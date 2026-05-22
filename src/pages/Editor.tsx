@@ -41,6 +41,7 @@ import {
   FileJson,
   FileSpreadsheet,
   Wand2,
+  Sparkles,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -592,6 +593,7 @@ export const Editor = () => {
   const runQueryRef = useRef<typeof runQuery>(null!);
   const runMultipleQueriesRef = useRef<typeof runMultipleQueries>(null!);
   const openExplainForQueryRef = useRef<(query: string) => void>(null!);
+  const openEditorTableReferenceRef = useRef<(rawIdentifier: string) => boolean>(() => false);
   const tabScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -2405,6 +2407,8 @@ export const Editor = () => {
     [activeDriver, addTab, resolveEditorTableReference, runQuery],
   );
 
+  openEditorTableReferenceRef.current = openEditorTableReference;
+
   const handleEditorMount = (
     editor: Parameters<OnMount>[0],
     monaco: Monaco,
@@ -2466,7 +2470,7 @@ export const Editor = () => {
       const identifier = getSqlIdentifierAtPosition(line, position.column);
       if (!identifier) return;
 
-      if (openEditorTableReference(identifier)) {
+      if (openEditorTableReferenceRef.current(identifier)) {
         browserEvent.preventDefault();
         browserEvent.stopPropagation();
       }
@@ -3181,7 +3185,10 @@ export const Editor = () => {
             className="flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border border-strong bg-surface-secondary text-primary hover:bg-blue-500/15 hover:border-blue-500/40 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="美化 SQL"
           >
-            <Wand2 size={16} />
+            <span className="relative inline-flex h-5 w-5 items-center justify-center">
+              <Wand2 size={17} className="text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.45)]" strokeWidth={2.4} />
+              <Sparkles size={9} className="absolute -right-0.5 -top-0.5 text-amber-300 drop-shadow-[0_0_5px_rgba(251,191,36,0.55)]" strokeWidth={2.8} />
+            </span>
             美化 SQL
           </button>
         )}

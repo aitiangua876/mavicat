@@ -46,7 +46,9 @@ pub mod drivers {
     pub mod driver_trait;
     pub mod mysql;
     pub mod postgres;
+    pub mod redis;
     pub mod registry;
+    pub mod sqlserver;
     pub mod sqlite;
 }
 
@@ -150,6 +152,8 @@ pub fn run() {
             tauri::async_runtime::block_on(async {
                 drivers::registry::register_driver(drivers::mysql::MysqlDriver::new()).await;
                 drivers::registry::register_driver(drivers::postgres::PostgresDriver::new()).await;
+                drivers::registry::register_driver(drivers::redis::RedisDriver::new()).await;
+                drivers::registry::register_driver(drivers::sqlserver::SqlServerDriver::new()).await;
                 drivers::registry::register_driver(drivers::sqlite::SqliteDriver::new()).await;
             });
 

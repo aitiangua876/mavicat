@@ -9,7 +9,7 @@ import { isLocalDriver } from "./driverCapabilities";
 
 export type DatabaseDriver = string;
 
-export const BUILTIN_DRIVER_IDS = ["postgres", "mysql", "sqlite"] as const;
+export const BUILTIN_DRIVER_IDS = ["postgres", "mysql", "sqlite", "sqlserver", "redis"] as const;
 export type BuiltinDriverId = (typeof BUILTIN_DRIVER_IDS)[number];
 
 export interface ConnectionParams {
@@ -68,6 +68,11 @@ export function getDefaultPort(driver: DatabaseDriver): number {
       return 3306;
     case "sqlite":
       return 0; // SQLite doesn't use ports
+    case "sqlserver":
+    case "mssql":
+      return 1433;
+    case "redis":
+      return 6379;
     default:
       return 0;
   }

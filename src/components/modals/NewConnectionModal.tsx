@@ -215,6 +215,8 @@ export const NewConnectionModal = ({
       defaultValue: "e.g. mysql://user:pass@localhost:3306/db",
     });
   const isMultiDb = isMultiDatabaseCapable(activeDriver?.capabilities);
+  const isRedisDriver = driver === "redis";
+  const credentialsRequired = isNetworkDriver && !isRedisDriver;
 
   // ── helpers ──
   const loadSshConnectionsList = async () => {
@@ -240,11 +242,14 @@ export const NewConnectionModal = ({
   const getDefaultUsername = (driverId: string) => {
     if (driverId === "postgres") return "postgres";
     if (driverId === "mysql" || driverId === "mariadb") return "root";
+    if (driverId === "sqlserver" || driverId === "mssql") return "sa";
     return "";
   };
 
   const getDefaultDatabase = (driverId: string) => {
     if (driverId === "postgres") return "postgres";
+    if (driverId === "sqlserver" || driverId === "mssql") return "master";
+    if (driverId === "redis") return "0";
     return "";
   };
 
@@ -429,7 +434,7 @@ export const NewConnectionModal = ({
         database: isMultiDb
           ? (selectedDatabasesState[0] ??
             availableDatabases[0] ??
-            "information_schema")
+            (isRedisDriver ? "0" : "information_schema"))
           : formData.database,
       };
       const result = await invoke<string>("test_connection", {
@@ -486,14 +491,14 @@ export const NewConnectionModal = ({
       setTestResult("error");
       return;
     }
-    if (isNetworkDriver && !formData.username?.trim()) {
+    if (credentialsRequired && !formData.username?.trim()) {
       setStatus("error");
       setMessage("请填写用户名");
       setTestResult("error");
       return;
     }
     if (
-      isNetworkDriver &&
+      credentialsRequired &&
       !initialConnection &&
       !formData.password?.trim()
     ) {
@@ -503,6 +508,7 @@ export const NewConnectionModal = ({
       return;
     }
     if (
+      !isRedisDriver &&
       !isMultiDb &&
       !noConnectionRequired &&
       (!formData.database ||
@@ -537,11 +543,15 @@ export const NewConnectionModal = ({
         ...formData,
         port: formData.port != null ? Number(formData.port) : undefined,
         save_in_keychain: false,
-        database: isMultiDb
-          ? databasesForSave.length === 1
-            ? databasesForSave[0]
-            : databasesForSave
-          : formData.database,
+        database: isRedisDriver
+          ? typeof formData.database === "string" && formData.database.trim()
+            ? formData.database.trim()
+            : "0"
+          : isMultiDb
+            ? databasesForSave.length === 1
+              ? databasesForSave[0]
+              : databasesForSave
+            : formData.database,
       };
       if (initialConnection) {
         if (!params.password?.trim()) delete params.password;
@@ -713,7 +723,7 @@ export const NewConnectionModal = ({
               value={formData.port}
               onChange={(v) => updateField("port", v)}
               type="number"
-              placeholder={driver === "mysql" ? "3306" : "5432"}
+              placeholder={String(activeDriver?.default_port ?? "")}
               required
             />
           </div>
@@ -725,7 +735,7 @@ export const NewConnectionModal = ({
               value={formData.username}
               onChange={(v) => updateField("username", v)}
               placeholder={t("newConnection.usernamePlaceholder")}
-              required
+              required={credentialsRequired}
             />
             <FieldInput
               label={t("newConnection.password")}
@@ -740,7 +750,7 @@ export const NewConnectionModal = ({
                   ? "••••••••"
                   : t("newConnection.passwordPlaceholder")
               }
-              required={!initialConnection}
+              required={credentialsRequired && !initialConnection}
             />
           </div>
 
@@ -797,7 +807,9 @@ export const NewConnectionModal = ({
                     void loadDatabases();
                   }}
                   disabled={
-                    loadingDatabases || !formData.host || !formData.username
+                    loadingDatabases ||
+                    !formData.host ||
+                    (credentialsRequired && !formData.username)
                   }
                   className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 disabled:text-muted disabled:cursor-not-allowed transition-colors"
                 >
@@ -893,7 +905,11 @@ export const NewConnectionModal = ({
           onClick={() => {
             void loadDatabases();
           }}
-          disabled={loadingDatabases || !formData.host || !formData.username}
+          disabled={
+            loadingDatabases ||
+            !formData.host ||
+            (credentialsRequired && !formData.username)
+          }
           className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 disabled:text-muted disabled:cursor-not-allowed transition-colors shrink-0"
         >
           {loadingDatabases ? (

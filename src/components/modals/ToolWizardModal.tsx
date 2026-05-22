@@ -23,7 +23,7 @@ type ToolWizardKind =
   | "data_transfer";
 
 type ExportFormat = "csv" | "json" | "excel" | "sql";
-type TransferWriteMode = "append" | "delete_then_insert";
+type TransferWriteMode = "append" | "delete_then_insert" | "create_then_insert";
 
 interface DataTransferWizardRequest {
   sourceConnectionId: string;
@@ -353,6 +353,7 @@ export const ToolWizardModal = ({
                     >
                       <option value="append">追加</option>
                       <option value="delete_then_insert">清空目标表后插入</option>
+                      <option value="create_then_insert">创建目标表后插入</option>
                     </select>
                   </label>
                   <label className="block">

@@ -314,7 +314,7 @@ function WorkbenchToolbar() {
       targetSchema?: string;
       sourceTable: string;
       targetTable?: string;
-      writeMode: 'append' | 'delete_then_insert';
+      writeMode: 'append' | 'delete_then_insert' | 'create_then_insert';
       batchSize: number;
     }) => {
       const report = await invoke<{

@@ -18,6 +18,8 @@ import { clearAutocompleteCache } from '../utils/autocomplete';
 import { toErrorMessage } from '../utils/errors';
 import { isMultiDatabaseCapable, getEffectiveDatabase, getDatabaseList } from '../utils/database';
 
+const CONNECTION_FAILED_EVENT = 'mavicat-connection-failed';
+
 const createEmptyConnectionData = (driver: string = '', name: string = '', dbName: string = ''): ConnectionData => ({
   driver,
   capabilities: null,
@@ -447,6 +449,7 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
   const connect = async (connectionId: string) => {
     // Capture previous state so we can restore it on failure
     const prevActiveConnectionId = activeConnectionId;
+    let connectionName = connectionDataMap[connectionId]?.connectionName || connectionId;
 
     // Set loading state synchronously before any await so UI reflects loading immediately
     if (!openConnectionIds.includes(connectionId)) {
@@ -475,6 +478,7 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Connection not found');
       }
 
+      connectionName = conn.name;
       const driver = conn.params.driver;
 
       // Fetch driver manifest to access capabilities (driver-agnostic feature detection)
@@ -665,6 +669,15 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Failed to connect:', error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(CONNECTION_FAILED_EVENT, {
+          detail: {
+            connectionId,
+            name: connectionName,
+            error: toErrorMessage(error),
+          },
+        }));
+      }
       setConnectionDataMap(prev => {
         const newMap = { ...prev };
         delete newMap[connectionId];

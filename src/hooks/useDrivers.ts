@@ -115,6 +115,64 @@ const FALLBACK_DRIVERS: PluginManifest[] = [
       create_foreign_keys: false,
     },
   },
+  {
+    id: "sqlserver",
+    name: "SQL Server",
+    version: "1.0.0",
+    description: "Microsoft SQL Server databases",
+    default_port: 1433,
+    is_builtin: true,
+    default_username: "sa",
+    color: "#f59e0b",
+    icon: "sqlserver",
+    capabilities: {
+      schemas: true,
+      views: true,
+      routines: false,
+      file_based: false,
+      folder_based: false,
+      connection_string: true,
+      connection_string_example: "sqlserver://user:pass@localhost:1433/db",
+      identifier_quote: '"',
+      alter_primary_key: false,
+      auto_increment_keyword: "IDENTITY",
+      serial_type: "",
+      inline_pk: false,
+      alter_column: false,
+      create_foreign_keys: false,
+      readonly: true,
+      manage_tables: false,
+    },
+  },
+  {
+    id: "redis",
+    name: "Redis",
+    version: "1.0.0",
+    description: "Redis key-value databases",
+    default_port: 6379,
+    is_builtin: true,
+    default_username: "",
+    color: "#ef4444",
+    icon: "redis",
+    capabilities: {
+      schemas: false,
+      views: false,
+      routines: false,
+      file_based: false,
+      folder_based: false,
+      connection_string: true,
+      connection_string_example: "redis://:password@localhost:6379/0",
+      identifier_quote: '"',
+      alter_primary_key: false,
+      auto_increment_keyword: "",
+      serial_type: "",
+      inline_pk: false,
+      alter_column: false,
+      create_foreign_keys: false,
+      readonly: true,
+      manage_tables: false,
+    },
+  },
 ];
 
 export function useDrivers(): {
@@ -133,13 +191,29 @@ export function useDrivers(): {
   const { settings } = useSettings();
 
   const load = useCallback(() => {
-    Promise.all([
+    Promise.allSettled([
       invoke<PluginManifest[]>("get_registered_drivers"),
       invoke<InstalledPluginInfo[]>("get_installed_plugins"),
     ])
-      .then(([drivers, installed]) => {
-        setAllDrivers(drivers);
-        setInstalledPlugins(installed);
+      .then(([driversResult, installedResult]) => {
+        if (driversResult.status === "fulfilled") {
+          setAllDrivers(driversResult.value);
+        }
+
+        if (installedResult.status === "fulfilled") {
+          setInstalledPlugins(installedResult.value);
+        }
+
+        if (driversResult.status === "rejected") {
+          setError(String(driversResult.reason));
+          return;
+        }
+
+        if (installedResult.status === "rejected") {
+          setError(String(installedResult.reason));
+          return;
+        }
+
         setError(null);
       })
       .catch((err: unknown) => {

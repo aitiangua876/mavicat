@@ -729,13 +729,23 @@ export const DataGrid = React.memo(
       [columns, visibleColumnNames],
     );
 
+    const allColumnsVisible = visibleColumns.length === columns.length;
+
     const setAllColumnsVisible = useCallback(() => {
       setVisibleColumnNames(new Set(columns));
     }, [columns]);
 
+    const setOnlyFirstColumnVisible = useCallback(() => {
+      setVisibleColumnNames(new Set(columns.slice(0, 1)));
+    }, [columns]);
+
     const invertVisibleColumns = useCallback(() => {
       setVisibleColumnNames((prev) => {
-        return new Set(columns.filter((column) => !prev.has(column)));
+        const next = new Set(columns.filter((column) => !prev.has(column)));
+        if (next.size === 0 && columns.length > 0) {
+          next.add(columns[0]);
+        }
+        return next;
       });
     }, [columns]);
 
@@ -1330,10 +1340,10 @@ export const DataGrid = React.memo(
                     <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b border-default bg-base">
                       <button
                         type="button"
-                        onClick={setAllColumnsVisible}
+                        onClick={allColumnsVisible ? setOnlyFirstColumnVisible : setAllColumnsVisible}
                         className="text-xs text-blue-300 hover:text-blue-200"
                       >
-                        全选
+                        {allColumnsVisible ? "取消全选" : "全选"}
                       </button>
                       <button
                         type="button"

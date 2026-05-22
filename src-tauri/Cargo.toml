@@ -43,6 +43,9 @@ urlencoding = "2.1.3"
 base64 = "0.22.1"
 infer = "0.16"
 futures = "0.3.31"
+tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls", "chrono", "rust_decimal"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+redis = { version = "0.27", features = ["tokio-comp"] }
 keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "linux-native-sync-persistent", "crypto-rust"] }
 tauri-plugin-opener = "2"
 once_cell = "1.20"
