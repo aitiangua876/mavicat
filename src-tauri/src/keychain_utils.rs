@@ -1,6 +1,6 @@
 use keyring::Entry;
 
-const SERVICE_NAME: &str = "tabularis";
+const SERVICE_NAME: &str = "mavicat";
 
 pub fn set_db_password(connection_id: &str, password: &str) -> Result<(), String> {
     println!("[Keychain] Setting DB password for {}", connection_id);

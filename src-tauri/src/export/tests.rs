@@ -1,6 +1,9 @@
-use super::format::{parse_csv_delimiter, value_to_csv_string, ExportFormat, DEFAULT_CSV_DELIMITER};
+use super::format::{
+    escape_html, parse_csv_delimiter, value_to_csv_string, value_to_sql_literal, ExportFormat,
+    DEFAULT_CSV_DELIMITER,
+};
 use super::progress::ProgressEmitter;
-use super::sink::{CsvSink, JsonSink, RowSink};
+use super::sink::{CsvSink, ExcelSink, JsonSink, RowSink, SqlDialect, SqlInsertSink};
 use serde_json::{json, Value};
 
 // ---------------------------------------------------------------------------
@@ -22,6 +25,13 @@ fn parse_csv_format_is_case_insensitive() {
 fn parse_json_format_is_case_insensitive() {
     assert_eq!(ExportFormat::parse("json").unwrap(), ExportFormat::Json);
     assert_eq!(ExportFormat::parse("JSON").unwrap(), ExportFormat::Json);
+}
+
+#[test]
+fn parse_excel_and_sql_formats() {
+    assert_eq!(ExportFormat::parse("excel").unwrap(), ExportFormat::Excel);
+    assert_eq!(ExportFormat::parse("xls").unwrap(), ExportFormat::Excel);
+    assert_eq!(ExportFormat::parse("sql").unwrap(), ExportFormat::Sql);
 }
 
 #[test]
@@ -82,6 +92,19 @@ fn value_to_csv_serializes_numbers_and_bools() {
 fn value_to_csv_serializes_objects_and_arrays_as_json() {
     assert_eq!(value_to_csv_string(&json!({"a": 1})), r#"{"a":1}"#);
     assert_eq!(value_to_csv_string(&json!([1, 2, 3])), "[1,2,3]");
+}
+
+#[test]
+fn value_to_sql_literals_escape_strings_and_json() {
+    assert_eq!(value_to_sql_literal(&json!("O'Hara")), "'O''Hara'");
+    assert_eq!(value_to_sql_literal(&Value::Null), "NULL");
+    assert_eq!(value_to_sql_literal(&json!(true)), "TRUE");
+    assert_eq!(value_to_sql_literal(&json!({"a": 1})), r#"'{"a":1}'"#);
+}
+
+#[test]
+fn html_escape_covers_common_special_chars() {
+    assert_eq!(escape_html("<a&b>\"'"), "&lt;a&amp;b&gt;&quot;&#39;");
 }
 
 // ---------------------------------------------------------------------------
@@ -176,10 +199,7 @@ fn csv_writes_headers_once_then_rows() {
 
 #[test]
 fn csv_respects_custom_delimiter() {
-    let csv = collect_csv(
-        b';',
-        &[(vec!["a", "b"], vec![json!("x"), json!("y")])],
-    );
+    let csv = collect_csv(b';', &[(vec!["a", "b"], vec![json!("x"), json!("y")])]);
     assert_eq!(csv, "a;b\nx;y\n");
 }
 
@@ -191,10 +211,7 @@ fn csv_emits_null_sentinel_for_null_values() {
 
 #[test]
 fn csv_quotes_values_containing_delimiter() {
-    let csv = collect_csv(
-        b',',
-        &[(vec!["v"], vec![json!("a,b")])],
-    );
+    let csv = collect_csv(b',', &[(vec!["v"], vec![json!("a,b")])]);
     assert!(csv.contains("\"a,b\""));
 }
 
@@ -265,4 +282,50 @@ fn json_missing_value_defaults_to_null() {
     }
     let parsed: Value = serde_json::from_str(&String::from_utf8(buf).unwrap()).unwrap();
     assert_eq!(parsed, json!([{"a": 1, "b": null}]));
+}
+
+// ---------------------------------------------------------------------------
+// ExcelSink
+// ---------------------------------------------------------------------------
+
+#[test]
+fn excel_sink_writes_html_table_excel_can_open() {
+    let mut buf: Vec<u8> = Vec::new();
+    {
+        let mut sink = ExcelSink::new(&mut buf);
+        let headers = vec!["id".to_string(), "name".to_string()];
+        sink.write_row(&headers, &[json!(1), json!("<alice>")])
+            .unwrap();
+        sink.finish().unwrap();
+    }
+    let output = String::from_utf8(buf).unwrap();
+    assert!(output.contains("<table>"));
+    assert!(output.contains("<th>name</th>"));
+    assert!(output.contains("<td>&lt;alice&gt;</td>"));
+}
+
+// ---------------------------------------------------------------------------
+// SqlInsertSink
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sql_sink_writes_insert_statements_with_quoted_identifiers() {
+    let mut buf: Vec<u8> = Vec::new();
+    {
+        let mut sink = SqlInsertSink::new(
+            &mut buf,
+            SqlDialect::Mysql,
+            "users".to_string(),
+            Some("app".to_string()),
+        );
+        let headers = vec!["id".to_string(), "display name".to_string()];
+        sink.write_row(&headers, &[json!(1), json!("O'Hara")])
+            .unwrap();
+        sink.finish().unwrap();
+    }
+    let output = String::from_utf8(buf).unwrap();
+    assert_eq!(
+        output,
+        "INSERT INTO `app`.`users` (`id`, `display name`) VALUES (1, 'O''Hara');\n"
+    );
 }

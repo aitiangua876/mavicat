@@ -242,8 +242,7 @@ QUERY PLAN
 
     #[test]
     fn parse_postgres_text_rejects_no_plan() {
-        let err = parse_postgres_text("QUERY PLAN\n---\n(0 rows)\n")
-            .expect_err("no plan → error");
+        let err = parse_postgres_text("QUERY PLAN\n---\n(0 rows)\n").expect_err("no plan → error");
         assert!(err.contains("No plan nodes"), "got: {err}");
     }
 

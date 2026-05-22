@@ -47,10 +47,7 @@ pub fn single_db_before_multi_transition(
     if previous.is_multi() || !new.is_multi() {
         return None;
     }
-    previous
-        .as_vec()
-        .into_iter()
-        .find(|s| !s.trim().is_empty())
+    previous.as_vec().into_iter().find(|s| !s.trim().is_empty())
 }
 
 impl std::fmt::Display for DatabaseSelection {
@@ -196,6 +193,8 @@ pub struct TestConnectionRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TableInfo {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -209,6 +208,8 @@ pub struct TableColumn {
     pub default_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub character_maximum_length: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -369,8 +370,8 @@ pub struct ViewInfo {
 pub struct TriggerInfo {
     pub name: String,
     pub table_name: String,
-    pub event: String,   // e.g. "INSERT", "UPDATE", "DELETE", "INSERT OR UPDATE"
-    pub timing: String,  // "BEFORE", "AFTER", "INSTEAD OF"
+    pub event: String,  // e.g. "INSERT", "UPDATE", "DELETE", "INSERT OR UPDATE"
+    pub timing: String, // "BEFORE", "AFTER", "INSTEAD OF"
     pub definition: Option<String>,
 }
 

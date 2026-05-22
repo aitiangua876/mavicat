@@ -1,6 +1,6 @@
 use super::binding::{
-    PgValueOptions, bind_pg_boolean_string, bind_pg_number, bind_pg_numeric_string, bind_pg_value,
-    build_pk_predicate,
+    bind_pg_boolean_string, bind_pg_number, bind_pg_numeric_string, bind_pg_value,
+    build_pk_predicate, PgValueOptions,
 };
 use super::helpers::{extract_base_type, is_implicit_cast_compatible};
 
@@ -255,7 +255,9 @@ mod pg_boolean_string_binding_tests {
 
     #[test]
     fn true_string_for_boolean_column_binds_as_bool() {
-        let bound = bind_pg_boolean_string("true", "boolean", 1).unwrap().unwrap();
+        let bound = bind_pg_boolean_string("true", "boolean", 1)
+            .unwrap()
+            .unwrap();
         assert_eq!(bound.sql, "$1");
         assert!(bound.param.is_some());
     }
@@ -289,11 +291,9 @@ mod pg_boolean_string_binding_tests {
 
     #[test]
     fn surrounding_whitespace_is_tolerated() {
-        assert!(
-            bind_pg_boolean_string("  true  ", "boolean", 1)
-                .unwrap()
-                .is_ok()
-        );
+        assert!(bind_pg_boolean_string("  true  ", "boolean", 1)
+            .unwrap()
+            .is_ok());
     }
 
     #[test]

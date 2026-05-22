@@ -17,6 +17,7 @@ export interface TableColumn {
   is_auto_increment: boolean;
   default_value?: string;
   character_maximum_length?: number;
+  comment?: string | null;
 }
 
 export interface TableSchema {
@@ -64,7 +65,6 @@ export interface QueryResultEntry {
   pkColumn: string | null;
 }
 
-import type { NotebookState } from "./notebook";
 import type { Node, Edge } from "@xyflow/react";
 
 export interface FlowState {
@@ -81,13 +81,14 @@ export interface PendingInsertion {
 export interface Tab {
   id: string;
   title: string;
-  type: "console" | "table" | "query_builder" | "notebook";
+  type: "console" | "table" | "table_design" | "query_builder" | "notebook";
   query: string;
   result: QueryResult | null;
   error: string;
   executionTime: number | null;
   page: number;
   activeTable: string | null;
+  designTable?: string;
   pkColumn: string | null;
   autoIncrementColumns?: string[]; // Names of auto-increment columns
   defaultValueColumns?: string[]; // Names of columns with default values
@@ -114,7 +115,7 @@ export interface Tab {
   results?: QueryResultEntry[];
   activeResultId?: string;
   notebookId?: string; // Reference to notebook file in config dir
-  notebookState?: NotebookState; // Deprecated: kept for migration of old tabs
+  notebookState?: unknown; // Deprecated: old notebook tabs are ignored in Mavicat core
 }
 
 export interface EditorPreferences {

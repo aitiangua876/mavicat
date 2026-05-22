@@ -1,15 +1,3 @@
-pub mod ai;
-pub mod ai_activity;
-#[cfg(test)]
-pub mod ai_activity_tests;
-pub mod ai_approval;
-#[cfg(test)]
-pub mod ai_approval_tests;
-pub mod ai_approval_watcher;
-pub mod ai_commands;
-pub mod ai_notebook_export;
-#[cfg(test)]
-pub mod ai_notebook_export_tests;
 pub mod cli;
 pub mod clipboard_import;
 pub mod commands;
@@ -18,6 +6,7 @@ pub mod connection_cache;
 #[cfg(test)]
 pub mod connection_cache_tests;
 pub mod credential_cache;
+pub mod data_transfer;
 pub mod dump_commands; // Added
 #[cfg(test)]
 pub mod dump_commands_tests;
@@ -29,21 +18,15 @@ pub mod export;
 #[cfg(test)]
 pub mod export_import_tests;
 pub mod health_check;
-pub mod heartbeat;
-#[cfg(test)]
-pub mod heartbeat_tests;
 pub mod json_viewer;
 pub mod keychain_utils;
 pub mod log_commands;
 pub mod logger;
-pub mod mcp;
 pub mod models;
 #[cfg(test)]
 pub mod models_tests;
-pub mod notebooks;
 pub mod paths; // Added
 pub mod persistence;
-pub mod plugins;
 pub mod pool_manager;
 #[cfg(test)]
 pub mod pool_manager_tests;
@@ -55,7 +38,6 @@ pub mod saved_queries;
 #[cfg(test)]
 pub mod saved_queries_tests;
 pub mod ssh_tunnel;
-pub mod task_manager;
 pub mod theme_commands;
 pub mod theme_models;
 pub mod updater;
@@ -118,12 +100,6 @@ pub fn run() {
 
     let args = cli::parse();
 
-    if args.mcp {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-        rt.block_on(mcp::run_mcp_server());
-        return;
-    }
-
     // Configure log level based on debug flag
     // Default to Info level so users can see application logs
     let log_level = log::LevelFilter::Info;
@@ -141,7 +117,7 @@ pub fn run() {
     init_logger(log_buffer.clone(), log_level);
 
     // Log startup message
-    log::info!("Tabularis application starting...");
+    log::info!("Mavicat application starting...");
     if args.debug {
         log::info!("Debug mode enabled - verbose logging active");
     } else {
@@ -170,20 +146,11 @@ pub fn run() {
         .manage(explain_import::PendingExplainFile::default())
         .manage(json_viewer::JsonViewerStore::default())
         .setup(move |app| {
-            // Read persisted config to know which external plugins are enabled.
-            // `None` means no preference has been saved yet → load all installed plugins.
-            let active_ext_drivers =
-                crate::config::load_config_internal(&app.handle()).active_external_drivers;
-
             // Register built-in drivers
             tauri::async_runtime::block_on(async {
                 drivers::registry::register_driver(drivers::mysql::MysqlDriver::new()).await;
                 drivers::registry::register_driver(drivers::postgres::PostgresDriver::new()).await;
                 drivers::registry::register_driver(drivers::sqlite::SqliteDriver::new()).await;
-
-                // Load only enabled external plugins (or all if no preference saved).
-                crate::plugins::manager::load_plugins(&app.handle(), active_ext_drivers.as_deref())
-                    .await;
             });
 
             // Start connection health-check ping loop.
@@ -198,14 +165,6 @@ pub fn run() {
                 });
             }
 
-            // Watch for pending MCP approval requests and run periodic cleanup.
-            ai_approval_watcher::spawn(app.handle().clone());
-
-            // Refresh the GUI heartbeat so the MCP subprocess can detect
-            // when Tabularis is closed and fail fast on approval-gated
-            // queries instead of waiting for the full approval timeout.
-            heartbeat::spawn();
-
             // Open devtools automatically in debug mode
             if args.debug {
                 if let Some(window) = app.get_webview_window("main") {
@@ -219,9 +178,7 @@ pub fn run() {
             // meant to be a dedicated plan viewer, not a full app launch.
             if let Some(path) = args.explain.clone() {
                 log::info!("CLI --explain received: {path}");
-                if let Err(e) =
-                    explain_import::spawn_visual_explain_window(app, Some(path))
-                {
+                if let Err(e) = explain_import::spawn_visual_explain_window(app, Some(path)) {
                     log::error!("Failed to open Visual Explain window: {e}");
                 }
                 // Close the default main window only AFTER visual-explain is
@@ -304,6 +261,7 @@ pub fn run() {
             explain_import::load_explain_from_file,
             explain_import::get_pending_explain_file,
             explain_import::open_visual_explain_window,
+            data_transfer::start_data_transfer,
             export::export_query_to_file,
             export::cancel_export,
             saved_queries::get_saved_queries,
@@ -324,10 +282,6 @@ pub fn run() {
             config::get_config_json,
             config::save_config_json,
             config::relaunch_app,
-            config::set_ai_key,
-            config::delete_ai_key,
-            config::check_ai_key,
-            config::check_ai_key_status,
             config::get_system_prompt,
             config::save_system_prompt,
             config::reset_system_prompt,
@@ -343,17 +297,10 @@ pub fn run() {
             config::get_tabrename_prompt,
             config::save_tabrename_prompt,
             config::reset_tabrename_prompt,
-            // AI
-            ai::generate_ai_query,
-            ai::explain_ai_query,
-            ai::analyze_ai_explain_plan,
-            ai::generate_cell_name,
-            ai::generate_tab_rename,
-            ai::suggest_table_name,
-            ai::get_ai_models,
             // Clipboard Import
             clipboard_import::execute_clipboard_import,
             commands::get_schema_snapshot,
+            commands::get_table_ddl,
             // DDL generation
             commands::get_create_table_sql,
             commands::get_add_column_sql,
@@ -371,19 +318,6 @@ pub fn run() {
             commands::get_trigger_definition,
             commands::create_trigger,
             commands::drop_trigger,
-            // MCP
-            mcp::install::get_mcp_status,
-            mcp::install::install_mcp_config,
-            // AI Activity / Approvals
-            ai_commands::get_ai_activity,
-            ai_commands::get_ai_sessions,
-            ai_commands::get_ai_session_events,
-            ai_commands::clear_ai_activity,
-            ai_commands::export_ai_activity_json,
-            ai_commands::export_ai_activity_csv,
-            ai_commands::export_ai_session_as_notebook,
-            ai_commands::list_pending_approvals,
-            ai_commands::decide_pending_approval,
             // Themes
             theme_commands::get_all_themes,
             theme_commands::get_theme,
@@ -414,33 +348,10 @@ pub fn run() {
             preferences::load_editor_preferences,
             preferences::delete_editor_preferences,
             preferences::list_all_preferences,
-            // Notebooks
-            notebooks::create_notebook,
-            notebooks::save_notebook,
-            notebooks::load_notebook,
-            notebooks::delete_notebook,
-            // Plugin Registry
-            plugins::commands::fetch_plugin_registry,
-            plugins::commands::install_plugin,
-            plugins::commands::uninstall_plugin,
-            plugins::commands::get_installed_plugins,
-            plugins::commands::disable_plugin,
-            plugins::commands::enable_plugin,
-            plugins::commands::get_plugin_manifest,
-            plugins::commands::get_plugin_dir,
-            plugins::commands::read_plugin_file,
-            plugins::manager::get_plugin_startup_errors,
             // JSON Viewer
             json_viewer::open_json_viewer_window,
             json_viewer::get_json_viewer_session,
             json_viewer::complete_json_viewer_session,
-            // Task Manager
-            task_manager::get_process_list,
-            task_manager::get_system_stats,
-            task_manager::get_tabularis_children,
-            task_manager::kill_plugin_process,
-            task_manager::restart_plugin_process,
-            task_manager::open_task_manager_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

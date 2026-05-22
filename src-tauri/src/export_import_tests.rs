@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::models::{ExportPayload, ConnectionGroup, SavedConnection, SshConnection, ConnectionParams, DatabaseSelection};
+    use crate::models::{
+        ConnectionGroup, ConnectionParams, DatabaseSelection, ExportPayload, SavedConnection,
+        SshConnection,
+    };
 
     #[test]
     fn test_export_payload_serialization() {
@@ -62,7 +65,13 @@ mod tests {
         assert_eq!(deserialized.groups.len(), 1);
         assert_eq!(deserialized.connections.len(), 1);
         assert_eq!(deserialized.ssh_connections.len(), 1);
-        assert_eq!(deserialized.connections[0].params.password, Some("password".to_string()));
-        assert_eq!(deserialized.ssh_connections[0].password, Some("ssh_password".to_string()));
+        assert_eq!(
+            deserialized.connections[0].params.password,
+            Some("password".to_string())
+        );
+        assert_eq!(
+            deserialized.ssh_connections[0].password,
+            Some("ssh_password".to_string())
+        );
     }
 }

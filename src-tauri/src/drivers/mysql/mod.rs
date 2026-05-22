@@ -42,7 +42,7 @@ pub async fn get_tables(
     log::debug!("MySQL: Fetching tables for database: {}", db_name);
     let pool = get_mysql_pool(params).await?;
     let rows = sqlx::query(
-        "SELECT table_name as name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' ORDER BY table_name ASC",
+        "SELECT table_name as name, NULLIF(table_comment, '') as comment FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' ORDER BY table_name ASC",
     )
     .bind(db_name)
     .fetch_all(&pool)
@@ -52,6 +52,7 @@ pub async fn get_tables(
         .iter()
         .map(|r| TableInfo {
             name: mysql_row_str(r, 0),
+            comment: mysql_row_str_opt(r, 1),
         })
         .collect();
     log::debug!("MySQL: Found {} tables in {}", tables.len(), db_name);
@@ -67,7 +68,7 @@ pub async fn get_columns(
     let pool = get_mysql_pool(params).await?;
 
     let query = r#"
-        SELECT column_name, data_type, column_key, is_nullable, extra, column_default, character_maximum_length
+        SELECT column_name, column_type, column_key, is_nullable, extra, column_default, character_maximum_length, NULLIF(column_comment, '')
         FROM information_schema.columns
         WHERE table_schema = ? AND table_name = ?
         ORDER BY ordinal_position
@@ -90,6 +91,7 @@ pub async fn get_columns(
             let extra = mysql_row_str(r, 4);
             let default_val = mysql_row_str_opt(r, 5);
             let character_maximum_length: Option<u64> = r.try_get(6).ok();
+            let comment = mysql_row_str_opt(r, 7);
 
             let is_auto_increment = extra.contains("auto_increment");
 
@@ -110,6 +112,7 @@ pub async fn get_columns(
                 is_auto_increment,
                 default_value,
                 character_maximum_length,
+                comment,
             }
         })
         .collect())
@@ -171,7 +174,7 @@ pub async fn get_all_columns_batch(
     let pool = get_mysql_pool(params).await?;
 
     let query = r#"
-        SELECT table_name, column_name, data_type, column_key, is_nullable, extra, column_default, character_maximum_length
+        SELECT table_name, column_name, column_type, column_key, is_nullable, extra, column_default, character_maximum_length, NULLIF(column_comment, '')
         FROM information_schema.columns
         WHERE table_schema = ?
         ORDER BY table_name, ordinal_position
@@ -194,6 +197,7 @@ pub async fn get_all_columns_batch(
         let extra = mysql_row_str(row, 5);
         let default_val = mysql_row_str_opt(row, 6);
         let character_maximum_length: Option<u64> = row.try_get(7).ok();
+        let comment = mysql_row_str_opt(row, 8);
 
         let is_auto_increment = extra.contains("auto_increment");
 
@@ -214,6 +218,7 @@ pub async fn get_all_columns_batch(
             is_auto_increment,
             default_value,
             character_maximum_length,
+            comment,
         };
 
         result
@@ -590,9 +595,21 @@ pub async fn insert_record(
     Ok(result.rows_affected())
 }
 
-pub async fn get_table_ddl(params: &ConnectionParams, table_name: &str) -> Result<String, String> {
+pub async fn get_table_ddl(
+    params: &ConnectionParams,
+    table_name: &str,
+    schema: Option<&str>,
+) -> Result<String, String> {
     let pool = get_mysql_pool(params).await?;
-    let query = format!("SHOW CREATE TABLE `{}`", table_name);
+    let table_ref = match schema {
+        Some(db_name) if !db_name.trim().is_empty() => format!(
+            "`{}`.`{}`",
+            db_name.replace('`', "``"),
+            table_name.replace('`', "``")
+        ),
+        _ => format!("`{}`", table_name.replace('`', "``")),
+    };
+    let query = format!("SHOW CREATE TABLE {}", table_ref);
     let row = sqlx::query(&query)
         .fetch_one(&pool)
         .await
@@ -694,7 +711,7 @@ pub async fn get_view_columns(
     let pool = get_mysql_pool(params).await?;
 
     let query = r#"
-            SELECT column_name, data_type, column_key, is_nullable, extra, column_default, character_maximum_length
+            SELECT column_name, column_type, column_key, is_nullable, extra, column_default, character_maximum_length, NULLIF(column_comment, '')
             FROM information_schema.columns
             WHERE table_schema = ? AND table_name = ?
             ORDER BY ordinal_position
@@ -717,6 +734,7 @@ pub async fn get_view_columns(
             let extra = mysql_row_str(r, 4);
             let default_val = mysql_row_str_opt(r, 5);
             let character_maximum_length: Option<u64> = r.try_get(6).ok();
+            let comment = mysql_row_str_opt(r, 7);
 
             let is_auto_increment = extra.contains("auto_increment");
 
@@ -737,6 +755,7 @@ pub async fn get_view_columns(
                 is_auto_increment,
                 default_value,
                 character_maximum_length,
+                comment,
             }
         })
         .collect())
@@ -1096,7 +1115,11 @@ pub async fn get_trigger_definition(
 ) -> Result<String, String> {
     let pool = get_mysql_pool(params).await?;
     let qualified = match schema {
-        Some(s) => format!("`{}`.`{}`", escape_identifier(s), escape_identifier(trigger_name)),
+        Some(s) => format!(
+            "`{}`.`{}`",
+            escape_identifier(s),
+            escape_identifier(trigger_name)
+        ),
         None => format!("`{}`", escape_identifier(trigger_name)),
     };
     let query = format!("SHOW CREATE TRIGGER {}", qualified);
@@ -1138,7 +1161,11 @@ pub async fn drop_trigger(
 ) -> Result<(), String> {
     let pool = get_mysql_pool(params).await?;
     let qualified = match schema {
-        Some(s) => format!("`{}`.`{}`", escape_identifier(s), escape_identifier(trigger_name)),
+        Some(s) => format!(
+            "`{}`.`{}`",
+            escape_identifier(s),
+            escape_identifier(trigger_name)
+        ),
         None => format!("`{}`", escape_identifier(trigger_name)),
     };
     let query = format!("DROP TRIGGER IF EXISTS {}", qualified);
@@ -1224,7 +1251,7 @@ impl MysqlDriver {
                 },
                 is_builtin: true,
                 default_username: "root".to_string(),
-                color: "#f97316".to_string(),
+                color: "#43c94d".to_string(),
                 icon: "mysql".to_string(),
                 settings: vec![
                     PluginSettingDefinition {
@@ -1303,10 +1330,8 @@ impl DatabaseDriver for MysqlDriver {
         } else {
             format!("{}:{}", user, encode(raw_pass))
         };
-        let max_allowed_packet = mysql_numeric_setting(
-            "maxAllowedPacket",
-            DEFAULT_MYSQL_MAX_ALLOWED_PACKET,
-        );
+        let max_allowed_packet =
+            mysql_numeric_setting("maxAllowedPacket", DEFAULT_MYSQL_MAX_ALLOWED_PACKET);
         let socket_timeout =
             mysql_numeric_setting("socketTimeout", DEFAULT_MYSQL_SOCKET_TIMEOUT_MS);
         let connect_timeout =

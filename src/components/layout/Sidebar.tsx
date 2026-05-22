@@ -1,357 +1,360 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Plug2, Settings, Cpu, PanelLeft, Layers, Star, Clock } from "lucide-react";
-import { DiscordIcon } from "../icons/DiscordIcon";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { DISCORD_URL } from "../../config/links";
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Edit2,
+  Loader2,
+  Plus,
+  Power,
+  Search,
+  Settings,
+  Shield,
+  Terminal,
+} from "lucide-react";
 import { useDatabase } from "../../hooks/useDatabase";
-import { useTheme } from "../../hooks/useTheme";
-import { SlotAnchor } from "../ui/SlotAnchor";
-
-// Sub-components
-import { NavItem } from "./sidebar/NavItem";
-import { OpenConnectionItem } from "./sidebar/OpenConnectionItem";
-import { ConnectionGroupItem } from "./sidebar/ConnectionGroupItem";
+import { useSidebarResize } from "../../hooks/useSidebarResize";
+import { useConnectionManager, type ConnectionStatus } from "../../hooks/useConnectionManager";
+import { useDrivers } from "../../hooks/useDrivers";
+import { getDriverColor, getDriverIcon } from "../../utils/driverUI";
 import { ExplorerSidebar, type SidebarTab } from "./ExplorerSidebar";
 import { PanelDatabaseProvider } from "./PanelDatabaseProvider";
-import { DiscordCommunityCallout } from "./sidebar/DiscordCommunityCallout";
-
-// Hooks & Utils
-import { useSidebarResize } from "../../hooks/useSidebarResize";
-import { useConnectionManager } from "../../hooks/useConnectionManager";
-import { useConnectionLayoutContext } from "../../hooks/useConnectionLayoutContext";
-import { isConnectionGrouped } from "../../utils/connectionLayout";
-import { useDrivers } from "../../hooks/useDrivers";
-import { useKeybindings } from "../../hooks/useKeybindings";
+import { ContextMenu, type ContextMenuItem } from "../ui/ContextMenu";
+import { NewConnectionModal } from "../modals/NewConnectionModal";
+import type { SavedConnection } from "../../contexts/DatabaseContext";
+import { NavicatConnectionIcon } from "../icons/NavicatStyleIcons";
 
 export const Sidebar = () => {
   const { t } = useTranslation();
-  const { currentTheme } = useTheme();
-  const isDarkTheme = !currentTheme?.id?.includes("-light");
+  const navigate = useNavigate();
   const {
     activeConnectionId,
-    connections,
+    connections: savedConnections,
+    connectionDataMap,
+    loadConnections,
   } = useDatabase();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("structure");
-  const [showShortcutHints, setShowShortcutHints] = useState(false);
-  const { isMac } = useKeybindings();
-
-  useEffect(() => {
-    const handler = () => setIsExplorerCollapsed((prev) => !prev);
-    window.addEventListener("tabularis:toggle-sidebar", handler);
-    return () => window.removeEventListener("tabularis:toggle-sidebar", handler);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const modifierHeld = isMac ? (e.metaKey || e.ctrlKey) : e.ctrlKey;
-      if (modifierHeld && e.shiftKey) setShowShortcutHints(true);
-    };
-    const handleKeyUp = () => setShowShortcutHints(false);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", handleKeyUp);
-    };
-  }, [isMac]);
-
   const {
-    openConnections,
-    handleDisconnect: disconnectConnection,
+    connections,
+    handleConnect,
+    handleDisconnect,
     handleSwitch,
   } = useConnectionManager();
-
   const { allDrivers } = useDrivers();
 
-  const {
-    splitView,
-    isSplitVisible,
-    selectedConnectionIds,
-    toggleSelection,
-    activateSplit,
-    hideSplitView,
-    explorerConnectionId
-  } = useConnectionLayoutContext();
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("structure");
+  const [search, setSearch] = useState("");
+  const [expandedConnectionIds, setExpandedConnectionIds] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    connectionId: string;
+  } | null>(null);
+  const [editingConnection, setEditingConnection] = useState<SavedConnection | null>(null);
+  const { sidebarWidth, startResize } = useSidebarResize(() => undefined);
 
-  const collapseExplorer = useCallback(() => setIsExplorerCollapsed(true), []);
-  const { sidebarWidth, startResize } = useSidebarResize(collapseExplorer);
+  useEffect(() => {
+    if (!activeConnectionId) return;
+    setExpandedConnectionIds((prev) => new Set(prev).add(activeConnectionId));
+  }, [activeConnectionId]);
 
-  // Sidebar-only ordering (in-memory, resets when connections close)
-  const [sidebarOrder, setSidebarOrder] = useState<string[]>([]);
+  const filteredConnections = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const matches = (value?: string | null) =>
+      !!value && value.toLowerCase().includes(query);
+    const dataMatches = (connectionId: string) => {
+      if (!query) return true;
+      const data = connectionDataMap[connectionId];
+      if (!data) return false;
+      const objectNames = [
+        data.databaseName,
+        ...data.selectedDatabases,
+        ...data.schemas,
+        ...data.tables.map((table) => table.name),
+        ...data.views.map((view) => view.name),
+        ...data.routines.map((routine) => routine.name),
+        ...data.triggers.map((trigger) => trigger.name),
+        ...Object.entries(data.databaseDataMap).flatMap(([database, databaseData]) => [
+          database,
+          ...databaseData.tables.map((table) => table.name),
+          ...databaseData.views.map((view) => view.name),
+          ...databaseData.routines.map((routine) => routine.name),
+          ...databaseData.triggers.map((trigger) => trigger.name),
+        ]),
+        ...Object.entries(data.schemaDataMap).flatMap(([schema, schemaData]) => [
+          schema,
+          ...schemaData.tables.map((table) => table.name),
+          ...schemaData.views.map((view) => view.name),
+          ...schemaData.routines.map((routine) => routine.name),
+          ...schemaData.triggers.map((trigger) => trigger.name),
+        ]),
+      ];
+      return objectNames.some((value) => matches(value));
+    };
+    const list = query
+      ? connections.filter((conn) =>
+          [conn.name, conn.database, conn.host, conn.driver].some((value) => matches(value)) ||
+          dataMatches(conn.id),
+        )
+      : connections;
 
-  // Build a flat list of non-split open connections, sorted by sidebar order
-  const sortedSidebarConnections = useMemo(() => {
-    const nonSplit = openConnections.filter(conn => !isConnectionGrouped(conn.id, splitView));
-    const orderMap = new Map(sidebarOrder.map((id, i) => [id, i]));
-    return nonSplit.sort((a, b) => {
-      const oa = orderMap.get(a.id);
-      const ob = orderMap.get(b.id);
-      // Connections not in sidebarOrder go at the end, in their original order
-      if (oa === undefined && ob === undefined) return 0;
-      if (oa === undefined) return 1;
-      if (ob === undefined) return -1;
-      return oa - ob;
+    return [...list].sort((a, b) => {
+      if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
+      return a.name.localeCompare(b.name);
     });
-  }, [openConnections, splitView, sidebarOrder]);
+  }, [connectionDataMap, connections, search]);
 
-  // Track which connections have a group (to show labels)
-  const groupedIds = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of connections) {
-      if (c.group_id) set.add(c.id);
-    }
-    return set;
-  }, [connections]);
+  const toggleExpanded = (connectionId: string) => {
+    setExpandedConnectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(connectionId)) next.delete(connectionId);
+      else next.add(connectionId);
+      return next;
+    });
+  };
 
-  // Drag-and-drop reorder state
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ id: string; position: 'above' | 'below' } | null>(null);
-
-  const handleReorderDragStart = useCallback((connectionId: string, e: React.DragEvent) => {
-    setDraggedId(connectionId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', connectionId);
-  }, []);
-
-  const handleReorderDragOver = useCallback((targetId: string, e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId) {
-      setDropTarget(null);
-      return;
-    }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    const position = e.clientY < midY ? 'above' : 'below';
-    setDropTarget({ id: targetId, position });
-  }, [draggedId]);
-
-  const handleReorderDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedId || !dropTarget || draggedId === dropTarget.id) {
-      setDraggedId(null);
-      setDropTarget(null);
-      return;
-    }
-
-    const currentOrder = sortedSidebarConnections.map(c => c.id);
-    const reordered = currentOrder.filter(id => id !== draggedId);
-    let toIdx = reordered.indexOf(dropTarget.id);
-    if (dropTarget.position === 'below') toIdx += 1;
-    reordered.splice(toIdx, 0, draggedId);
-
-    setSidebarOrder(reordered);
-    setDraggedId(null);
-    setDropTarget(null);
-  }, [draggedId, dropTarget, sortedSidebarConnections]);
-
-  const handleReorderDragEnd = useCallback(() => {
-    setDraggedId(null);
-    setDropTarget(null);
-  }, []);
-
-  const handleSwitchToConnection = (connectionId: string) => {
-    handleSwitch(connectionId);
-    if (
-      location.pathname === "/" ||
-      location.pathname === "/connections" ||
-      location.pathname === "/mcp" ||
-      location.pathname === "/settings"
-    ) {
+  const openConnection = async (connection: ConnectionStatus) => {
+    try {
+      if (!connection.isOpen) {
+        await handleConnect(connection.id);
+      } else {
+        handleSwitch(connection.id);
+      }
+      setExpandedConnectionIds((prev) => new Set(prev).add(connection.id));
       navigate("/editor");
+    } catch (error) {
+      console.error("Failed to open connection", error);
     }
   };
 
-  const handleSwitchOrSetExplorer = (connectionId: string) => {
-    if (splitView) {
-      hideSplitView();
+  const closeConnection = async (connectionId: string) => {
+    await handleDisconnect(connectionId);
+    setExpandedConnectionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(connectionId);
+      return next;
+    });
+  };
+
+  const savedConnectionById = useMemo(() => {
+    return new Map(savedConnections.map((connection) => [connection.id, connection]));
+  }, [savedConnections]);
+
+  const openEditConnection = async (connectionId: string) => {
+    const savedConnection = savedConnectionById.get(connectionId);
+    if (!savedConnection) return;
+
+    const status = connections.find((connection) => connection.id === connectionId);
+    if (status?.isOpen) {
+      await closeConnection(connectionId);
     }
-    handleSwitchToConnection(connectionId);
+    setEditingConnection(savedConnection);
   };
 
-  const handleDisconnectConnection = async (connectionId: string) => {
-    const isLast = openConnections.length <= 1;
-    await disconnectConnection(connectionId);
-    if (isLast) {
-      navigate("/");
-    }
+  const handleConnectionContextMenu = (
+    event: React.MouseEvent,
+    connectionId: string,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      connectionId,
+    });
   };
 
-  const handleOpenInEditor = (connectionId: string) => {
-    handleSwitch(connectionId);
-    navigate("/editor");
-  };
+  const contextConnection =
+    contextMenu != null
+      ? connections.find((connection) => connection.id === contextMenu.connectionId)
+      : undefined;
 
-  const explorerConnId = (splitView && isSplitVisible) ? explorerConnectionId : activeConnectionId;
-  const shouldShowExplorer =
-    !!explorerConnId &&
-    location.pathname !== "/settings" &&
-    location.pathname !== "/mcp" &&
-    location.pathname !== "/connections";
+  const contextMenuItems: ContextMenuItem[] = contextConnection
+    ? [
+        {
+          label: contextConnection.isOpen ? "切换到此连接" : "打开连接",
+          icon: Terminal,
+          action: () => void openConnection(contextConnection),
+        },
+        {
+          label: "编辑连接...",
+          icon: Edit2,
+          action: () => void openEditConnection(contextConnection.id),
+        },
+        { separator: true },
+        {
+          label: "复制名称",
+          icon: Copy,
+          action: () => void navigator.clipboard.writeText(contextConnection.name),
+        },
+        { separator: true },
+        {
+          label: t("connections.disconnect"),
+          icon: Power,
+          action: () => void closeConnection(contextConnection.id),
+          disabled: !contextConnection.isOpen,
+          danger: true,
+        },
+      ]
+    : [];
 
   return (
-    <div className="flex h-full">
-      {/* Primary Navigation Bar (Narrow) */}
-      <aside className="w-16 bg-elevated border-r border-default flex flex-col items-center py-4 z-20">
-        <div className="mb-8" title="tabularis">
-          <img
-            src="/logo.png"
-            alt="tabularis"
-            className="w-12 h-12 p-2 rounded-2xl mx-auto mb-4 shadow-lg shadow-blue-500/30"
-            style={{
-              backgroundColor: isDarkTheme
-                ? currentTheme?.colors?.surface?.secondary || "#334155"
-                : currentTheme?.colors?.bg?.elevated || "#f8fafc",
-            }}
-          />
+    <aside
+      className="relative shrink-0 bg-[#242424] border-r border-[#151515] text-[#e6e6e6] flex flex-col min-h-0"
+      style={{ width: sidebarWidth }}
+    >
+      <div
+        onMouseDown={startResize}
+        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/60 z-40"
+      />
+
+      <div className="h-10 px-2.5 flex items-center justify-between border-b border-[#151515] bg-[#2f2f2f]">
+        <div className="flex items-center gap-2 text-[15px] font-semibold">
+          <NavicatConnectionIcon size={22} />
+          <span>我的连接</span>
         </div>
-
-        <nav className="flex-1 w-full flex flex-col items-center">
-          <NavItem
-            to="/connections"
-            icon={Plug2}
-            label={t("sidebar.connections")}
-            isConnected={!!activeConnectionId}
-          />
-
-          {/* Open connections */}
-          {openConnections.length > 0 && (
-            <div className="w-full flex flex-col items-center mt-2 pt-2 border-t border-default">
-              {/* Show group item once if there is a split view */}
-              {splitView && (
-                <ConnectionGroupItem
-                  connections={openConnections.filter(c =>
-                    isConnectionGrouped(c.id, splitView),
-                  )}
-                  mode={splitView.mode}
-                />
-              )}
-
-              {/* Sortable connection list */}
-              {sortedSidebarConnections.map((conn, idx) => (
-                <OpenConnectionItem
-                  key={conn.id}
-                  connection={conn}
-                  driverManifest={allDrivers.find(d => d.id === conn.driver)}
-                  isSelected={selectedConnectionIds.has(conn.id)}
-                  onSwitch={() => handleSwitchOrSetExplorer(conn.id)}
-                  onOpenInEditor={() => handleOpenInEditor(conn.id)}
-                  onDisconnect={() => handleDisconnectConnection(conn.id)}
-                  onToggleSelect={(isCtrlHeld) => toggleSelection(conn.id, isCtrlHeld)}
-                  selectedConnectionIds={selectedConnectionIds}
-                  onActivateSplit={activateSplit}
-                  shortcutIndex={idx + 1}
-                  showShortcutHint={showShortcutHints && idx < 9}
-                  showLabel={groupedIds.has(conn.id)}
-                  draggable
-                  onReorderDragStart={(e) => handleReorderDragStart(conn.id, e)}
-                  onReorderDragOver={(e) => handleReorderDragOver(conn.id, e)}
-                  onReorderDragLeave={() => setDropTarget(null)}
-                  onReorderDrop={handleReorderDrop}
-                  onReorderDragEnd={handleReorderDragEnd}
-                  dropIndicator={dropTarget?.id === conn.id ? dropTarget.position : null}
-                />
-              ))}
-            </div>
-          )}
-        </nav>
-
-        <div className="mt-auto">
-          <div className="relative mb-2">
-            <button
-              onClick={() => openUrl(DISCORD_URL)}
-              className="flex items-center justify-center w-12 h-12 rounded-lg transition-colors relative group text-secondary hover:bg-surface-secondary hover:text-indigo-400"
-            >
-              <div className="relative">
-                <DiscordIcon size={24} />
-              </div>
-              <span className="absolute left-14 bg-surface-secondary text-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-                Discord
-              </span>
-            </button>
-            <DiscordCommunityCallout />
-          </div>
-
-          <NavItem
-            to="/mcp"
-            icon={Cpu}
-            label={t("sidebar.mcpServer")}
-          />
-
-          <NavItem
-            to="/settings"
-            icon={Settings}
-            label={t("sidebar.settings")}
-          />
-
-          <SlotAnchor
-            name="sidebar.footer.actions"
-            context={{}}
-            className="flex flex-col items-center gap-1 mt-1"
-          />
-        </div>
-      </aside>
-
-      {/* Secondary Sidebar (Schema Explorer) */}
-      {shouldShowExplorer && !isExplorerCollapsed && explorerConnId && (
-        <PanelDatabaseProvider connectionId={explorerConnId}>
-          <ExplorerSidebar
-            sidebarWidth={sidebarWidth}
-            startResize={startResize}
-            onCollapse={() => setIsExplorerCollapsed(true)}
-            sidebarTab={sidebarTab}
-            onSidebarTabChange={setSidebarTab}
-          />
-        </PanelDatabaseProvider>
-      )}
-
-      {/* Collapsed Explorer (Icon strip) */}
-      {shouldShowExplorer && isExplorerCollapsed && (
-        <div className="w-12 bg-base border-r border-default flex flex-col items-center py-2 gap-1">
+        <div className="flex items-center">
           <button
-            onClick={() => setIsExplorerCollapsed(false)}
-            className="text-muted hover:text-secondary hover:bg-surface-secondary rounded-lg p-2 transition-colors group relative"
-            title={t("sidebar.expandExplorer")}
+            onClick={() => navigate("/connections")}
+            className="p-1.5 rounded-sm text-[#d7d7d7] hover:bg-white/10 hover:text-white"
+            title={t("connections.addConnection")}
           >
-            <PanelLeft size={18} />
-            <span className="absolute left-14 top-1/2 -translate-y-1/2 bg-surface-secondary text-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-              {t("sidebar.expandExplorer")}
-            </span>
+            <Plus size={19} />
           </button>
-          <div className="w-6 h-px bg-default my-1" />
-          {([
-            { id: "structure" as SidebarTab, icon: Layers, label: t("sidebar.structure") },
-            { id: "favorites" as SidebarTab, icon: Star, label: t("sidebar.favorites") },
-            { id: "history" as SidebarTab, icon: Clock, label: t("sidebar.queryHistory") },
-          ]).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setSidebarTab(tab.id);
-                setIsExplorerCollapsed(false);
-              }}
-              className={`rounded-lg p-2 transition-colors group relative ${
-                sidebarTab === tab.id
-                  ? "text-blue-400 bg-blue-500/10"
-                  : "text-muted hover:text-secondary hover:bg-surface-secondary"
-              }`}
-              title={tab.label}
-            >
-              <tab.icon size={16} />
-              <span className="absolute left-14 top-1/2 -translate-y-1/2 bg-surface-secondary text-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-                {tab.label}
-              </span>
-            </button>
-          ))}
+          <button
+            onClick={() => navigate("/settings")}
+            className="p-1.5 rounded-sm text-[#d7d7d7] hover:bg-white/10 hover:text-white"
+            title={t("sidebar.settings")}
+          >
+            <Settings size={19} />
+          </button>
         </div>
+      </div>
+
+      <div className="p-2 border-b border-[#151515]">
+        <div className="relative">
+          <Search size={17} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8a8a8a]" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="搜索"
+            className="w-full h-9 bg-[#1f1f1f] border border-[#3a3a3a] rounded-sm pl-8 pr-2.5 text-[15px] text-[#eeeeee] placeholder:text-[#777] focus:outline-none focus:border-[#3778d8]"
+          />
+        </div>
+      </div>
+
+      <div className="custom-scrollbar overflow-y-auto flex-1 min-h-0 py-1">
+        {filteredConnections.length === 0 ? (
+          <div className="px-3 py-6 text-center text-xs text-[#8a8a8a]">
+            暂无连接
+          </div>
+        ) : (
+          filteredConnections.map((connection) => {
+            const isExpanded = expandedConnectionIds.has(connection.id) || !!search.trim();
+            const isActive = activeConnectionId === connection.id;
+            const driverManifest = allDrivers.find((driver) => driver.id === connection.driver);
+            const driverColor = getDriverColor(driverManifest);
+
+            return (
+              <div key={connection.id}>
+                <div
+                  className={`group flex items-center gap-1 h-8 pl-1 pr-1.5 text-[15px] font-semibold cursor-default ${
+                    isActive
+                      ? "bg-[#2f78d6] text-white"
+                      : "text-[#dcdcdc] hover:bg-[#343434]"
+                  }`}
+                  onDoubleClick={() => void openConnection(connection)}
+                  onContextMenu={(event) => handleConnectionContextMenu(event, connection.id)}
+                >
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!connection.isOpen) {
+                        void openConnection(connection);
+                      } else {
+                        toggleExpanded(connection.id);
+                      }
+                    }}
+                    className="w-5 h-full flex items-center justify-center text-current/80"
+                    title={isExpanded ? "收起" : "展开"}
+                  >
+                    {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+                  </button>
+
+                  <button
+                    onClick={() => void openConnection(connection)}
+                    className="flex-1 min-w-0 flex items-center gap-2 h-full text-left"
+                  >
+                    <span
+                      className="w-6 h-6 rounded-[5px] flex items-center justify-center text-white shrink-0"
+                      style={{ backgroundColor: driverColor }}
+                    >
+                      {connection.isConnecting ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        getDriverIcon(driverManifest, 17)
+                      )}
+                    </span>
+                    <span className="truncate">{connection.name}</span>
+                    {connection.sshEnabled && (
+                      <Shield size={13} className="text-emerald-300 shrink-0" />
+                    )}
+                  </button>
+
+                  {connection.isOpen && (
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void closeConnection(connection.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-black/20"
+                      title={t("connections.disconnect")}
+                    >
+                      <Power size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {isExpanded && connection.isOpen && (
+                  <div className="pl-5">
+                    <PanelDatabaseProvider connectionId={connection.id}>
+                      <ExplorerSidebar
+                        sidebarWidth={sidebarWidth}
+                        startResize={startResize}
+                        onCollapse={() => undefined}
+                        sidebarTab={sidebarTab}
+                        onSidebarTabChange={setSidebarTab}
+                        embedded
+                        globalSearch={search}
+                      />
+                    </PanelDatabaseProvider>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onClose={() => setContextMenu(null)}
+        />
       )}
-    </div>
+
+      <NewConnectionModal
+        isOpen={editingConnection !== null}
+        onClose={() => setEditingConnection(null)}
+        onSave={() => {
+          void loadConnections();
+          setEditingConnection(null);
+        }}
+        initialConnection={editingConnection}
+      />
+    </aside>
   );
 };

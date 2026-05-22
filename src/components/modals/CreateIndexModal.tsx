@@ -13,6 +13,7 @@ interface CreateIndexModalProps {
   connectionId: string;
   tableName: string;
   driver: string;
+  schema?: string;
 }
 
 interface TableColumn {
@@ -25,9 +26,11 @@ export const CreateIndexModal = ({
   onSuccess,
   connectionId,
   tableName,
+  schema,
 }: CreateIndexModalProps) => {
   const { t } = useTranslation();
   const { activeSchema } = useDatabase();
+  const effectiveSchema = schema ?? activeSchema ?? undefined;
   const [indexName, setIndexName] = useState('');
   const [isUnique, setIsUnique] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -44,12 +47,12 @@ export const CreateIndexModal = ({
         setIsUnique(false);
         setError('');
 
-        invoke<TableColumn[]>('get_columns', { connectionId, tableName, ...(activeSchema ? { schema: activeSchema } : {}) })
+        invoke<TableColumn[]>('get_columns', { connectionId, tableName, ...(effectiveSchema ? { schema: effectiveSchema } : {}) })
             .then(cols => setAvailableColumns(cols))
             .catch(e => console.error(e))
             .finally(() => setFetchingCols(false));
     }
-  }, [isOpen, connectionId, tableName, activeSchema]);
+  }, [isOpen, connectionId, tableName, effectiveSchema]);
 
   const toggleColumn = (colName: string) => {
       if (selectedColumns.includes(colName)) {
@@ -73,13 +76,13 @@ export const CreateIndexModal = ({
         indexName,
         columns: selectedColumns,
         isUnique,
-        ...(activeSchema ? { schema: activeSchema } : {}),
+        ...(effectiveSchema ? { schema: effectiveSchema } : {}),
       });
       setSqlPreview(stmts.map(s => s + ';').join('\n'));
     } catch (e) {
       setSqlPreview('-- ' + String(e));
     }
-  }, [indexName, isUnique, selectedColumns, connectionId, tableName, activeSchema, t]);
+  }, [indexName, isUnique, selectedColumns, connectionId, tableName, effectiveSchema, t]);
 
   useEffect(() => {
     const timer = setTimeout(generatePreview, 300);
@@ -99,13 +102,13 @@ export const CreateIndexModal = ({
             indexName,
             columns: selectedColumns,
             isUnique,
-            ...(activeSchema ? { schema: activeSchema } : {}),
+            ...(effectiveSchema ? { schema: effectiveSchema } : {}),
           });
           for (const sql of stmts) {
             await invoke('execute_query', {
               connectionId,
               query: sql,
-              ...(activeSchema ? { schema: activeSchema } : {}),
+              ...(effectiveSchema ? { schema: effectiveSchema } : {}),
             });
           }
           onSuccess();

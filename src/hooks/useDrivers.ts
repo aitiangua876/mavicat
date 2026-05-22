@@ -40,7 +40,7 @@ const FALLBACK_DRIVERS: PluginManifest[] = [
     default_port: 3306,
     is_builtin: true,
     default_username: "root",
-    color: "#f97316",
+    color: "#43c94d",
     icon: "mysql",
     settings: [
       {

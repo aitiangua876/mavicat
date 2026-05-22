@@ -24,11 +24,9 @@ export default defineConfig({
       output: {
         manualChunks: {
           'monaco-editor': ['monaco-editor', '@monaco-editor/react'],
-          recharts: ['recharts'],
           xyflow: ['@xyflow/react', 'dagre'],
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-          markdown: ['react-markdown'],
           table: ['@tanstack/react-table', '@tanstack/react-virtual'],
           wkx: ['wkx', 'buffer', 'util'],
         },

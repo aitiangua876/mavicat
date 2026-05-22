@@ -1,6 +1,6 @@
+use mavicat_lib::drivers::{mysql, postgres};
+use mavicat_lib::models::{ConnectionParams, DatabaseSelection};
 use std::time::Duration;
-use tabularis_lib::drivers::{mysql, postgres};
-use tabularis_lib::models::{ConnectionParams, DatabaseSelection};
 use tokio::time::sleep;
 
 // Helper to construct connection params
@@ -295,10 +295,8 @@ async fn test_mysql_batch_preserves_user_variable_and_last_insert_id() {
     );
 
     // Cleanup
-    let _ =
-        mysql::execute_query(&params, "DROP TABLE test_batch_child", None, 1, None).await;
-    let _ =
-        mysql::execute_query(&params, "DROP TABLE test_batch_parent", None, 1, None).await;
+    let _ = mysql::execute_query(&params, "DROP TABLE test_batch_child", None, 1, None).await;
+    let _ = mysql::execute_query(&params, "DROP TABLE test_batch_parent", None, 1, None).await;
 }
 
 /// Explicit `BEGIN`/`COMMIT` must span the batch — both inserts commit
@@ -312,8 +310,8 @@ async fn test_mysql_batch_preserves_transaction_atomicity() {
         return;
     }
 
-    let _ = mysql::execute_query(&params, "DROP TABLE IF EXISTS test_batch_tx", None, 1, None)
-        .await;
+    let _ =
+        mysql::execute_query(&params, "DROP TABLE IF EXISTS test_batch_tx", None, 1, None).await;
 
     let queries: Vec<String> = [
         "CREATE TABLE test_batch_tx (id INT AUTO_INCREMENT PRIMARY KEY, val VARCHAR(20))",
@@ -427,14 +425,8 @@ async fn test_mysql_affected_rows_reported_correctly() {
         return;
     }
 
-    let _ = mysql::execute_query(
-        &params,
-        "DROP TABLE IF EXISTS test_affected",
-        None,
-        1,
-        None,
-    )
-    .await;
+    let _ =
+        mysql::execute_query(&params, "DROP TABLE IF EXISTS test_affected", None, 1, None).await;
 
     let queries: Vec<String> = [
         "CREATE TABLE test_affected (id INT AUTO_INCREMENT PRIMARY KEY, v INT)",
@@ -502,14 +494,8 @@ async fn test_postgres_affected_rows_reported_correctly() {
         return;
     }
 
-    let _ = postgres::execute_query(
-        &params,
-        "DROP TABLE IF EXISTS test_affected",
-        None,
-        1,
-        None,
-    )
-    .await;
+    let _ =
+        postgres::execute_query(&params, "DROP TABLE IF EXISTS test_affected", None, 1, None).await;
 
     let queries: Vec<String> = [
         "CREATE TABLE test_affected (id SERIAL PRIMARY KEY, v INT)",
@@ -557,8 +543,8 @@ async fn test_postgres_affected_rows_reported_correctly() {
 #[tokio::test]
 #[ignore]
 async fn test_concurrent_cancel_aborts_all_in_flight_queries() {
+    use mavicat_lib::commands::QueryCancellationState;
     use std::sync::Arc;
-    use tabularis_lib::commands::QueryCancellationState;
     use tokio::task::AbortHandle;
 
     let params = get_mysql_params();
@@ -571,13 +557,15 @@ async fn test_concurrent_cancel_aborts_all_in_flight_queries() {
     let connection_id = "concurrent-cancel-test".to_string();
 
     let p_a = params.clone();
-    let task_a = tokio::spawn(async move {
-        mysql::execute_query(&p_a, "SELECT SLEEP(5)", None, 1, None).await
-    });
+    let task_a =
+        tokio::spawn(
+            async move { mysql::execute_query(&p_a, "SELECT SLEEP(5)", None, 1, None).await },
+        );
     let p_b = params.clone();
-    let task_b = tokio::spawn(async move {
-        mysql::execute_query(&p_b, "SELECT SLEEP(5)", None, 1, None).await
-    });
+    let task_b =
+        tokio::spawn(
+            async move { mysql::execute_query(&p_b, "SELECT SLEEP(5)", None, 1, None).await },
+        );
 
     let handle_a: Arc<AbortHandle> = Arc::new(task_a.abort_handle());
     let handle_b: Arc<AbortHandle> = Arc::new(task_b.abort_handle());

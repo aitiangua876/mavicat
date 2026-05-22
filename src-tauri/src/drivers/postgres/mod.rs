@@ -16,7 +16,7 @@ use crate::models::{
     TableColumn, TableInfo, TriggerInfo, ViewInfo,
 };
 use crate::pool_manager::get_postgres_pool;
-use binding::{PgValueOptions, bind_pg_value, build_pk_predicate};
+use binding::{bind_pg_value, build_pk_predicate, PgValueOptions};
 use client::{execute, format_pg_error, get_client, query_all, query_one};
 pub use explain::explain_query;
 use extract::extract_value;
@@ -65,7 +65,16 @@ pub async fn get_tables(params: &ConnectionParams, schema: &str) -> Result<Vec<T
     let pool = get_postgres_pool(params).await?;
     let rows = query_all(
         &pool,
-        "SELECT table_name::text as name FROM information_schema.tables WHERE table_schema = $1 AND table_type = 'BASE TABLE' ORDER BY table_name ASC",
+        r#"
+        SELECT
+            t.table_name::text as name,
+            obj_description(c.oid, 'pg_class') as comment
+        FROM information_schema.tables t
+        JOIN pg_namespace n ON n.nspname = t.table_schema
+        JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = t.table_name
+        WHERE t.table_schema = $1 AND t.table_type = 'BASE TABLE'
+        ORDER BY t.table_name ASC
+        "#,
         &[&schema],
     )
     .await?;
@@ -73,6 +82,7 @@ pub async fn get_tables(params: &ConnectionParams, schema: &str) -> Result<Vec<T
         .iter()
         .map(|r| TableInfo {
             name: r.try_get("name").unwrap_or_default(),
+            comment: r.try_get("comment").ok(),
         })
         .collect();
     log::debug!(
@@ -99,6 +109,7 @@ pub async fn get_columns(
             c.column_default::text,
             c.is_identity::text,
             c.character_maximum_length,
+            col_description(pc.oid, pa.attnum) as comment,
             (SELECT COUNT(*) FROM information_schema.table_constraints tc
              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
              AND tc.table_schema = kcu.table_schema
@@ -107,6 +118,9 @@ pub async fn get_columns(
              AND kcu.table_name = c.table_name
              AND kcu.column_name = c.column_name) > 0 as is_pk
         FROM information_schema.columns c
+        LEFT JOIN pg_namespace pn ON pn.nspname = c.table_schema
+        LEFT JOIN pg_class pc ON pc.relnamespace = pn.oid AND pc.relname = c.table_name
+        LEFT JOIN pg_attribute pa ON pa.attrelid = pc.oid AND pa.attname = c.column_name
         WHERE c.table_schema = $1 AND c.table_name = $2
         ORDER BY c.ordinal_position
     "#;
@@ -148,6 +162,7 @@ pub async fn get_columns(
                 is_auto_increment: is_auto,
                 default_value,
                 character_maximum_length,
+                comment: r.try_get("comment").ok(),
             }
         })
         .collect())
@@ -216,6 +231,7 @@ pub async fn get_all_columns_batch(
             c.column_default,
             c.is_identity,
             c.character_maximum_length,
+            col_description(pc.oid, pa.attnum) as comment,
             (SELECT COUNT(*) FROM information_schema.table_constraints tc
              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
              AND tc.table_schema = kcu.table_schema
@@ -224,6 +240,9 @@ pub async fn get_all_columns_batch(
              AND kcu.table_name = c.table_name
              AND kcu.column_name = c.column_name) > 0 as is_pk
         FROM information_schema.columns c
+        LEFT JOIN pg_namespace pn ON pn.nspname = c.table_schema
+        LEFT JOIN pg_class pc ON pc.relnamespace = pn.oid AND pc.relname = c.table_name
+        LEFT JOIN pg_attribute pa ON pa.attrelid = pc.oid AND pa.attname = c.column_name
         WHERE c.table_schema = $1
         ORDER BY c.table_name, c.ordinal_position
     "#;
@@ -266,6 +285,7 @@ pub async fn get_all_columns_batch(
             is_auto_increment: is_auto,
             default_value,
             character_maximum_length,
+            comment: row.try_get("comment").ok(),
         };
 
         result
@@ -782,12 +802,10 @@ async fn exec_on_pg_client(
     };
 
     let pg_params: Vec<i32> = vec![];
-    let mut rows_stream = std::pin::pin!(
-        client
-            .query_raw(&final_query, &pg_params)
-            .await
-            .map_err(|e| format_pg_error(&e))?
-    );
+    let mut rows_stream = std::pin::pin!(client
+        .query_raw(&final_query, &pg_params)
+        .await
+        .map_err(|e| format_pg_error(&e))?);
 
     let mut columns: Vec<String> = Vec::new();
     let mut json_rows = Vec::new();
@@ -1020,6 +1038,7 @@ pub async fn get_view_columns(
             c.column_default,
             c.is_identity,
             c.character_maximum_length,
+            col_description(pc.oid, pa.attnum) as comment,
             (SELECT COUNT(*) FROM information_schema.table_constraints tc
              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
              AND tc.table_schema = kcu.table_schema
@@ -1028,6 +1047,9 @@ pub async fn get_view_columns(
              AND kcu.table_name = c.table_name
              AND kcu.column_name = c.column_name) > 0 as is_pk
         FROM information_schema.columns c
+        LEFT JOIN pg_namespace pn ON pn.nspname = c.table_schema
+        LEFT JOIN pg_class pc ON pc.relnamespace = pn.oid AND pc.relname = c.table_name
+        LEFT JOIN pg_attribute pa ON pa.attrelid = pc.oid AND pa.attname = c.column_name
         WHERE c.table_schema = $1 AND c.table_name = $2
         ORDER BY c.ordinal_position
     "#;
@@ -1069,6 +1091,7 @@ pub async fn get_view_columns(
                 is_auto_increment: is_auto,
                 default_value,
                 character_maximum_length,
+                comment: r.try_get("comment").ok(),
             }
         })
         .collect())
@@ -1552,7 +1575,13 @@ impl DatabaseDriver for PostgresDriver {
         table_name: &str,
         schema: Option<&str>,
     ) -> Result<String, String> {
-        get_trigger_definition(params, trigger_name, table_name, self.resolve_schema(schema)).await
+        get_trigger_definition(
+            params,
+            trigger_name,
+            table_name,
+            self.resolve_schema(schema),
+        )
+        .await
     }
 
     async fn create_trigger(
@@ -1571,7 +1600,13 @@ impl DatabaseDriver for PostgresDriver {
         table_name: &str,
         schema: Option<&str>,
     ) -> Result<(), String> {
-        drop_trigger(params, trigger_name, table_name, self.resolve_schema(schema)).await
+        drop_trigger(
+            params,
+            trigger_name,
+            table_name,
+            self.resolve_schema(schema),
+        )
+        .await
     }
 
     async fn execute_query(

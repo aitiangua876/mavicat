@@ -20,9 +20,9 @@ export const Accordion = ({
     <div className="flex items-center justify-between px-2 py-1 group/acc">
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider hover:text-secondary transition-colors select-none flex-1"
+        className="flex items-center gap-2 text-[13px] font-semibold text-muted uppercase tracking-wider hover:text-secondary transition-colors select-none flex-1"
       >
-        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         <span>{title}</span>
       </button>
       {actions}

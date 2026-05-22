@@ -5,14 +5,11 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
-  Database,
   Plus,
   RefreshCw,
   Download,
   Upload,
   Network,
-  Search,
-  X,
 } from "lucide-react";
 import { Accordion } from "./Accordion";
 import { SidebarTableItem } from "./SidebarTableItem";
@@ -25,6 +22,7 @@ import type { ContextMenuData } from "../../../types/sidebar";
 import type { DriverCapabilities } from "../../../types/plugins";
 import { groupRoutinesByType } from "../../../utils/routines";
 import { formatObjectCount } from "../../../utils/schema";
+import { NavicatDatabaseIcon } from "../../icons/NavicatStyleIcons";
 
 interface SidebarDatabaseItemProps {
   databaseName: string;
@@ -34,7 +32,9 @@ interface SidebarDatabaseItemProps {
   connectionId: string;
   driver: string;
   schemaVersion: number;
-  onLoadDatabase: (database: string) => void;
+  isOpen: boolean;
+  onOpenDatabase: (database: string) => void;
+  onCloseDatabase: (database: string) => void;
   onRefreshDatabase: (database: string) => void;
   onTableClick: (name: string, database: string) => void;
   onTableDoubleClick: (name: string, database: string) => void;
@@ -62,6 +62,7 @@ interface SidebarDatabaseItemProps {
   onImport?: (database: string) => void;
   onViewDiagram?: (database: string) => void;
   capabilities?: DriverCapabilities | null;
+  globalSearch?: string;
 }
 
 export const SidebarDatabaseItem = ({
@@ -72,7 +73,9 @@ export const SidebarDatabaseItem = ({
   connectionId,
   driver,
   schemaVersion,
-  onLoadDatabase,
+  isOpen,
+  onOpenDatabase,
+  onCloseDatabase,
   onRefreshDatabase,
   onTableClick,
   onTableDoubleClick,
@@ -94,28 +97,27 @@ export const SidebarDatabaseItem = ({
   onImport,
   onViewDiagram,
   capabilities,
+  globalSearch = "",
 }: SidebarDatabaseItemProps) => {
   const { t } = useTranslation();
 
-  const [isExpanded, setIsExpanded] = useState(activeSchema === databaseName);
   const [tablesOpen, setTablesOpen] = useState(true);
   const [viewsOpen, setViewsOpen] = useState(true);
   const [routinesOpen, setRoutinesOpen] = useState(false);
   const [triggersOpen, setTriggersOpen] = useState(false);
   const [functionsOpen, setFunctionsOpen] = useState(true);
   const [proceduresOpen, setProceduresOpen] = useState(true);
-  const [tableFilter, setTableFilter] = useState("");
-  const [triggerFilter, setTriggerFilter] = useState("");
+  const objectFilter = globalSearch.trim().toLowerCase();
 
   const tables = databaseData?.tables ?? [];
-  const filteredTables = tableFilter
-    ? tables.filter((t) => t.name.toLowerCase().includes(tableFilter.toLowerCase()))
+  const filteredTables = objectFilter
+    ? tables.filter((t) => t.name.toLowerCase().includes(objectFilter))
     : tables;
   const views = databaseData?.views ?? [];
   const routines = databaseData?.routines ?? [];
   const triggers = databaseData?.triggers ?? [];
-  const filteredTriggers = triggerFilter
-    ? triggers.filter((tr) => tr.name.toLowerCase().includes(triggerFilter.toLowerCase()))
+  const filteredTriggers = objectFilter
+    ? triggers.filter((tr) => tr.name.toLowerCase().includes(objectFilter))
     : triggers;
   const isLoading = databaseData?.isLoading ?? false;
   const isLoaded = databaseData?.isLoaded ?? false;
@@ -124,11 +126,16 @@ export const SidebarDatabaseItem = ({
     ? groupRoutinesByType(routines)
     : { procedures: [], functions: [] };
 
-  const handleToggle = () => {
-    const willExpand = !isExpanded;
-    setIsExpanded(willExpand);
-    if (willExpand && !isLoaded && !isLoading) {
-      onLoadDatabase(databaseName);
+  const handleOpen = () => {
+    onOpenDatabase(databaseName);
+  };
+
+  const handleToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (isOpen) {
+      onCloseDatabase(databaseName);
+    } else {
+      handleOpen();
     }
   };
 
@@ -140,80 +147,82 @@ export const SidebarDatabaseItem = ({
     <div className="flex flex-col">
       {/* Database header */}
       <div
-        className="flex items-center justify-between px-2 py-1.5 group/db cursor-pointer hover:bg-surface-secondary transition-colors"
-        onClick={handleToggle}
+        className="flex items-center justify-between px-2 py-1 group/db cursor-pointer hover:bg-surface-secondary transition-colors"
+        onDoubleClick={handleOpen}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu(e, "database", databaseName, databaseName);
         }}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {isExpanded ? (
-            <ChevronDown size={14} className="text-muted shrink-0" />
-          ) : (
-            <ChevronRight size={14} className="text-muted shrink-0" />
-          )}
-          <Database
-            size={14}
-            className={
-              activeSchema === databaseName
-                ? "text-blue-400 shrink-0"
-                : "text-muted group-hover/db:text-blue-400 shrink-0"
-            }
+          <button
+            onClick={handleToggle}
+            className="p-0.5 rounded hover:bg-surface-secondary text-muted hover:text-primary transition-colors"
+          >
+            {isOpen ? (
+              <ChevronDown size={17} className="text-muted shrink-0" />
+            ) : (
+              <ChevronRight size={17} className="text-muted shrink-0" />
+            )}
+          </button>
+          <NavicatDatabaseIcon
+            size={18}
+            active={isOpen}
+            className="shrink-0"
           />
-          <span className="text-sm font-medium text-secondary truncate">
+          <span className={`text-[15px] font-semibold truncate ${isOpen ? "text-secondary" : "text-muted"}`}>
             {databaseName}
           </span>
           {isLoaded && (
-            <span className="ml-1 text-[10px] text-muted opacity-60 shrink-0">
+            <span className="ml-1 text-xs text-muted opacity-60 shrink-0">
               {itemCount}
             </span>
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          {onImport && (
+          {isOpen && onImport && (
             <button
               onClick={(e) => { e.stopPropagation(); onImport(databaseName); }}
               className="p-1 rounded hover:bg-surface-secondary text-muted hover:text-green-400 transition-colors"
               title={t("dump.importDatabase")}
             >
-              <Upload size={13} />
+              <Upload size={16} />
             </button>
           )}
-          {onDump && (
+          {isOpen && onDump && (
             <button
               onClick={(e) => { e.stopPropagation(); onDump(databaseName); }}
               className="p-1 rounded hover:bg-surface-secondary text-muted hover:text-blue-400 transition-colors"
               title={t("dump.dumpDatabase")}
             >
-              <Download size={13} />
+              <Download size={16} />
             </button>
           )}
-          {onViewDiagram && (
+          {isOpen && onViewDiagram && (
             <button
               onClick={(e) => { e.stopPropagation(); onViewDiagram(databaseName); }}
               className="p-1 rounded hover:bg-surface-secondary text-muted hover:text-orange-400 transition-colors"
               title={t("sidebar.viewERDiagram")}
             >
-              <Network size={13} className="rotate-90" />
+              <Network size={16} className="rotate-90" />
             </button>
           )}
-          <button
+          {isOpen && <button
             onClick={(e) => { e.stopPropagation(); onRefreshDatabase(databaseName); }}
             className="p-1 rounded hover:bg-surface-secondary text-muted hover:text-primary transition-colors"
             title={t("sidebar.refreshTables")}
           >
-            <RefreshCw size={13} />
-          </button>
+            <RefreshCw size={16} />
+          </button>}
         </div>
       </div>
 
       {/* Database contents */}
-      {isExpanded && (
-        <div className="ml-3 border-l border-default">
+      {isOpen && (
+        <div className="ml-3.5 border-l border-default">
           {isLoading && !isLoaded ? (
-            <div className="flex items-center gap-2 p-2 text-xs text-muted">
-              <Loader2 size={12} className="animate-spin" />
+            <div className="flex items-center gap-2 px-2 py-1 text-sm text-muted">
+              <Loader2 size={14} className="animate-spin" />
               {t("sidebar.loadingSchema")}
             </div>
           ) : (
@@ -240,32 +249,9 @@ export const SidebarDatabaseItem = ({
                   ) : undefined
                 }
               >
-                {tables.length > 0 && (
-                  <div className="px-2 py-1">
-                    <div className="relative flex items-center">
-                      <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                      <input
-                        type="text"
-                        value={tableFilter}
-                        onChange={(e) => setTableFilter(e.target.value)}
-                        placeholder={t("sidebar.filterTables")}
-                        className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {tableFilter && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setTableFilter(""); }}
-                          className="absolute right-1.5 text-muted hover:text-primary"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
                 {filteredTables.length === 0 ? (
                   <div className="text-center p-2 text-xs text-muted italic">
-                    {tableFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
+                    {objectFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
                   </div>
                 ) : (
                   <div>
@@ -360,32 +346,9 @@ export const SidebarDatabaseItem = ({
                     </div>
                   }
                 >
-                  {triggers.length > 0 && (
-                    <div className="px-2 py-1">
-                      <div className="relative flex items-center">
-                        <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                        <input
-                          type="text"
-                          value={triggerFilter}
-                          onChange={(e) => setTriggerFilter(e.target.value)}
-                          placeholder={t("sidebar.filterTriggers")}
-                          className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {triggerFilter && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setTriggerFilter(""); }}
-                            className="absolute right-1.5 text-muted hover:text-primary"
-                          >
-                            <X size={11} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   {filteredTriggers.length === 0 ? (
                     <div className="text-center p-2 text-xs text-muted italic">
-                      {triggerFilter ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
+                      {objectFilter ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
                     </div>
                   ) : (
                     <div>

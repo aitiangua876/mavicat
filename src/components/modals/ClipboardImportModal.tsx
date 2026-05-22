@@ -40,6 +40,8 @@ interface ClipboardImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialText?: string;
+  sourceLabel?: string;
 }
 
 interface ImportResult {
@@ -47,7 +49,13 @@ interface ImportResult {
   table_created: boolean;
 }
 
-export function ClipboardImportModal({ isOpen, onClose, onSuccess }: ClipboardImportModalProps) {
+export function ClipboardImportModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialText,
+  sourceLabel,
+}: ClipboardImportModalProps) {
   const { t } = useTranslation();
   const titleId = useId();
   const descriptionId = useId();
@@ -103,28 +111,32 @@ export function ClipboardImportModal({ isOpen, onClose, onSuccess }: ClipboardIm
     (t) => t.toLowerCase() === tableName.toLowerCase() && tableName !== ''
   );
 
-  const readClipboard = useCallback(async () => {
-    setIsLoadingClipboard(true);
+  const parseText = useCallback(async (text: string) => {
     setError(null);
     setSuccess(null);
+    if (!text || !text.trim()) {
+      setError(t('clipboardImport.noData'));
+      setParsed(null);
+      return;
+    }
+    setRawText(text);
+    const result = parseClipboardText(text);
+    setParsed(result);
+    const mapped = await toSchemaColumns(result.inferredColumns);
+    setColumns(mapped);
+  }, [t, toSchemaColumns]);
+
+  const readClipboard = useCallback(async () => {
+    setIsLoadingClipboard(true);
     try {
       const text = await readText();
-      if (!text || !text.trim()) {
-        setError(t('clipboardImport.noData'));
-        setParsed(null);
-        return;
-      }
-      setRawText(text);
-      const result = parseClipboardText(text);
-      setParsed(result);
-      const mapped = await toSchemaColumns(result.inferredColumns);
-      setColumns(mapped);
+      await parseText(text);
     } catch {
       setError(t('clipboardImport.noData'));
     } finally {
       setIsLoadingClipboard(false);
     }
-  }, [t, toSchemaColumns]);
+  }, [t, parseText]);
 
   // Load existing tables for conflict detection
   const loadTables = useCallback(async () => {
@@ -150,10 +162,14 @@ export function ClipboardImportModal({ isOpen, onClose, onSuccess }: ClipboardIm
       setWarningsExpanded(false);
       setMaximizedPane(null);
       setTargetColumns([]);
-      readClipboard();
+      if (initialText !== undefined) {
+        void parseText(initialText);
+      } else {
+        readClipboard();
+      }
       loadTables();
     }
-  }, [isOpen, readClipboard, loadTables]);
+  }, [isOpen, initialText, parseText, readClipboard, loadTables]);
 
   // Fetch columns of the existing target table when append mode is active.
   useEffect(() => {
@@ -369,7 +385,7 @@ export function ClipboardImportModal({ isOpen, onClose, onSuccess }: ClipboardIm
                   {t('clipboardImport.title')}
                 </h2>
                 <p id={descriptionId} className="text-[11px] text-muted leading-relaxed">
-                  {t('clipboardImport.subtitle')}
+                  {sourceLabel ?? t('clipboardImport.subtitle')}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

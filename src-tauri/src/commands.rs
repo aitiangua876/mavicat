@@ -310,8 +310,7 @@ pub fn find_connection_by_id<R: Runtime>(
     app: &AppHandle<R>,
     id: &str,
 ) -> Result<SavedConnection, String> {
-    let conn_cache =
-        app.state::<std::sync::Arc<crate::connection_cache::ConnectionCache>>();
+    let conn_cache = app.state::<std::sync::Arc<crate::connection_cache::ConnectionCache>>();
 
     let mut conn = match conn_cache.lookup(id) {
         crate::connection_cache::CacheLookup::Hit(c) => c,
@@ -493,6 +492,30 @@ pub async fn get_schema_snapshot<R: Runtime>(
 }
 
 #[tauri::command]
+pub async fn get_table_ddl<R: Runtime>(
+    app: AppHandle<R>,
+    connection_id: String,
+    table_name: String,
+    schema: Option<String>,
+) -> Result<String, String> {
+    let saved_conn = find_connection_by_id(&app, &connection_id)?;
+    let expanded_params = expand_ssh_connection_params(&app, &saved_conn.params).await?;
+    let params = resolve_connection_params_with_id(&expanded_params, &connection_id)?;
+
+    match saved_conn.params.driver.as_str() {
+        "mysql" | "mariadb" => {
+            crate::drivers::mysql::get_table_ddl(&params, &table_name, schema.as_deref()).await
+        }
+        "postgres" => {
+            let schema_name = schema.unwrap_or_else(|| "public".to_string());
+            crate::drivers::postgres::get_table_ddl(&params, &table_name, &schema_name).await
+        }
+        "sqlite" => crate::drivers::sqlite::get_table_ddl(&params, &table_name).await,
+        driver => Err(format!("Table DDL is not supported for driver: {}", driver)),
+    }
+}
+
+#[tauri::command]
 pub async fn save_connection<R: Runtime>(
     app: AppHandle<R>,
     name: String,
@@ -576,7 +599,11 @@ pub async fn delete_connection<R: Runtime>(app: AppHandle<R>, id: String) -> Res
 
     // Clean up query history for this connection
     if let Err(e) = crate::query_history::remove_history_for_connection(&app, &id) {
-        log::warn!("Failed to remove query history for connection {}: {}", id, e);
+        log::warn!(
+            "Failed to remove query history for connection {}: {}",
+            id,
+            e
+        );
     }
 
     if deleted {
@@ -660,26 +687,17 @@ pub async fn update_connection<R: Runtime>(
 
     // On single→multi transition, associate existing favorites/history (with no
     // database set) to the original single database name.
-    if let Some(previous_db) = crate::models::single_db_before_multi_transition(
-        &original_db_selection,
-        &params.database,
-    ) {
-        if let Err(e) = crate::saved_queries::backfill_missing_database_for_connection(
-            &app,
-            &id,
-            &previous_db,
-        ) {
-            log::warn!(
-                "Failed to backfill saved query database for {}: {}",
-                id,
-                e
-            );
+    if let Some(previous_db) =
+        crate::models::single_db_before_multi_transition(&original_db_selection, &params.database)
+    {
+        if let Err(e) =
+            crate::saved_queries::backfill_missing_database_for_connection(&app, &id, &previous_db)
+        {
+            log::warn!("Failed to backfill saved query database for {}: {}", id, e);
         }
-        if let Err(e) = crate::query_history::backfill_missing_database_for_connection(
-            &app,
-            &id,
-            &previous_db,
-        ) {
+        if let Err(e) =
+            crate::query_history::backfill_missing_database_for_connection(&app, &id, &previous_db)
+        {
             log::warn!(
                 "Failed to backfill query history database for {}: {}",
                 id,
@@ -959,50 +977,6 @@ pub async fn get_ssh_connections<R: Runtime>(
                     "password".to_string()
                 },
             );
-        }
-    }
-
-    // Fetch credentials for all connections that use keychain, in a single
-    // spawn_blocking call. The cache is checked first (HashMap lookup), so
-    // subsequent calls (e.g. from the UI refreshing the list) are near-instant.
-    let ids_needing_creds: Vec<String> = ssh_connections
-        .iter()
-        .filter(|s| s.save_in_keychain.unwrap_or(false))
-        .map(|s| s.id.clone())
-        .collect();
-
-    if !ids_needing_creds.is_empty() {
-        // Clone the Arc out of the Tauri State so the closure owns it ('static bound)
-        let cache = app
-            .state::<std::sync::Arc<crate::credential_cache::CredentialCache>>()
-            .inner()
-            .clone();
-        let credentials = tokio::task::spawn_blocking(move || {
-            ids_needing_creds
-                .into_iter()
-                .map(|id| {
-                    let pwd = credential_cache::get_ssh_password_cached(&cache, &id);
-                    let pass = credential_cache::get_ssh_key_passphrase_cached(&cache, &id);
-                    (id, pwd, pass)
-                })
-                .collect::<Vec<_>>()
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-
-        for (id, pwd_r, pass_r) in credentials {
-            if let Some(ssh) = ssh_connections.iter_mut().find(|s| s.id == id) {
-                if let Ok(pwd) = pwd_r {
-                    if !pwd.trim().is_empty() {
-                        ssh.password = Some(pwd);
-                    }
-                }
-                if let Ok(pass) = pass_r {
-                    if !pass.trim().is_empty() {
-                        ssh.key_passphrase = Some(pass);
-                    }
-                }
-            }
         }
     }
 
@@ -1833,7 +1807,9 @@ mod tests {
 
             {
                 let remaining = state.handles.lock().unwrap();
-                let slot = remaining.get("conn-1").expect("slot kept while B in flight");
+                let slot = remaining
+                    .get("conn-1")
+                    .expect("slot kept while B in flight");
                 assert_eq!(slot.len(), 1);
                 assert!(Arc::ptr_eq(&slot[0], &handle_b));
             }
@@ -2684,7 +2660,7 @@ pub async fn open_er_diagram_window(
         .map(|s| format!("/{}", s))
         .unwrap_or_default();
     let title = format!(
-        "tabularis - {} ({}{})",
+        "Mavicat - {} ({}{})",
         database_name, connection_name, schema_suffix
     );
     let mut url = format!(
@@ -3594,7 +3570,11 @@ pub async fn import_connections_payload<R: Runtime>(
 
     // Merge groups
     for new_group in payload.groups {
-        if let Some(existing) = current_file.groups.iter_mut().find(|g| g.id == new_group.id) {
+        if let Some(existing) = current_file
+            .groups
+            .iter_mut()
+            .find(|g| g.id == new_group.id)
+        {
             *existing = new_group;
         } else {
             current_file.groups.push(new_group);

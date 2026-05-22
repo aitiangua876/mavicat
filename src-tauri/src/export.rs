@@ -5,9 +5,12 @@ mod sink;
 #[cfg(test)]
 mod tests;
 
-pub use format::{parse_csv_delimiter, value_to_csv_string, ExportFormat, DEFAULT_CSV_DELIMITER};
+pub use format::{
+    escape_html, parse_csv_delimiter, quote_sql_string, value_to_csv_string, value_to_sql_literal,
+    ExportFormat, DEFAULT_CSV_DELIMITER,
+};
 pub use progress::{ProgressEmitter, DEFAULT_INTERVAL as DEFAULT_PROGRESS_INTERVAL};
-pub use sink::{CsvSink, JsonSink, RowSink};
+pub use sink::{CsvSink, ExcelSink, JsonSink, RowSink, SqlDialect, SqlInsertSink};
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -72,6 +75,8 @@ pub async fn export_query_to_file<R: Runtime>(
     file_path: String,
     format: String,
     csv_delimiter: Option<String>,
+    export_table_name: Option<String>,
+    export_schema: Option<String>,
 ) -> Result<(), String> {
     let sanitized_query = sanitize_query(&query);
     let saved_conn = find_connection_by_id(&app, &connection_id)?;
@@ -81,6 +86,13 @@ pub async fn export_query_to_file<R: Runtime>(
 
     let export_format = ExportFormat::parse(&format)?;
     let delimiter = parse_csv_delimiter(csv_delimiter.as_deref());
+    let export_table_name = export_table_name
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "export_result".to_string());
+    let export_schema = export_schema
+        .map(|schema| schema.trim().to_string())
+        .filter(|schema| !schema.is_empty());
 
     let app_for_task = app.clone();
     let task_connection_id = connection_id.clone();
@@ -96,6 +108,8 @@ pub async fn export_query_to_file<R: Runtime>(
             writer,
             export_format,
             delimiter,
+            export_table_name,
+            export_schema,
         )
         .await
     });
@@ -128,6 +142,8 @@ async fn run_export<R: Runtime>(
     writer: BufWriter<File>,
     format: ExportFormat,
     delimiter: u8,
+    export_table_name: String,
+    export_schema: Option<String>,
 ) -> Result<(), String> {
     let app_for_progress = app.clone();
     let mut progress = ProgressEmitter::new(DEFAULT_PROGRESS_INTERVAL, move |count| {
@@ -147,6 +163,17 @@ async fn run_export<R: Runtime>(
         }
         ExportFormat::Json => {
             let mut sink = JsonSink::new(writer);
+            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            sink.finish()?;
+        }
+        ExportFormat::Excel => {
+            let mut sink = ExcelSink::new(writer);
+            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            sink.finish()?;
+        }
+        ExportFormat::Sql => {
+            let dialect = SqlDialect::from_driver(driver);
+            let mut sink = SqlInsertSink::new(writer, dialect, export_table_name, export_schema);
             stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
             sink.finish()?;
         }

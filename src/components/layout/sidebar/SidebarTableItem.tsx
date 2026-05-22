@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  Table as TableIcon,
   Loader2,
   Folder,
   Link as LinkIcon,
@@ -16,9 +15,10 @@ import { SidebarColumnItem } from "./SidebarColumnItem";
 import { dragState } from "../../../utils/dragState";
 import type { TableColumn, ForeignKey, Index } from "../../../types/schema";
 import type { ContextMenuData } from "../../../types/sidebar";
+import { NavicatTableIcon } from "../../icons/NavicatStyleIcons";
 
 interface SidebarTableItemProps {
-  table: { name: string };
+  table: { name: string; comment?: string | null };
   activeTable: string | null;
   onTableClick: (name: string) => void;
   onTableDoubleClick: (name: string) => void;
@@ -143,6 +143,10 @@ export const SidebarTableItem = ({
 
   const keys = groupedIndexes.filter((i) => i.is_primary || i.is_unique);
   const indexesList = groupedIndexes;
+  const tableComment = table.comment?.trim();
+  const tableTitle = tableComment
+    ? `${table.name}\n\n注释：${tableComment}`
+    : table.name;
 
   return (
     <div className="flex flex-col">
@@ -172,34 +176,40 @@ export const SidebarTableItem = ({
         onClick={() => onTableClick(table.name)}
         onDoubleClick={() => onTableDoubleClick(table.name)}
         onContextMenu={(e) => handleContextMenu(e, "table", table.name)}
+        title={tableTitle}
         className={clsx(
-          "flex items-center gap-1 pl-1 pr-3 py-1.5 text-sm cursor-pointer group select-none transition-colors border-l-2",
+          "flex items-center gap-1.5 pl-1 pr-3 py-1 text-[15px] font-semibold cursor-pointer group select-none transition-colors border-l-2",
           activeTable === table.name
-            ? "bg-blue-900/40 text-blue-200 border-blue-500"
-            : "text-secondary hover:bg-surface-secondary border-transparent hover:text-primary",
+            ? "bg-[#1f3f7f] text-[#f3f8ff] border-[#4aa3ff] shadow-[inset_0_0_0_1px_rgba(96,165,250,0.14)]"
+            : "text-[#d7e2f0] border-transparent hover:bg-[#303842] hover:text-white",
         )}
       >
         <button
           onClick={handleExpand}
-          className="p-0.5 rounded hover:bg-surface-secondary text-muted hover:text-primary transition-colors"
-        >
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-        <TableIcon
-          size={14}
-          className={
+          className={clsx(
+            "p-0.5 rounded transition-colors",
             activeTable === table.name
-              ? "text-blue-400"
-              : "text-muted group-hover:text-blue-400"
-          }
-        />
-        <span className="truncate flex-1">{table.name}</span>
+              ? "text-[#dbeafe] hover:bg-white/10"
+              : "text-[#8fa6c3] hover:bg-white/10 hover:text-[#dcecff]",
+          )}
+        >
+          {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+        </button>
+        <NavicatTableIcon size={18} className="shrink-0" />
+        <span
+          className={clsx(
+            "truncate flex-1 decoration-dotted underline-offset-4",
+            tableComment && "group-hover:underline",
+          )}
+        >
+          {table.name}
+        </span>
       </div>
       {isExpanded && (
-        <div className="ml-[22px] border-l border-default">
+        <div className="ml-[24px] border-l border-default">
           {isLoading ? (
-            <div className="flex items-center gap-2 p-2 text-xs text-muted">
-              <Loader2 size={12} className="animate-spin" />
+            <div className="flex items-center gap-2 px-2 py-1 text-sm text-muted">
+              <Loader2 size={14} className="animate-spin" />
               {t("sidebar.loadingSchema")}
             </div>
           ) : (
@@ -207,7 +217,7 @@ export const SidebarTableItem = ({
               {/* Columns Folder */}
               <div className="flex flex-col">
                 <div
-                  className="flex items-center gap-2 px-2 py-1 text-xs text-muted hover:text-secondary cursor-pointer select-none"
+                  className="flex items-center gap-2 px-2 py-1 text-sm text-muted hover:text-secondary cursor-pointer select-none"
                   onClick={(e) => {
                     e.stopPropagation();
                     setExpandColumns(!expandColumns);
@@ -217,9 +227,9 @@ export const SidebarTableItem = ({
                     e.preventDefault();
                   }}
                 >
-                  <Folder size={12} className="text-blue-400/70" />
+                  <Folder size={15} className="text-blue-400/70" />
                   <span>{t("sidebar.columns")}</span>
-                  <span className="ml-auto text-[10px] opacity-50">
+                  <span className="ml-auto text-xs opacity-50">
                     {columns.length}
                   </span>
                 </div>
@@ -246,15 +256,15 @@ export const SidebarTableItem = ({
               {keys.length > 0 && (
                 <div className="flex flex-col">
                   <div
-                    className="flex items-center gap-2 px-2 py-1 text-xs text-muted hover:text-secondary cursor-pointer select-none"
+                    className="flex items-center gap-2 px-2 py-1 text-sm text-muted hover:text-secondary cursor-pointer select-none"
                     onClick={(e) => {
                       e.stopPropagation();
                       setExpandKeys(!expandKeys);
                     }}
                   >
-                    <Folder size={12} className="text-yellow-500/70" />
+                    <Folder size={15} className="text-yellow-500/70" />
                     <span>{t("sidebar.keys")}</span>
-                    <span className="ml-auto text-[10px] opacity-50">
+                    <span className="ml-auto text-xs opacity-50">
                       {keys.length}
                     </span>
                   </div>
@@ -263,14 +273,14 @@ export const SidebarTableItem = ({
                       {keys.map((k) => (
                         <div
                           key={k.name}
-                          className="flex items-center gap-2 px-3 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
+                          className="flex items-center gap-2 px-3 py-1 text-sm text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
                           title={k.columns.join(", ")}
                           onContextMenu={canManage !== false ? (e) => {
                             handleContextMenu(e, "index", k.name);
                           } : undefined}
                         >
                           <Key
-                            size={12}
+                            size={15}
                             className={
                               k.is_primary ? "text-yellow-500" : "text-secondary"
                             }
@@ -286,7 +296,7 @@ export const SidebarTableItem = ({
               {/* Foreign Keys Folder */}
               <div className="flex flex-col">
                 <div
-                  className="flex items-center gap-2 px-2 py-1 text-xs text-muted hover:text-secondary cursor-pointer select-none"
+                  className="flex items-center gap-2 px-2 py-1 text-sm text-muted hover:text-secondary cursor-pointer select-none"
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
@@ -294,9 +304,9 @@ export const SidebarTableItem = ({
                     handleContextMenu(e, "folder_fks", "foreign keys")
                   : undefined}
                 >
-                  <Folder size={12} className="text-purple-400/70" />
+                  <Folder size={15} className="text-purple-400/70" />
                   <span>{t("sidebar.foreignKeys")}</span>
-                  <span className="ml-auto text-[10px] opacity-50">
+                  <span className="ml-auto text-xs opacity-50">
                     {foreignKeys.length}
                   </span>
                 </div>
@@ -304,13 +314,13 @@ export const SidebarTableItem = ({
                   {foreignKeys.map((fk) => (
                     <div
                       key={fk.name}
-                      className="flex items-center gap-2 px-3 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
+                      className="flex items-center gap-2 px-3 py-1 text-sm text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
                       title={`${fk.column_name} -> ${fk.ref_table}.${fk.ref_column}`}
                       onContextMenu={canManage !== false ? (e) =>
                         handleContextMenu(e, "foreign_key", fk.name)
                       : undefined}
                     >
-                      <LinkIcon size={12} className="text-purple-400 shrink-0" />
+                      <LinkIcon size={15} className="text-purple-400 shrink-0" />
                       <span className="truncate flex-1 min-w-0">{fk.name}</span>
                     </div>
                   ))}
@@ -320,7 +330,7 @@ export const SidebarTableItem = ({
               {/* Indexes Folder */}
               <div className="flex flex-col">
                 <div
-                  className="flex items-center gap-2 px-2 py-1 text-xs text-muted hover:text-secondary cursor-pointer select-none"
+                  className="flex items-center gap-2 px-2 py-1 text-sm text-muted hover:text-secondary cursor-pointer select-none"
                   onClick={(e) => {
                     e.stopPropagation();
                     setExpandIndexes(!expandIndexes);
@@ -329,9 +339,9 @@ export const SidebarTableItem = ({
                     handleContextMenu(e, "folder_indexes", "indexes")
                   : undefined}
                 >
-                  <Folder size={12} className="text-green-400/70" />
+                  <Folder size={15} className="text-green-400/70" />
                   <span>{t("sidebar.indexes")}</span>
-                  <span className="ml-auto text-[10px] opacity-50">
+                  <span className="ml-auto text-xs opacity-50">
                     {indexesList.length}
                   </span>
                 </div>
@@ -340,14 +350,14 @@ export const SidebarTableItem = ({
                     {indexesList.map((idx) => (
                       <div
                         key={idx.name}
-                        className="flex items-center gap-2 px-3 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
+                        className="flex items-center gap-2 px-3 py-1 text-sm text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
                         title={idx.columns.join(", ")}
                         onContextMenu={canManage !== false ? (e) =>
                           handleContextMenu(e, "index", idx.name)
                         : undefined}
                       >
                         <List
-                          size={12}
+                          size={15}
                           className={
                             idx.is_unique ? "text-blue-400" : "text-green-400"
                           }

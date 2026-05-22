@@ -29,6 +29,7 @@ interface ModifyColumnModalProps {
     is_pk: boolean;
     is_auto_increment: boolean;
   } | null;
+  schema?: string;
 }
 
 export const ModifyColumnModal = ({
@@ -39,9 +40,11 @@ export const ModifyColumnModal = ({
   tableName,
   driver,
   column,
+  schema,
 }: ModifyColumnModalProps) => {
   const { t } = useTranslation();
   const { activeSchema } = useDatabase();
+  const effectiveSchema = schema ?? activeSchema ?? undefined;
   const { dataTypes } = useDataTypes(driver);
   const { allDrivers } = useDrivers();
   const driverManifest = allDrivers.find((d) => d.id === driver);
@@ -116,7 +119,7 @@ export const ModifyColumnModal = ({
           table: tableName,
           oldColumn: oldCol,
           newColumn: newCol,
-          ...(activeSchema ? { schema: activeSchema } : {}),
+          ...(effectiveSchema ? { schema: effectiveSchema } : {}),
         });
       } else {
         const col = buildColumnDefinition(form);
@@ -124,14 +127,14 @@ export const ModifyColumnModal = ({
           connectionId,
           table: tableName,
           column: col,
-          ...(activeSchema ? { schema: activeSchema } : {}),
+          ...(effectiveSchema ? { schema: effectiveSchema } : {}),
         });
       }
       setSqlPreview(stmts.map((s) => s + ";").join("\n"));
     } catch (e) {
       setSqlPreview("-- " + String(e));
     }
-  }, [form, isEdit, column, connectionId, tableName, activeSchema, availableTypes, t]);
+  }, [form, isEdit, column, connectionId, tableName, effectiveSchema, availableTypes, t]);
 
   // Debounced preview generation
   useEffect(() => {
@@ -165,7 +168,7 @@ export const ModifyColumnModal = ({
           table: tableName,
           oldColumn: oldCol,
           newColumn: newCol,
-          ...(activeSchema ? { schema: activeSchema } : {}),
+          ...(effectiveSchema ? { schema: effectiveSchema } : {}),
         });
       } else {
         const col = buildColumnDefinition(form);
@@ -173,7 +176,7 @@ export const ModifyColumnModal = ({
           connectionId,
           table: tableName,
           column: col,
-          ...(activeSchema ? { schema: activeSchema } : {}),
+          ...(effectiveSchema ? { schema: effectiveSchema } : {}),
         });
       }
 
@@ -181,7 +184,7 @@ export const ModifyColumnModal = ({
         await invoke("execute_query", {
           connectionId,
           query: sql,
-          ...(activeSchema ? { schema: activeSchema } : {}),
+          ...(effectiveSchema ? { schema: effectiveSchema } : {}),
         });
       }
 

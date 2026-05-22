@@ -2,7 +2,7 @@ use serde_json::ser::{CompactFormatter, Formatter};
 use serde_json::Value;
 use std::io::Write;
 
-use super::format::value_to_csv_string;
+use super::format::{escape_html, value_to_csv_string, value_to_sql_literal};
 
 /// A streaming consumer of rows produced by a driver.
 ///
@@ -17,6 +17,161 @@ pub trait RowSink {
 pub struct CsvSink<W: Write> {
     writer: csv::Writer<W>,
     headers_written: bool,
+}
+
+pub struct ExcelSink<W: Write> {
+    writer: W,
+    headers_written: bool,
+    closed: bool,
+}
+
+impl<W: Write> ExcelSink<W> {
+    pub fn new(writer: W) -> Self {
+        Self {
+            writer,
+            headers_written: false,
+            closed: false,
+        }
+    }
+
+    fn write_document_start(&mut self) -> Result<(), String> {
+        if self.headers_written {
+            return Ok(());
+        }
+        write!(
+            self.writer,
+            r#"<!doctype html><html><head><meta charset="utf-8"><style>table{{border-collapse:collapse}}th,td{{border:1px solid #999;padding:4px 8px;mso-number-format:"\@";}}</style></head><body><table>"#
+        )
+        .map_err(|e| e.to_string())
+    }
+}
+
+impl<W: Write> RowSink for ExcelSink<W> {
+    fn write_row(&mut self, headers: &[String], values: &[Value]) -> Result<(), String> {
+        self.write_document_start()?;
+        if !self.headers_written {
+            write!(self.writer, "<thead><tr>").map_err(|e| e.to_string())?;
+            for header in headers {
+                write!(self.writer, "<th>{}</th>", escape_html(header))
+                    .map_err(|e| e.to_string())?;
+            }
+            write!(self.writer, "</tr></thead><tbody>").map_err(|e| e.to_string())?;
+            self.headers_written = true;
+        }
+
+        write!(self.writer, "<tr>").map_err(|e| e.to_string())?;
+        for value in values {
+            let cell = match value {
+                Value::String(s) => s.clone(),
+                Value::Null => String::new(),
+                other => other.to_string(),
+            };
+            write!(self.writer, "<td>{}</td>", escape_html(&cell)).map_err(|e| e.to_string())?;
+        }
+        write!(self.writer, "</tr>").map_err(|e| e.to_string())
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        if !self.headers_written {
+            self.write_document_start()?;
+            write!(self.writer, "<tbody>").map_err(|e| e.to_string())?;
+            self.headers_written = true;
+        }
+        if !self.closed {
+            write!(self.writer, "</tbody></table></body></html>").map_err(|e| e.to_string())?;
+            self.closed = true;
+        }
+        self.writer.flush().map_err(|e| e.to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SqlDialect {
+    Mysql,
+    Postgres,
+    Sqlite,
+}
+
+impl SqlDialect {
+    pub fn from_driver(driver: &str) -> Self {
+        match driver {
+            "mysql" | "mariadb" => Self::Mysql,
+            "postgres" => Self::Postgres,
+            _ => Self::Sqlite,
+        }
+    }
+
+    pub fn quote_identifier(self, identifier: &str) -> String {
+        match self {
+            Self::Mysql => format!("`{}`", identifier.replace('`', "``")),
+            Self::Postgres | Self::Sqlite => format!("\"{}\"", identifier.replace('"', "\"\"")),
+        }
+    }
+
+    pub fn qualified_name(self, schema: Option<&str>, table: &str) -> String {
+        if let Some(schema_name) = schema.filter(|s| !s.trim().is_empty()) {
+            return format!(
+                "{}.{}",
+                self.quote_identifier(schema_name),
+                self.quote_identifier(table)
+            );
+        }
+
+        table
+            .split('.')
+            .filter(|part| !part.trim().is_empty())
+            .map(|part| self.quote_identifier(part))
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+}
+
+pub struct SqlInsertSink<W: Write> {
+    writer: W,
+    dialect: SqlDialect,
+    table_name: String,
+    schema: Option<String>,
+}
+
+impl<W: Write> SqlInsertSink<W> {
+    pub fn new(writer: W, dialect: SqlDialect, table_name: String, schema: Option<String>) -> Self {
+        Self {
+            writer,
+            dialect,
+            table_name,
+            schema,
+        }
+    }
+}
+
+impl<W: Write> RowSink for SqlInsertSink<W> {
+    fn write_row(&mut self, headers: &[String], values: &[Value]) -> Result<(), String> {
+        let table_name = self
+            .dialect
+            .qualified_name(self.schema.as_deref(), &self.table_name);
+        let columns = headers
+            .iter()
+            .map(|header| self.dialect.quote_identifier(header))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let literals = headers
+            .iter()
+            .enumerate()
+            .map(|(index, _)| value_to_sql_literal(values.get(index).unwrap_or(&Value::Null)))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        writeln!(
+            self.writer,
+            "INSERT INTO {} ({}) VALUES ({});",
+            table_name, columns, literals
+        )
+        .map_err(|e| e.to_string())
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        self.writer.flush().map_err(|e| e.to_string())
+    }
 }
 
 impl<W: Write> CsvSink<W> {
@@ -39,9 +194,7 @@ impl<W: Write> RowSink for CsvSink<W> {
             self.headers_written = true;
         }
         let record: Vec<String> = values.iter().map(value_to_csv_string).collect();
-        self.writer
-            .write_record(&record)
-            .map_err(|e| e.to_string())
+        self.writer.write_record(&record).map_err(|e| e.to_string())
     }
 
     fn finish(&mut self) -> Result<(), String> {

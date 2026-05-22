@@ -111,6 +111,10 @@ export function generateTabTitle(
     return partial.activeTable;
   }
 
+  if (partial?.type === "table_design" && partial.designTable) {
+    return `${partial.designTable} - 设计`;
+  }
+
   const consoleCount = tabs.filter(
     (t) => t.connectionId === activeConnectionId && t.type === "console",
   ).length;
@@ -139,13 +143,14 @@ export function findExistingTableTab(
   connectionId: string,
   tableName: string | undefined,
   schema?: string,
+  type: Tab["type"] = "table",
 ): Tab | undefined {
   if (!tableName) return undefined;
   return tabs.find(
     (t) =>
       t.connectionId === connectionId &&
-      t.type === "table" &&
-      t.activeTable === tableName &&
+      t.type === type &&
+      (type === "table_design" ? t.designTable === tableName : t.activeTable === tableName) &&
       (t.schema || undefined) === (schema || undefined),
   );
 }

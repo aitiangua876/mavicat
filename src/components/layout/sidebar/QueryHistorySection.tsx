@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, Trash2, Loader2, Database } from "lucide-react";
+import { Search, Trash2, Loader2 } from "lucide-react";
 import { groupByDate, formatHistoryTime } from "../../../utils/dateGroups";
 import { SqlHighlight } from "../../ui/SqlHighlight";
 import { formatSqlPreview } from "../../../utils/sqlHighlight";
 import type { QueryHistoryEntry } from "../../../types/queryHistory";
+import { NavicatDatabaseIcon } from "../../icons/NavicatStyleIcons";
 
 interface QueryHistorySectionProps {
   entries: QueryHistoryEntry[];
@@ -132,7 +133,7 @@ export function QueryHistorySection({
                   </div>
                   {entry.database && (
                     <div className="flex items-center gap-0.5 text-[10px] text-muted shrink-0">
-                      <Database size={9} className="shrink-0" />
+                      <NavicatDatabaseIcon size={10} className="shrink-0" />
                       <span className="truncate max-w-[80px]">{entry.database}</span>
                     </div>
                   )}

@@ -4,6 +4,8 @@ use serde_json::Value;
 pub enum ExportFormat {
     Csv,
     Json,
+    Excel,
+    Sql,
 }
 
 impl ExportFormat {
@@ -11,6 +13,8 @@ impl ExportFormat {
         match s.trim().to_ascii_lowercase().as_str() {
             "csv" => Ok(Self::Csv),
             "json" => Ok(Self::Json),
+            "excel" | "xls" => Ok(Self::Excel),
+            "sql" => Ok(Self::Sql),
             other => Err(format!("Unsupported export format: {}", other)),
         }
     }
@@ -35,4 +39,33 @@ pub fn value_to_csv_string(val: &Value) -> String {
         Value::Null => "NULL".to_string(),
         other => other.to_string(),
     }
+}
+
+pub fn value_to_sql_literal(val: &Value) -> String {
+    match val {
+        Value::Null => "NULL".to_string(),
+        Value::Bool(value) => {
+            if *value {
+                "TRUE".to_string()
+            } else {
+                "FALSE".to_string()
+            }
+        }
+        Value::Number(value) => value.to_string(),
+        Value::String(value) => quote_sql_string(value),
+        other => quote_sql_string(&other.to_string()),
+    }
+}
+
+pub fn quote_sql_string(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
+pub fn escape_html(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }

@@ -4,11 +4,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
-  Layers,
   Plus,
   RefreshCw,
-  Search,
-  X,
 } from "lucide-react";
 import { Accordion } from "./Accordion";
 import { SidebarTableItem } from "./SidebarTableItem";
@@ -20,6 +17,7 @@ import type { TableColumn } from "../../../types/schema";
 import type { ContextMenuData } from "../../../types/sidebar";
 import { groupRoutinesByType } from "../../../utils/routines";
 import { formatObjectCount } from "../../../utils/schema";
+import { NavicatSchemaIcon } from "../../icons/NavicatStyleIcons";
 
 interface SidebarSchemaItemProps {
   schemaName: string;
@@ -54,6 +52,7 @@ interface SidebarSchemaItemProps {
   onCreateView: () => void;
   onCreateTrigger: (schema: string) => void;
   showTriggers?: boolean;
+  globalSearch?: string;
 }
 
 export const SidebarSchemaItem = ({
@@ -83,6 +82,7 @@ export const SidebarSchemaItem = ({
   onCreateView,
   onCreateTrigger,
   showTriggers = false,
+  globalSearch = "",
 }: SidebarSchemaItemProps) => {
   const { t } = useTranslation();
 
@@ -96,8 +96,7 @@ export const SidebarSchemaItem = ({
   const [triggersOpen, setTriggersOpen] = useState(false);
   const [functionsOpen, setFunctionsOpen] = useState(true);
   const [proceduresOpen, setProceduresOpen] = useState(true);
-  const [tableFilter, setTableFilter] = useState("");
-  const [triggerFilter, setTriggerFilter] = useState("");
+  const objectFilter = globalSearch.trim().toLowerCase();
 
   // Adjust isExpanded during render when activeSchema changes (avoids useEffect)
   if (activeSchema !== prevActiveSchema) {
@@ -108,14 +107,14 @@ export const SidebarSchemaItem = ({
   }
 
   const tables = schemaData?.tables ?? [];
-  const filteredTables = tableFilter
-    ? tables.filter((t) => t.name.toLowerCase().includes(tableFilter.toLowerCase()))
+  const filteredTables = objectFilter
+    ? tables.filter((t) => t.name.toLowerCase().includes(objectFilter))
     : tables;
   const views = schemaData?.views ?? [];
   const routines = schemaData?.routines ?? [];
   const triggers = schemaData?.triggers ?? [];
-  const filteredTriggers = triggerFilter
-    ? triggers.filter((tr) => tr.name.toLowerCase().includes(triggerFilter.toLowerCase()))
+  const filteredTriggers = objectFilter
+    ? triggers.filter((tr) => tr.name.toLowerCase().includes(objectFilter))
     : triggers;
   const isLoading = schemaData?.isLoading ?? false;
   const isLoaded = schemaData?.isLoaded ?? false;
@@ -147,14 +146,7 @@ export const SidebarSchemaItem = ({
           ) : (
             <ChevronRight size={14} className="text-muted shrink-0" />
           )}
-          <Layers
-            size={14}
-            className={
-              activeSchema === schemaName
-                ? "text-blue-400 shrink-0"
-                : "text-muted group-hover/schema:text-blue-400 shrink-0"
-            }
-          />
+          <NavicatSchemaIcon size={15} className="shrink-0" />
           <span className="text-sm font-medium text-secondary truncate">
             {schemaName}
           </span>
@@ -208,32 +200,9 @@ export const SidebarSchemaItem = ({
                   </div>
                 }
               >
-                {tables.length > 0 && (
-                  <div className="px-2 py-1">
-                    <div className="relative flex items-center">
-                      <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                      <input
-                        type="text"
-                        value={tableFilter}
-                        onChange={(e) => setTableFilter(e.target.value)}
-                        placeholder={t("sidebar.filterTables")}
-                        className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {tableFilter && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setTableFilter(""); }}
-                          className="absolute right-1.5 text-muted hover:text-primary"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
                 {filteredTables.length === 0 ? (
                   <div className="text-center p-2 text-xs text-muted italic">
-                    {tableFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
+                    {objectFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
                   </div>
                 ) : (
                   <div>
@@ -325,32 +294,9 @@ export const SidebarSchemaItem = ({
                     </div>
                   }
                 >
-                  {triggers.length > 0 && (
-                    <div className="px-2 py-1">
-                      <div className="relative flex items-center">
-                        <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                        <input
-                          type="text"
-                          value={triggerFilter}
-                          onChange={(e) => setTriggerFilter(e.target.value)}
-                          placeholder={t("sidebar.filterTriggers")}
-                          className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {triggerFilter && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setTriggerFilter(""); }}
-                            className="absolute right-1.5 text-muted hover:text-primary"
-                          >
-                            <X size={11} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   {filteredTriggers.length === 0 ? (
                     <div className="text-center p-2 text-xs text-muted italic">
-                      {triggerFilter ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
+                      {objectFilter ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
                     </div>
                   ) : (
                     <div>

@@ -15,7 +15,7 @@ import {
 import clsx from "clsx";
 import { ResultEntryContent } from "./ResultEntryContent";
 import { PaginationControls } from "./PaginationControls";
-import { ResizeHandle } from "../notebook/ResizeHandle";
+import { ResizeHandle } from "./ResizeHandle";
 import { formatDuration } from "../../utils/formatTime";
 import { getEntryDisplayLabel, getStackedGridHeight } from "../../utils/multiResult";
 import type { QueryResultEntry } from "../../types/editor";

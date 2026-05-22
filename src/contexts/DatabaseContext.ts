@@ -3,6 +3,7 @@ import type { DriverCapabilities } from '../types/plugins';
 
 export interface TableInfo {
   name: string;
+  comment?: string | null;
 }
 
 export interface ViewInfo {

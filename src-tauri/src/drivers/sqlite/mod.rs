@@ -45,6 +45,7 @@ pub async fn get_tables(params: &ConnectionParams) -> Result<Vec<TableInfo>, Str
         .iter()
         .map(|r| TableInfo {
             name: r.try_get("name").unwrap_or_default(),
+            comment: None,
         })
         .collect();
     log::debug!(
@@ -89,6 +90,7 @@ pub async fn get_columns(
                 is_auto_increment: false,
                 default_value: dflt_value,
                 character_maximum_length: None,
+                comment: None,
             }
         })
         .collect())
@@ -177,6 +179,7 @@ pub async fn get_all_columns_batch(
                     is_auto_increment: false, // SQLite doesn't expose this via table_info easily, typically AUTOINCREMENT on INTEGER PRIMARY KEY
                     default_value: dflt_value,
                     character_maximum_length: None,
+                    comment: None,
                 }
             })
             .collect();
@@ -751,13 +754,17 @@ pub async fn get_view_columns(
                 is_auto_increment: false,
                 default_value: dflt_value,
                 character_maximum_length: None,
+                comment: None,
             }
         })
         .collect())
 }
 
 pub async fn get_triggers(params: &ConnectionParams) -> Result<Vec<TriggerInfo>, String> {
-    log::debug!("SQLite: Fetching triggers for database: {}", params.database);
+    log::debug!(
+        "SQLite: Fetching triggers for database: {}",
+        params.database
+    );
     let pool = get_sqlite_pool(params).await?;
     let rows = sqlx::query(
         "SELECT name, tbl_name, sql FROM sqlite_master WHERE type='trigger' ORDER BY name ASC",
@@ -815,13 +822,11 @@ pub async fn get_trigger_definition(
     trigger_name: &str,
 ) -> Result<String, String> {
     let pool = get_sqlite_pool(params).await?;
-    let row = sqlx::query(
-        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name = ?",
-    )
-    .bind(trigger_name)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| format!("Failed to get trigger definition: {}", e))?;
+    let row = sqlx::query("SELECT sql FROM sqlite_master WHERE type='trigger' AND name = ?")
+        .bind(trigger_name)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| format!("Failed to get trigger definition: {}", e))?;
     let sql: String = row.try_get("sql").unwrap_or_default();
     Ok(sql)
 }
@@ -835,10 +840,7 @@ pub async fn create_trigger(params: &ConnectionParams, trigger_sql: &str) -> Res
     Ok(())
 }
 
-pub async fn drop_trigger(
-    params: &ConnectionParams,
-    trigger_name: &str,
-) -> Result<(), String> {
+pub async fn drop_trigger(params: &ConnectionParams, trigger_name: &str) -> Result<(), String> {
     let pool = get_sqlite_pool(params).await?;
     let sql = format!(
         "DROP TRIGGER IF EXISTS \"{}\"",

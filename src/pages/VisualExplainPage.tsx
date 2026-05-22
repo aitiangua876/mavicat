@@ -11,8 +11,18 @@ import {
   getExplainFileName,
   parseExplainFileParam,
 } from "../utils/explainImport";
-import { parseVisualExplainDeepLink } from "../utils/aiActivity";
 import { useSettings } from "../hooks/useSettings";
+
+function parseVisualExplainDeepLink(search: string): {
+  connectionId: string | null;
+  query: string | null;
+} {
+  const params = new URLSearchParams(search);
+  return {
+    connectionId: params.get("connection"),
+    query: params.get("query"),
+  };
+}
 
 export interface VisualExplainPageProps {
   /// When provided, render in embedded mode: skip the page header, use the

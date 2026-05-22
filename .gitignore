@@ -10,7 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+src-tauri/target
+target
 *.local
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -31,3 +34,16 @@ devdiary
 coverage
 plugins/**/target
 .gitnexus
+
+# Local automation/cache/output
+.codex/
+.gitster/
+.playwright-mcp/
+artifacts/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.dmg
+*.app
+mavicat-navicat-icons-preview.png

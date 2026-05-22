@@ -8,7 +8,7 @@ use rustls::crypto::verify_tls13_signature;
 use rustls::crypto::CryptoProvider;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use rustls::server::ParsedCertificate;
-use rustls::{DigitallySignedStruct};
+use rustls::DigitallySignedStruct;
 use rustls::{ClientConfig, Error as TlsError, RootCertStore};
 use rustls_platform_verifier::BuilderVerifierExt;
 use sqlx::{sqlite::SqliteConnectOptions, MySql, Pool, Sqlite};
@@ -315,8 +315,7 @@ struct NoCertVerifier {
 
 impl NoCertVerifier {
     fn new() -> Self {
-        let provider = CryptoProvider::get_default()
-            .expect("rustls CryptoProvider not installed");
+        let provider = CryptoProvider::get_default().expect("rustls CryptoProvider not installed");
         Self {
             supported: provider.signature_verification_algorithms,
         }
@@ -375,16 +374,13 @@ struct VerifyCaCertVerifier {
 impl VerifyCaCertVerifier {
     fn new(roots: RootCertStore) -> Result<Self, String> {
         if roots.is_empty() {
-            return Err(
-                "No root certificates available. For verify-ca mode, \
+            return Err("No root certificates available. For verify-ca mode, \
                 you must specify an explicit CA file via the connection's \
                 CA Certificate field. On macOS, the system keychain does \
                 not provide root anchors compatible with strict EKU checks."
-                    .to_string(),
-            );
+                .to_string());
         }
-        let provider = CryptoProvider::get_default()
-            .ok_or("No rustls CryptoProvider installed")?;
+        let provider = CryptoProvider::get_default().ok_or("No rustls CryptoProvider installed")?;
         Ok(Self {
             roots: Arc::new(roots),
             supported: provider.signature_verification_algorithms,

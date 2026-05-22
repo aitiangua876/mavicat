@@ -30,6 +30,9 @@ import {
   Ban,
   FileDigit,
   ExternalLink,
+  Columns3,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -74,6 +77,11 @@ import {
   getSelectedRows,
   copyTextToClipboard,
 } from "../../utils/clipboard";
+import {
+  canCopySqlMode,
+  rowsToSqlCopy,
+  type SqlCopyMode,
+} from "../../utils/sqlCopy";
 import type {
   PendingInsertion,
   TableColumn,
@@ -152,7 +160,7 @@ export const DataGrid = React.memo(
     readonly: readonlyProp,
   }: DataGridProps) => {
     const { t } = useTranslation();
-    const { activeSchema, connections } = useDatabase();
+    const { activeSchema, activeDriver, connections } = useDatabase();
     const { showAlert } = useAlert();
 
     const detectJsonInTextColumns = useMemo(() => {
@@ -199,21 +207,40 @@ export const DataGrid = React.memo(
       colIndex: number;
       kind: "json" | "text";
     } | null>(null);
+    const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+    const [visibleColumnNames, setVisibleColumnNames] = useState<Set<string>>(
+      () => new Set(columns),
+    );
 
     useEffect(() => {
       setExpandedCell(null);
     }, [data]);
+
+    useEffect(() => {
+      setVisibleColumnNames((prev) => {
+        const next = new Set(
+          columns.filter((column) => prev.size === 0 || prev.has(column)),
+        );
+        if (next.size === 0) {
+          return new Set(columns);
+        }
+        return next;
+      });
+    }, [columns]);
 
     const [internalSelectedRowIndices, setInternalSelectedRowIndices] =
       useState<Set<number>>(new Set());
     const [lastSelectedRowIndex, setLastSelectedRowIndex] = useState<
       number | null
     >(null);
+    const [isDraggingRows, setIsDraggingRows] = useState(false);
     const [focusedCell, setFocusedCell] = useState<{
       rowIndex: number;
       colIndex: number;
     } | null>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
+    const dragAnchorRowIndexRef = useRef<number | null>(null);
+    const didDragRowsRef = useRef(false);
     const pendingJsonSessions = useRef<
       Map<string, { colName: string; rowData: unknown[]; isInsertion: boolean; tempId?: string }>
     >(new Map());
@@ -250,6 +277,13 @@ export const DataGrid = React.memo(
       if (!columnMetadata) return null;
       return new Map(
         columnMetadata.map((col) => [col.name, col.character_maximum_length]),
+      );
+    }, [columnMetadata]);
+
+    const columnCommentMap = useMemo(() => {
+      if (!columnMetadata) return null;
+      return new Map(
+        columnMetadata.map((col) => [col.name, col.comment?.trim() || ""]),
       );
     }, [columnMetadata]);
 
@@ -387,6 +421,10 @@ export const DataGrid = React.memo(
 
     const handleRowClick = useCallback(
       (index: number, event: React.MouseEvent) => {
+        if (didDragRowsRef.current) {
+          didDragRowsRef.current = false;
+          return;
+        }
         let newSelected = new Set(selectedRowIndices);
 
         if (event.shiftKey && lastSelectedRowIndex !== null) {
@@ -414,6 +452,50 @@ export const DataGrid = React.memo(
       },
       [selectedRowIndices, lastSelectedRowIndex, updateSelection],
     );
+
+    const selectRowDragRange = useCallback(
+      (toIndex: number) => {
+        const fromIndex = dragAnchorRowIndexRef.current;
+        if (fromIndex === null) return;
+        const range = calculateSelectionRange(fromIndex, toIndex);
+        updateSelection(new Set(range));
+      },
+      [updateSelection],
+    );
+
+    const startRowDragSelection = useCallback(
+      (index: number, event: React.MouseEvent) => {
+        event.preventDefault();
+        setFocusedCell(null);
+        dragAnchorRowIndexRef.current = index;
+        didDragRowsRef.current = false;
+        setIsDraggingRows(true);
+        setLastSelectedRowIndex(index);
+        updateSelection(new Set([index]));
+      },
+      [updateSelection],
+    );
+
+    const extendRowDragSelection = useCallback(
+      (index: number) => {
+        if (!isDraggingRows || dragAnchorRowIndexRef.current === null) return;
+        if (index !== dragAnchorRowIndexRef.current) {
+          didDragRowsRef.current = true;
+        }
+        selectRowDragRange(index);
+      },
+      [isDraggingRows, selectRowDragRange],
+    );
+
+    useEffect(() => {
+      if (!isDraggingRows) return;
+      const stopDragging = () => {
+        setIsDraggingRows(false);
+        dragAnchorRowIndexRef.current = null;
+      };
+      document.addEventListener("mouseup", stopDragging);
+      return () => document.removeEventListener("mouseup", stopDragging);
+    }, [isDraggingRows]);
 
     const handleSelectAll = useCallback(() => {
       setFocusedCell(null);
@@ -602,7 +684,7 @@ export const DataGrid = React.memo(
 
         const { rowIndex, colIndex } = editingCell;
         const totalRows = mergedRows.length;
-        const totalCols = columns.length;
+        const totalCols = visibleColumns.length;
 
         // Calculate next position
         let nextRowIndex = rowIndex;
@@ -622,13 +704,15 @@ export const DataGrid = React.memo(
         // Get the value of the next cell
         const nextRow = mergedRows[nextRowIndex];
         if (nextRow) {
-          const nextValue = nextRow.rowData[nextColIndex];
+          const nextColumnName = visibleColumns[nextColIndex] ?? columns[nextColIndex];
+          const nextSourceColIndex = columns.indexOf(nextColumnName);
+          const nextValue = nextRow.rowData[nextSourceColIndex];
 
           // Set editing on the next cell
           setTimeout(() => {
             setEditingCell({
               rowIndex: nextRowIndex,
-              colIndex: nextColIndex,
+              colIndex: nextSourceColIndex,
               value: nextValue,
             });
           }, 0);
@@ -640,10 +724,42 @@ export const DataGrid = React.memo(
 
     const coreRowModel = useMemo(() => getCoreRowModel(), []);
 
+    const visibleColumns = useMemo(
+      () => columns.filter((column) => visibleColumnNames.has(column)),
+      [columns, visibleColumnNames],
+    );
+
+    const setAllColumnsVisible = useCallback(() => {
+      setVisibleColumnNames(new Set(columns));
+    }, [columns]);
+
+    const invertVisibleColumns = useCallback(() => {
+      setVisibleColumnNames((prev) => {
+        return new Set(columns.filter((column) => !prev.has(column)));
+      });
+    }, [columns]);
+
+    const toggleColumnVisibility = useCallback(
+      (columnName: string) => {
+        setVisibleColumnNames((prev) => {
+          const next = new Set(prev);
+          if (next.has(columnName)) {
+            if (next.size === 1) return next;
+            next.delete(columnName);
+          } else {
+            next.add(columnName);
+          }
+          return next;
+        });
+      },
+      [],
+    );
+
     const tableColumns = React.useMemo(
       () =>
-        columns.map((colName, index) =>
-          columnHelper.accessor((row) => row[index], {
+        visibleColumns.map((colName) => {
+          const index = columns.indexOf(colName);
+          return columnHelper.accessor((row) => row[index], {
             // react-table requires a non-empty `id` when an accessorFn is used.
             // Some drivers (e.g. SQL Server `SELECT @@VERSION`, Postgres `SELECT 1 AS ""`)
             // return columns with an empty name, which would otherwise crash the grid.
@@ -652,22 +768,37 @@ export const DataGrid = React.memo(
               const sortState = getColumnSortState(colName, sortClause);
               const displaySortState: "none" | "asc" | "desc" =
                 sortState ?? "none";
+              const columnComment = columnCommentMap?.get(colName) ?? "";
+              const columnTitleParts = [
+                colName,
+                columnTypeMap?.get(colName)
+                  ? `类型：${columnTypeMap.get(colName)}`
+                  : null,
+                columnComment ? `注释：${columnComment}` : null,
+                onSort
+                  ? displaySortState === "none"
+                    ? t("dataGrid.sortByAsc", { col: colName })
+                    : displaySortState === "asc"
+                      ? t("dataGrid.sortByDesc", { col: colName })
+                      : t("dataGrid.clearSort")
+                  : null,
+              ].filter(Boolean);
 
               return (
                 <div
                   className={`flex items-center gap-2 select-none group/header ${onSort ? "cursor-pointer" : ""}`}
                   onClick={() => onSort && onSort(colName)}
-                  title={
-                    onSort
-                      ? displaySortState === "none"
-                        ? t("dataGrid.sortByAsc", { col: colName })
-                        : displaySortState === "asc"
-                          ? t("dataGrid.sortByDesc", { col: colName })
-                          : t("dataGrid.clearSort")
-                      : undefined
-                  }
+                  title={columnTitleParts.join("\n")}
                 >
-                  <span>{colName}</span>
+                  <span
+                    className={
+                      columnComment
+                        ? "decoration-dotted underline-offset-4 group-hover/header:underline"
+                        : undefined
+                    }
+                  >
+                    {colName}
+                  </span>
                   {onSort && (
                     <span className="flex flex-col items-center justify-center">
                       {displaySortState === "asc" && (
@@ -708,16 +839,18 @@ export const DataGrid = React.memo(
 
               return formatted;
             },
-          }),
-        ),
+          });
+        }),
       [
         columns,
+        visibleColumns,
         columnHelper,
         t,
         sortClause,
         onSort,
         columnTypeMap,
         columnLengthMap,
+        columnCommentMap,
       ],
     );
 
@@ -1050,6 +1183,39 @@ export const DataGrid = React.memo(
       await copyToClipboard(formatRows(rows));
     }, [contextMenu, selectedRowIndices, data, formatRows, copyToClipboard]);
 
+    const getContextRows = useCallback(() => {
+      if (!contextMenu) return [];
+      return selectedRowIndices.has(contextMenu.rowIndex)
+        ? getSelectedRows(data, selectedRowIndices)
+        : [contextMenu.row];
+    }, [contextMenu, selectedRowIndices, data]);
+
+    const copyRowsAsSql = useCallback(
+      async (mode: SqlCopyMode) => {
+        if (!contextMenu || !tableName) return;
+        const sql = rowsToSqlCopy({
+          mode,
+          tableName,
+          columns,
+          rows: getContextRows(),
+          driver: activeDriver,
+          schema: activeSchema,
+          primaryKeyColumns: pkColumn ? [pkColumn] : [],
+        });
+        await copyToClipboard(sql);
+      },
+      [
+        activeDriver,
+        activeSchema,
+        columns,
+        contextMenu,
+        copyToClipboard,
+        getContextRows,
+        pkColumn,
+        tableName,
+      ],
+    );
+
     const copyHeaderName = useCallback(async () => {
       if (!headerContextMenu) return;
       await copyToClipboard(headerContextMenu.colName);
@@ -1140,6 +1306,68 @@ export const DataGrid = React.memo(
           ref={parentRef}
           className="h-full overflow-auto border border-default rounded bg-elevated relative"
         >
+          <div className="sticky top-2 right-2 z-30 flex justify-end pointer-events-none">
+            <div className="relative mr-2 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setColumnMenuOpen((open) => !open)}
+                className="h-7 px-2 inline-flex items-center gap-1.5 rounded border border-strong bg-base/95 text-xs text-secondary hover:text-primary hover:bg-surface-secondary shadow"
+                title="筛选显示列"
+              >
+                <Columns3 size={14} />
+                列
+                <span className="text-[10px] text-muted">
+                  {visibleColumns.length}/{columns.length}
+                </span>
+              </button>
+              {columnMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setColumnMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-64 max-h-80 overflow-hidden rounded-md border border-strong bg-elevated shadow-xl z-40">
+                    <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b border-default bg-base">
+                      <button
+                        type="button"
+                        onClick={setAllColumnsVisible}
+                        className="text-xs text-blue-300 hover:text-blue-200"
+                      >
+                        全选
+                      </button>
+                      <button
+                        type="button"
+                        onClick={invertVisibleColumns}
+                        className="text-xs text-blue-300 hover:text-blue-200"
+                      >
+                        反选
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto py-1">
+                      {columns.map((column) => {
+                        const checked = visibleColumnNames.has(column);
+                        return (
+                          <button
+                            key={column}
+                            type="button"
+                            onClick={() => toggleColumnVisibility(column)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs text-secondary hover:bg-surface-secondary hover:text-primary"
+                          >
+                            {checked ? (
+                              <CheckSquare size={14} className="text-blue-300 shrink-0" />
+                            ) : (
+                              <Square size={14} className="text-muted shrink-0" />
+                            )}
+                            <span className="truncate">{column}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
@@ -1226,6 +1454,8 @@ export const DataGrid = React.memo(
                       }`}
                     >
                       <td
+                        onMouseDown={(e) => startRowDragSelection(rowIndex, e)}
+                        onMouseEnter={() => extendRowDragSelection(rowIndex)}
                         onClick={(e) => {
                           setFocusedCell(null);
                           handleRowClick(rowIndex, e);
@@ -1244,12 +1474,13 @@ export const DataGrid = React.memo(
                       >
                         {isInsertion ? "NEW" : rowIndex + 1}
                       </td>
-                      {row.getVisibleCells().map((cell, colIndex) => {
+                      {row.getVisibleCells().map((cell) => {
+                        const colName = cell.column.id;
+                        const colIndex = columns.indexOf(colName);
+                        if (colIndex < 0) return null;
                         const isEditing =
                           editingCell?.rowIndex === rowIndex &&
                           editingCell?.colIndex === colIndex;
-
-                        const colName = cell.column.id;
 
                         const columnInfo: ColumnDisplayInfo = {
                           colName,
@@ -1763,6 +1994,9 @@ export const DataGrid = React.memo(
               const deleteRowCount = selectedRowIndices.has(contextMenu.rowIndex)
                 ? selectedRowIndices.size
                 : 1;
+              const primaryKeyColumns = pkColumn ? [pkColumn] : [];
+              const canCopyInsertSql = canCopySqlMode("insert", tableName, primaryKeyColumns);
+              const canCopyKeyedSql = canCopySqlMode("update", tableName, primaryKeyColumns);
 
               // Determine which cell value options to show based on column properties
               const { colName } = contextMenu;
@@ -1860,6 +2094,34 @@ export const DataGrid = React.memo(
                 icon: Copy,
                 action: copySelectedOrContextRow,
               });
+
+              menuItems.push(
+                { separator: true },
+                {
+                  label: tableName ? "复制为 INSERT" : "复制为 INSERT（需要表名）",
+                  icon: FileDigit,
+                  action: () => copyRowsAsSql("insert"),
+                  disabled: !canCopyInsertSql,
+                },
+                {
+                  label: canCopyKeyedSql ? "复制为 UPDATE" : "复制为 UPDATE（需要主键）",
+                  icon: FileDigit,
+                  action: () => copyRowsAsSql("update"),
+                  disabled: !canCopyKeyedSql,
+                },
+                {
+                  label: canCopyKeyedSql ? "复制为 DELETE" : "复制为 DELETE（需要主键）",
+                  icon: FileDigit,
+                  action: () => copyRowsAsSql("delete"),
+                  disabled: !canCopyKeyedSql,
+                },
+                {
+                  label: canCopyKeyedSql ? "复制为 UPSERT/REPLACE" : "复制为 UPSERT/REPLACE（需要主键）",
+                  icon: FileDigit,
+                  action: () => copyRowsAsSql("upsert"),
+                  disabled: !canCopyKeyedSql,
+                },
+              );
 
               if (!readonlyProp) {
                 menuItems.push(

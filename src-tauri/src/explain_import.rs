@@ -74,7 +74,7 @@ pub fn spawn_visual_explain_window<R: Runtime, M: Manager<R>>(
         "visual-explain",
         WebviewUrl::App("/visual-explain".into()),
     )
-    .title("tabularis - Visual Explain")
+    .title("Mavicat - Visual Explain")
     .inner_size(1280.0, 820.0)
     .min_inner_size(900.0, 600.0)
     .center()
@@ -153,8 +153,8 @@ pub fn parse_explain(raw: &str) -> Result<ExplainPlan, String> {
 /// We honour this by picking the first element; each object carries a `Plan`
 /// node plus optional `Planning Time` / `Execution Time` timings.
 pub fn parse_postgres_json(raw: &str) -> Result<ExplainPlan, String> {
-    let value: Value = serde_json::from_str(raw)
-        .map_err(|e| format!("Failed to parse EXPLAIN JSON: {e}"))?;
+    let value: Value =
+        serde_json::from_str(raw).map_err(|e| format!("Failed to parse EXPLAIN JSON: {e}"))?;
 
     let top = first_statement(&value)?;
     let plan_obj = top
@@ -442,7 +442,10 @@ fn strip_ms_suffix(line: &str, prefix: &str) -> Option<f64> {
 /// that the caller should treat it as an attribute of the enclosing node.
 fn parse_text_node_header(content: &str, counter: &mut u32) -> Option<ExplainNode> {
     // Strip the optional "->" arrow marking a child node.
-    let body = content.strip_prefix("->").map(str::trim_start).unwrap_or(content);
+    let body = content
+        .strip_prefix("->")
+        .map(str::trim_start)
+        .unwrap_or(content);
 
     let cost_pos = body.find("(cost=")?;
     let header = body[..cost_pos].trim();

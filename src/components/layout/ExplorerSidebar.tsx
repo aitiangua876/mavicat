@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { quoteTableRef } from "../../utils/identifiers";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  Database,
   Plus,
   FileCode,
   Play,
@@ -26,8 +25,6 @@ import {
   Check,
   CheckSquare,
   Square,
-  Search,
-  X,
   Star,
   FileInput,
   Layers,
@@ -40,6 +37,7 @@ import { useAlert } from "../../hooks/useAlert";
 import { useDatabase } from "../../hooks/useDatabase";
 import { useSavedQueries } from "../../hooks/useSavedQueries";
 import { useQueryHistory } from "../../hooks/useQueryHistory";
+import { useEditor } from "../../hooks/useEditor";
 import type { SavedQuery } from "../../contexts/SavedQueriesContext";
 import type { QueryHistoryEntry } from "../../types/queryHistory";
 import { ContextMenu, type ContextMenuItem } from "../ui/ContextMenu";
@@ -68,6 +66,7 @@ import { useConnectionLayoutContext } from "../../hooks/useConnectionLayoutConte
 import type { TableColumn } from "../../types/schema";
 import type { ContextMenuData } from "../../types/sidebar";
 import type { RoutineInfo, TriggerInfo } from "../../contexts/DatabaseContext";
+import { NavicatDatabaseIcon } from "../icons/NavicatStyleIcons";
 import { groupRoutinesByType } from "../../utils/routines";
 import { formatObjectCount } from "../../utils/schema";
 import { groupByDate, formatHistoryTime } from "../../utils/dateGroups";
@@ -89,9 +88,11 @@ interface ExplorerSidebarProps {
   onCollapse: () => void;
   sidebarTab: SidebarTab;
   onSidebarTabChange: (tab: SidebarTab) => void;
+  embedded?: boolean;
+  globalSearch?: string;
 }
 
-export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebarTab, onSidebarTabChange }: ExplorerSidebarProps) => {
+export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebarTab, onSidebarTabChange, embedded = false, globalSearch = "" }: ExplorerSidebarProps) => {
   const { t } = useTranslation();
   const {
     activeConnectionId,
@@ -128,9 +129,11 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
   } = useDatabase();
   const { queries, deleteQuery, updateQuery, saveQuery } = useSavedQueries();
   const { entries: historyEntries, isLoading: isHistoryLoading, deleteEntry: deleteHistoryEntry, clearHistory } = useQueryHistory();
+  const { addTab, closeTabsForDatabase } = useEditor();
   const { showAlert } = useAlert();
   const navigate = useNavigate();
   const [schemaVersion, setSchemaVersion] = useState(0);
+  const [openDatabaseNames, setOpenDatabaseNames] = useState<Set<string>>(new Set());
 
   const { splitView, isSplitVisible, explorerConnectionId, setExplorerConnectionId } = useConnectionLayoutContext();
 
@@ -166,14 +169,12 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
   const [historyDeleteConfirm, setHistoryDeleteConfirm] = useState<string | null>(null);
   const [historyClearConfirm, setHistoryClearConfirm] = useState(false);
   const [favoriteDeleteConfirm, setFavoriteDeleteConfirm] = useState<string | null>(null);
-  const [tableFilter, setTableFilter] = useState("");
-  const [favoritesFilter, setFavoritesFilter] = useState("");
+  const objectFilter = globalSearch.trim().toLowerCase();
   const [selectedFavoriteId, setSelectedFavoriteId] = useState<string | null>(null);
   const [tablesOpen, setTablesOpen] = useState(true);
   const [viewsOpen, setViewsOpen] = useState(true);
   const [routinesOpen, setRoutinesOpen] = useState(false);
   const [triggersOpenFlat, setTriggersOpenFlat] = useState(false);
-  const [triggerFilterFlat, setTriggerFilterFlat] = useState("");
   const [functionsOpen, setFunctionsOpen] = useState(true);
   const [proceduresOpen, setProceduresOpen] = useState(true);
   const [activeView, setActiveView] = useState<string | null>(null);
@@ -189,7 +190,6 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
   const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
   const [isSchemaFilterOpen, setIsSchemaFilterOpen] = useState(false);
   const [pendingSchemaSelection, setPendingSchemaSelection] = useState<Set<string>>(new Set());
-  const [dbFilter, setDbFilter] = useState("");
   const [isDbManagerOpen, setIsDbManagerOpen] = useState(false);
   const [pendingDbSelection, setPendingDbSelection] = useState<Set<string>>(new Set());
   const [allAvailableDatabases, setAllAvailableDatabases] = useState<string[]>([]);
@@ -263,6 +263,24 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
     });
   };
 
+  const handleDesignTable = (tableName: string, schema?: string) => {
+    if (!activeConnectionId) return;
+    if (schema) {
+      setActiveTable(tableName, schema);
+    }
+    addTab({
+      type: "table_design",
+      title: `${tableName} - 设计`,
+      designTable: tableName,
+      activeTable: null,
+      schema,
+      query: "",
+      result: null,
+      isEditorOpen: true,
+    });
+    navigate("/editor");
+  };
+
   const handleViewClick = (viewName: string) => {
     setActiveView(viewName);
   };
@@ -305,6 +323,21 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
         targetConnectionId: activeConnectionId,
       },
     });
+  };
+
+  const handleOpenTableDdl = async (tableName: string, schema?: string) => {
+    if (!activeConnectionId) return;
+    try {
+      const ddl = await invoke<string>("get_table_ddl", {
+        connectionId: activeConnectionId,
+        tableName,
+        ...(schema ? { schema } : {}),
+      });
+      runQuery(ddl, `DDL - ${tableName}`, undefined, true, schema, true);
+    } catch (e) {
+      console.error(e);
+      showAlert(`获取建表语句失败：${toErrorMessage(e)}`, { kind: "error" });
+    }
   };
 
   const handleRoutineDoubleClick = async (routine: RoutineInfo, schema?: string) => {
@@ -354,6 +387,36 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
     setContextMenu({ x: e.clientX, y: e.clientY, type, id, label, data });
   };
 
+  useEffect(() => {
+    setOpenDatabaseNames((prev) => {
+      const available = new Set(selectedDatabases);
+      const next = new Set(Array.from(prev).filter((name) => available.has(name)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [selectedDatabases]);
+
+  const openDatabaseNode = (database: string) => {
+    setOpenDatabaseNames((prev) => new Set(prev).add(database));
+    const data = databaseDataMap[database];
+    if (!data?.isLoaded && !data?.isLoading) {
+      loadDatabaseData(database);
+    }
+  };
+
+  const closeDatabaseNode = (database: string) => {
+    setOpenDatabaseNames((prev) => {
+      const next = new Set(prev);
+      next.delete(database);
+      return next;
+    });
+    if (activeSchema === database) {
+      setActiveTable(null);
+    }
+    if (activeConnectionId) {
+      void closeTabsForDatabase(activeConnectionId, database);
+    }
+  };
+
   const handleImportDatabase = async (database?: string) => {
     const file = await open({
       filters: [{ name: "SQL / Zip File", extensions: ["sql", "zip"] }],
@@ -373,17 +436,19 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
   return (
     <>
       <aside
-        className="bg-base border-r border-default flex flex-col relative shrink-0"
-        style={{ width: sidebarWidth }}
+        className={`${embedded ? "bg-transparent border-0" : "shrink-0 border-r bg-base border-default"} flex flex-col relative`}
+        style={{ width: embedded ? "100%" : sidebarWidth }}
       >
         {/* Resize Handle */}
-        <div
-          onMouseDown={startResize}
-          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-30 transition-colors"
-        />
+        {!embedded && (
+          <div
+            onMouseDown={startResize}
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-30 transition-colors"
+          />
+        )}
 
         {/* Tab switcher for split view */}
-        {splitView && isSplitVisible && (
+        {!embedded && splitView && isSplitVisible && (
           <div className="flex items-center gap-1 px-3 py-1.5 border-b border-default">
             {splitView.connectionIds.map(connId => {
               const name = connectionDataMap[connId]?.connectionName ?? connId;
@@ -403,9 +468,10 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
           </div>
         )}
 
+        {!embedded && (
         <div className="p-4 border-b border-default font-semibold text-sm text-primary flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Database size={16} className="text-blue-400 shrink-0" />
+            <NavicatDatabaseIcon size={17} active className="shrink-0" />
             <div className="flex flex-col min-w-0">
               <span>{t("sidebar.explorer")}</span>
               {activeConnectionName && (
@@ -519,8 +585,10 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
             </button>
           </div>
         </div>
+        )}
 
         {/* Tab bar */}
+        {!embedded && (
         <div className="flex items-center border-b border-default bg-base px-1">
           {([
             { id: "structure" as const, icon: Layers, label: t("sidebar.structure") },
@@ -552,18 +620,19 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
             </button>
           ))}
         </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className={embedded ? "overflow-visible py-0" : "flex-1 overflow-y-auto py-2"}>
           {/* Favorites tab */}
-          {sidebarTab === "favorites" && (<div className="animate-fade-in">{(() => {
+          {!embedded && sidebarTab === "favorites" && (<div className="animate-fade-in">{(() => {
             const sorted = [...queries].sort((a, b) => {
               if (!a.updated_at && !b.updated_at) return 0;
               if (!a.updated_at) return 1;
               if (!b.updated_at) return -1;
               return b.updated_at.localeCompare(a.updated_at);
             });
-            const filteredQueries = favoritesFilter.trim()
-              ? sorted.filter((q) => q.name.toLowerCase().includes(favoritesFilter.toLowerCase()) || q.sql.toLowerCase().includes(favoritesFilter.toLowerCase()))
+            const filteredQueries = objectFilter
+              ? sorted.filter((q) => q.name.toLowerCase().includes(objectFilter) || q.sql.toLowerCase().includes(objectFilter))
               : sorted;
             const groupedFavorites = groupByDate(filteredQueries, (q) => q.updated_at ?? "1970-01-01");
 
@@ -573,22 +642,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
               </div>
             ) : (
               <div>
-                <div className="px-2 pb-1.5">
-                  <div className="relative">
-                    <Search
-                      size={12}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-muted"
-                    />
-                    <input
-                      type="text"
-                      value={favoritesFilter}
-                      onChange={(e) => setFavoritesFilter(e.target.value)}
-                      placeholder={t("sidebar.searchFavorites")}
-                      className="w-full pl-6 pr-2 py-1 text-xs bg-surface-secondary border border-default rounded text-primary placeholder:text-muted focus:outline-none focus:border-blue-500/50"
-                    />
-                  </div>
-                </div>
-                {favoritesFilter.trim() && (
+                {objectFilter && (
                   <div className="px-3 pb-1 text-[10px] text-muted">
                     {filteredQueries.length} / {queries.length}
                   </div>
@@ -623,7 +677,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                             <div className="flex items-center gap-1.5 text-[10px] text-muted shrink-0">
                               {q.database && (
                                 <span className="flex items-center gap-0.5">
-                                  <Database size={9} className="shrink-0" />
+                                  <NavicatDatabaseIcon size={10} className="shrink-0" />
                                   <span className="truncate max-w-[80px]">{q.database}</span>
                                 </span>
                               )}
@@ -643,7 +697,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
           })()}</div>)}
 
           {/* History tab */}
-          {sidebarTab === "history" && (
+          {!embedded && sidebarTab === "history" && (
             <div className="animate-fade-in"><QueryHistorySection
               entries={historyEntries}
               isLoading={isHistoryLoading}
@@ -658,7 +712,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
           )}
 
           {/* Structure tab */}
-          {sidebarTab === "structure" && (
+          {(embedded || sidebarTab === "structure") && (
             (isLoadingTables || isLoadingSchemas) ? (
               <div className="flex items-center justify-center h-20 text-muted gap-2">
                 <Loader2 size={16} className="animate-spin" />
@@ -884,6 +938,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                           onRoutineDoubleClick={(routine, schema) => handleRoutineDoubleClick(routine, schema)}
                           onTriggerDoubleClick={(trigger, schema) => handleTriggerDoubleClick(trigger, schema)}
                           onContextMenu={handleContextMenu}
+                          globalSearch={globalSearch}
                           onAddColumn={(t_name) =>
                             setModifyColumnModal({ isOpen: true, tableName: t_name, column: null })
                           }
@@ -1066,30 +1121,25 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                     </div>
                   </div>
 
-                  {/* Database filter input */}
-                  <div className="px-3 pb-1.5">
-                    <div className="relative flex items-center">
-                      <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                      <input
-                        type="text"
-                        value={dbFilter}
-                        onChange={(e) => setDbFilter(e.target.value)}
-                        placeholder={t("sidebar.filterDatabases")}
-                        className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                      />
-                      {dbFilter && (
-                        <button
-                          onClick={() => setDbFilter("")}
-                          className="absolute right-1.5 text-muted hover:text-primary"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {(dbFilter
-                    ? selectedDatabases.filter((db) => db.toLowerCase().includes(dbFilter.toLowerCase()))
+                  {(objectFilter
+                    ? selectedDatabases.filter((db) => {
+                        const databaseData = databaseDataMap[db];
+                        return (
+                          db.toLowerCase().includes(objectFilter) ||
+                          databaseData?.tables.some((table) =>
+                            table.name.toLowerCase().includes(objectFilter),
+                          ) ||
+                          databaseData?.views.some((view) =>
+                            view.name.toLowerCase().includes(objectFilter),
+                          ) ||
+                          databaseData?.routines.some((routine) =>
+                            routine.name.toLowerCase().includes(objectFilter),
+                          ) ||
+                          databaseData?.triggers.some((trigger) =>
+                            trigger.name.toLowerCase().includes(objectFilter),
+                          )
+                        );
+                      })
                     : selectedDatabases
                   ).map((dbName) => (
                     <SidebarDatabaseItem
@@ -1101,7 +1151,9 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       connectionId={activeConnectionId!}
                       driver={activeDriver!}
                       schemaVersion={schemaVersion}
-                      onLoadDatabase={loadDatabaseData}
+                      isOpen={openDatabaseNames.has(dbName)}
+                      onOpenDatabase={openDatabaseNode}
+                      onCloseDatabase={closeDatabaseNode}
                       onRefreshDatabase={refreshDatabaseData}
                       onTableClick={(name, db) => handleTableClick(name, db)}
                       onTableDoubleClick={(name, db) => handleOpenDatabaseTable(name, db)}
@@ -1110,6 +1162,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       onRoutineDoubleClick={(routine, db) => handleRoutineDoubleClick(routine, db)}
                       onTriggerDoubleClick={(trigger, db) => handleTriggerDoubleClick(trigger, db)}
                       onContextMenu={handleContextMenu}
+                      globalSearch={globalSearch}
                       onAddColumn={(t_name) =>
                         setModifyColumnModal({ isOpen: true, tableName: t_name, column: null })
                       }
@@ -1195,7 +1248,7 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       : activeDatabaseName;
                     return dbLabel ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-default">
-                        <Database size={14} className="text-blue-400 shrink-0" />
+                        <NavicatDatabaseIcon size={15} active className="shrink-0" />
                         <span className="text-sm font-medium text-secondary truncate">
                           {dbLabel}
                         </span>
@@ -1243,35 +1296,13 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       </div>
                     }
                   >
-                    {tables.length > 0 && (
-                      <div className="px-2 py-1">
-                        <div className="relative flex items-center">
-                          <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                          <input
-                            type="text"
-                            value={tableFilter}
-                            onChange={(e) => setTableFilter(e.target.value)}
-                            placeholder={t("sidebar.filterTables")}
-                            className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                          />
-                          {tableFilter && (
-                            <button
-                              onClick={() => setTableFilter("")}
-                              className="absolute right-1.5 text-muted hover:text-primary"
-                            >
-                              <X size={11} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
                     {(() => {
-                      const filtered = tableFilter
-                        ? tables.filter((tbl) => tbl.name.toLowerCase().includes(tableFilter.toLowerCase()))
+                      const filtered = objectFilter
+                        ? tables.filter((tbl) => tbl.name.toLowerCase().includes(objectFilter))
                         : tables;
                       return filtered.length === 0 ? (
                         <div className="text-center p-2 text-xs text-muted italic">
-                          {tableFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
+                          {objectFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
                         </div>
                       ) : (
                         <div>
@@ -1429,36 +1460,13 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                         </div>
                       }
                     >
-                      {triggers.length > 0 && (
-                        <div className="px-2 py-1">
-                          <div className="relative flex items-center">
-                            <Search size={11} className="absolute left-2 text-muted pointer-events-none" />
-                            <input
-                              type="text"
-                              value={triggerFilterFlat}
-                              onChange={(e) => setTriggerFilterFlat(e.target.value)}
-                              placeholder={t("sidebar.filterTriggers")}
-                              className="w-full bg-surface-secondary text-xs text-secondary placeholder:text-muted rounded pl-6 pr-6 py-1 border border-default focus:outline-none focus:border-blue-500/50"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            {triggerFilterFlat && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setTriggerFilterFlat(""); }}
-                                className="absolute right-1.5 text-muted hover:text-primary"
-                              >
-                                <X size={11} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
                       {(() => {
-                        const filtered = triggerFilterFlat
-                          ? triggers.filter((tr) => tr.name.toLowerCase().includes(triggerFilterFlat.toLowerCase()))
+                        const filtered = objectFilter
+                          ? triggers.filter((tr) => tr.name.toLowerCase().includes(objectFilter))
                           : triggers;
                         return filtered.length === 0 ? (
                           <div className="text-center p-2 text-xs text-muted italic">
-                            {triggerFilterFlat ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
+                            {objectFilter ? t("sidebar.noTriggersMatch") : t("sidebar.noTriggers")}
                           </div>
                         ) : (
                           <div>
@@ -1582,6 +1590,11 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       },
                     },
                     {
+                      label: "设计表",
+                      icon: Edit,
+                      action: () => handleDesignTable(contextMenu.id, ctxSchema),
+                    },
+                    {
                       label: t("sidebar.newConsole"),
                       icon: FileCode,
                       action: () => {
@@ -1601,6 +1614,13 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       label: t("sidebar.viewSchema"),
                       icon: FileText,
                       action: () => setSchemaModal({ tableName: contextMenu.id, schema: ctxSchema }),
+                    },
+                    {
+                      label: "查看创建表语句",
+                      icon: FileCode,
+                      action: () => {
+                        void handleOpenTableDdl(contextMenu.id, ctxSchema);
+                      },
                     },
                     activeCapabilities?.no_connection_required !== true ? {
                       label: t("sidebar.viewERDiagram"),
@@ -1941,6 +1961,15 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                               })()
                           : contextMenu.type === "database"
                             ? [
+                                ...(openDatabaseNames.has(contextMenu.id)
+                                  ? [
+                                      {
+                                        label: "关闭数据库",
+                                        icon: PanelLeftClose,
+                                        action: () => closeDatabaseNode(contextMenu.id),
+                                      },
+                                    ]
+                                  : []),
                                 {
                                   label: t("sidebar.newConsole"),
                                   icon: FileCode,

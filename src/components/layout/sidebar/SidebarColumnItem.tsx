@@ -76,29 +76,47 @@ export const SidebarColumnItem = ({
       }
     }
   };
+  const columnComment = column.comment?.trim();
+  const hasTypeLength = /\(.+\)/.test(column.data_type);
+  const columnTypeLabel =
+    hasTypeLength
+      ? column.data_type
+      : column.character_maximum_length !== undefined &&
+          column.character_maximum_length !== null
+        ? `${column.data_type}(${column.character_maximum_length})`
+        : column.data_type;
+  const columnTitle = [
+    column.name,
+    `类型：${columnTypeLabel}`,
+    columnComment ? `注释：${columnComment}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
     <>
       <div
-        className="flex items-center gap-2 px-3 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
+        className="flex items-center gap-2 px-3 py-1 text-sm text-secondary hover:bg-surface-secondary hover:text-primary cursor-pointer group font-mono"
         onContextMenu={!isView && canManage !== false ? handleContextMenu : undefined}
         onDoubleClick={!isView && canManage !== false ? () => onEdit(column) : undefined}
+        title={columnTitle}
       >
         {column.is_pk ? (
-          <Key size={12} className="text-yellow-500 shrink-0" />
+          <Key size={15} className="text-yellow-500 shrink-0" />
         ) : (
-          <Columns size={12} className="text-muted shrink-0" />
+          <Columns size={15} className="text-muted shrink-0" />
         )}
         <span
           className={clsx(
-            "truncate flex-1 min-w-0",
+            "truncate flex-1 min-w-0 decoration-dotted underline-offset-4",
             column.is_pk && "font-bold text-yellow-500/80",
+            columnComment && "group-hover:underline",
           )}
         >
           {column.name}
         </span>
-        <span className="text-muted text-[10px] ml-auto shrink-0">
-          {column.data_type}
+        <span className="text-muted text-xs ml-auto shrink-0">
+          {columnTypeLabel}
         </span>
       </div>
       {contextMenu && !isView && canManage !== false && (

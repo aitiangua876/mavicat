@@ -61,7 +61,7 @@ export const TextInput: React.FC<TextInputProps> = ({
       <div className="relative">
         <div
           data-testid="text-input-code"
-          className="w-full border border-strong rounded-lg overflow-hidden transition-colors"
+          className="w-full border border-strong rounded overflow-hidden transition-colors"
           style={{ height: 220 }}
         >
           {diffEnabled && hasDiff && originalText !== null ? (
@@ -101,10 +101,10 @@ export const TextInput: React.FC<TextInputProps> = ({
             onClick={() => setDiffEnabled((v) => !v)}
             aria-pressed={diffEnabled}
             disabled={!hasDiff}
-            className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`mavicat-desktop-button px-2 py-1 text-xs transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed ${
               diffEnabled && hasDiff
-                ? "bg-blue-600/30 text-blue-100 border-blue-500/50"
-                : "bg-surface-secondary text-secondary border-default hover:bg-surface-tertiary"
+                ? "mavicat-desktop-button-primary text-blue-100 border-blue-500/50"
+                : "text-secondary"
             }`}
             title={t("textInput.diff", { defaultValue: "Diff" })}
           >
@@ -122,10 +122,10 @@ export const TextInput: React.FC<TextInputProps> = ({
               type="button"
               onClick={() => setSideBySide((v) => !v)}
               aria-pressed={sideBySide}
-              className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${
+              className={`mavicat-desktop-button px-2 py-1 text-xs transition-colors flex items-center gap-1 ${
                 sideBySide
-                  ? "bg-blue-600/30 text-blue-100 border-blue-500/50"
-                  : "bg-surface-secondary text-secondary border-default hover:bg-surface-tertiary"
+                  ? "mavicat-desktop-button-primary text-blue-100 border-blue-500/50"
+                  : "text-secondary"
               }`}
               title={t("textInput.sideBySide", { defaultValue: "Side by side" })}
             >

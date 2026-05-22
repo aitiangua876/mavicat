@@ -213,7 +213,11 @@ pub async fn complete_json_viewer_session(
             .cell_index
             .lock()
             .map_err(|e| format!("Failed to acquire cell index lock: {}", e))?;
-        if cell_index.get(&key).map(|v| v == &session_id).unwrap_or(false) {
+        if cell_index
+            .get(&key)
+            .map(|v| v == &session_id)
+            .unwrap_or(false)
+        {
             cell_index.remove(&key);
         }
     }

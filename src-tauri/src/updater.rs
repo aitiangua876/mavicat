@@ -53,7 +53,7 @@ struct GitHubAsset {
 }
 
 // Constants
-const GITHUB_REPO: &str = "TabularisDB/tabularis";
+const GITHUB_REPO: &str = "chenlong/Mavicat";
 const CACHE_DURATION_SECS: u64 = 43200; // 12 hours
 /// Returns the installation source: "snap", "aur", or None for direct installs.
 /// Only meaningful on Linux; always returns None on other platforms.
@@ -70,13 +70,11 @@ fn detect_installation_source() -> Option<String> {
             return Some("flatpak".to_string());
         }
 
-        // AUR: check if pacman's local database has a tabularis-bin entry
+        // AUR: check if pacman's local database has a mavicat-bin entry
         if let Ok(entries) = std::fs::read_dir("/var/lib/pacman/local") {
-            let is_aur = entries.filter_map(|e| e.ok()).any(|e| {
-                e.file_name()
-                    .to_string_lossy()
-                    .starts_with("tabularis-bin-")
-            });
+            let is_aur = entries
+                .filter_map(|e| e.ok())
+                .any(|e| e.file_name().to_string_lossy().starts_with("mavicat-bin-"));
             if is_aur {
                 return Some("aur".to_string());
             }
@@ -134,7 +132,7 @@ async fn fetch_latest_release() -> Result<GitHubRelease, String> {
 
     let res = client
         .get(&url)
-        .header("User-Agent", "Tabularis")
+        .header("User-Agent", "Mavicat")
         .header("Accept", "application/vnd.github.v3+json")
         .send()
         .await
@@ -354,22 +352,22 @@ mod tests {
     fn test_categorize_asset_macos() {
         assert_eq!(categorize_asset("Tabularis_0.8.8_x64.dmg"), "macos");
         assert_eq!(categorize_asset("Tabularis_0.8.8_aarch64.dmg"), "macos");
-        assert_eq!(categorize_asset("tabularis-darwin.zip"), "macos");
+        assert_eq!(categorize_asset("mavicat-darwin.zip"), "macos");
         assert_eq!(categorize_asset("app-macos-universal.tar.gz"), "macos");
     }
 
     #[test]
     fn test_categorize_asset_windows() {
         assert_eq!(categorize_asset("Tabularis_0.8.8_x64_setup.exe"), "windows");
-        assert_eq!(categorize_asset("tabularis.msi"), "windows");
+        assert_eq!(categorize_asset("mavicat.msi"), "windows");
         assert_eq!(categorize_asset("app-windows-x86_64.zip"), "windows");
     }
 
     #[test]
     fn test_categorize_asset_linux() {
-        assert_eq!(categorize_asset("tabularis_0.8.8_amd64.AppImage"), "linux");
-        assert_eq!(categorize_asset("tabularis_0.8.8_amd64.deb"), "linux");
-        assert_eq!(categorize_asset("tabularis-0.8.8-1.x86_64.rpm"), "linux");
+        assert_eq!(categorize_asset("mavicat_0.8.8_amd64.AppImage"), "linux");
+        assert_eq!(categorize_asset("mavicat_0.8.8_amd64.deb"), "linux");
+        assert_eq!(categorize_asset("mavicat-0.8.8-1.x86_64.rpm"), "linux");
     }
 
     #[test]
@@ -390,7 +388,7 @@ mod tests {
     // GitHub repo constant test
     #[test]
     fn test_github_repo_constant() {
-        assert_eq!(GITHUB_REPO, "TabularisDB/tabularis");
+        assert_eq!(GITHUB_REPO, "chenlong/Mavicat");
     }
 
     // Cache duration test
@@ -411,7 +409,7 @@ mod tests {
     fn test_detect_installation_source_snap() {
         let _lock = ENV_MUTEX.lock().unwrap();
         std::env::remove_var("FLATPAK_ID");
-        std::env::set_var("SNAP", "/snap/tabularis/current");
+        std::env::set_var("SNAP", "/snap/mavicat/current");
         let source = detect_installation_source();
         std::env::remove_var("SNAP");
         assert_eq!(source.as_deref(), Some("snap"));
@@ -422,7 +420,7 @@ mod tests {
     fn test_detect_installation_source_flatpak() {
         let _lock = ENV_MUTEX.lock().unwrap();
         std::env::remove_var("SNAP");
-        std::env::set_var("FLATPAK_ID", "io.github.debba.tabularis");
+        std::env::set_var("FLATPAK_ID", "com.mavicat.desktop");
         let source = detect_installation_source();
         std::env::remove_var("FLATPAK_ID");
         assert_eq!(source.as_deref(), Some("flatpak"));
@@ -435,7 +433,7 @@ mod tests {
         std::env::remove_var("SNAP");
         std::env::remove_var("FLATPAK_ID");
         let source = detect_installation_source();
-        // On a dev/CI machine without pacman or tabularis-bin installed, must be None
+        // On a dev/CI machine without pacman or mavicat-bin installed, must be None
         assert!(source.is_none() || source.as_deref() == Some("aur"));
     }
 }

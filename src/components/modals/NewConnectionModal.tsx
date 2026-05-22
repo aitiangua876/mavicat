@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   X,
@@ -21,14 +21,11 @@ import { open } from "@tauri-apps/plugin-dialog";
 import clsx from "clsx";
 import { SshConnectionsModal } from "./SshConnectionsModal";
 import { Select } from "../ui/Select";
-import { SlotAnchor } from "../ui/SlotAnchor";
 import { useDrivers } from "../../hooks/useDrivers";
-import { usePluginSlotRegistry } from "../../hooks/usePluginSlotRegistry";
 import { Modal } from "../ui/Modal";
 import type { PluginManifest } from "../../types/plugins";
 import { loadSshConnections, type SshConnection } from "../../utils/ssh";
 import { isMultiDatabaseCapable } from "../../utils/database";
-import { fetchConnectionWithCredentials } from "../../utils/credentials";
 import { getDriverIcon, getDriverColorStyle } from "../../utils/driverUI";
 import {
   looksLikeConnectionString,
@@ -82,6 +79,7 @@ const FieldInput = ({
   placeholder,
   autoFocus,
   className,
+  required,
 }: {
   label: string;
   value: string | number | undefined;
@@ -90,6 +88,7 @@ const FieldInput = ({
   placeholder?: string;
   autoFocus?: boolean;
   className?: string;
+  required?: boolean;
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -98,6 +97,7 @@ const FieldInput = ({
     <div className={clsx("flex flex-col gap-1", className)}>
       <label className="text-[10px] uppercase font-semibold tracking-wider text-muted">
         {label}
+        {required && <span className="ml-1 text-red-400">*</span>}
       </label>
       <div className="relative group">
         <input
@@ -143,14 +143,16 @@ export const NewConnectionModal = ({
   const [driver, setDriver] = useState<string>("mysql");
   const activeDriver = drivers.find((d) => d.id === driver) ?? drivers[0];
   const [name, setName] = useState("");
+  const [nameDirty, setNameDirty] = useState(false);
   const [formData, setFormData] = useState<Partial<ConnectionParams>>({
     host: "localhost",
     port: 3306,
-    username: "",
+    username: "root",
     database: "",
     ssl_mode: "",
     ssh_enabled: false,
     ssh_port: 22,
+    save_in_keychain: false,
   });
   const [selectedDatabasesState, setSelectedDatabasesState] = useState<
     string[]
@@ -214,27 +216,6 @@ export const NewConnectionModal = ({
     });
   const isMultiDb = isMultiDatabaseCapable(activeDriver?.capabilities);
 
-  // ── plugin slot: connection-modal.connection_content ──
-  const slotRegistry = usePluginSlotRegistry();
-  const onDatabaseChange = useCallback((value: string) => {
-    setFormData((prev) => ({ ...prev, database: value }));
-  }, []);
-  const dbFieldSlotContext = useMemo(
-    () => ({
-      driver,
-      database: typeof formData.database === "string" ? formData.database : "",
-      onDatabaseChange,
-      connectionName: name,
-    }),
-    [driver, formData.database, onDatabaseChange, name],
-  );
-  const hasConnectionContentSlot =
-    noConnectionRequired &&
-    slotRegistry.getSlotContributions(
-      "connection-modal.connection_content",
-      dbFieldSlotContext,
-    ).length > 0;
-
   // ── helpers ──
   const loadSshConnectionsList = async () => {
     const result = await loadSshConnections();
@@ -248,7 +229,26 @@ export const NewConnectionModal = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const loadDatabases = async (overrides?: Partial<ConnectionParams>) => {
+  const updateHost = (value: string) => {
+    updateField("host", value);
+    if (!nameDirty) {
+      setName(value.trim());
+      if (nameError) setNameError(false);
+    }
+  };
+
+  const getDefaultUsername = (driverId: string) => {
+    if (driverId === "postgres") return "postgres";
+    if (driverId === "mysql" || driverId === "mariadb") return "root";
+    return "";
+  };
+
+  const getDefaultDatabase = (driverId: string) => {
+    if (driverId === "postgres") return "postgres";
+    return "";
+  };
+
+  const loadDatabases = async (overrides?: Partial<ConnectionParams>): Promise<string[]> => {
     const effectiveDriver = overrides?.driver ?? driver;
     const targetDriver = drivers.find((d) => d.id === effectiveDriver);
 
@@ -256,7 +256,7 @@ export const NewConnectionModal = ({
       targetDriver?.capabilities?.file_based === true ||
       targetDriver?.capabilities?.folder_based === true
     ) {
-      return;
+      return [];
     }
 
     setLoadingDatabases(true);
@@ -266,6 +266,7 @@ export const NewConnectionModal = ({
         ...formData,
         ...overrides,
         driver: effectiveDriver,
+        save_in_keychain: false,
         port:
           overrides?.port != null
             ? Number(overrides.port)
@@ -292,6 +293,7 @@ export const NewConnectionModal = ({
           return merged.filter((db) => databases.includes(db));
         });
       }
+      return databases;
     } catch (err) {
       const errorMsg =
         typeof err === "string"
@@ -301,6 +303,7 @@ export const NewConnectionModal = ({
             : t("newConnection.failLoadDatabases");
       setDatabaseLoadError(errorMsg);
       setAvailableDatabases([]);
+      return [];
     } finally {
       setLoadingDatabases(false);
     }
@@ -324,6 +327,7 @@ export const NewConnectionModal = ({
       setConnectionStringError(null);
       setNameError(false);
       setDatabasesTabError(false);
+      setNameDirty(!!initialConnection);
 
       if (initialConnection) {
         setName(initialConnection.name);
@@ -336,22 +340,14 @@ export const NewConnectionModal = ({
           initialConnection.params.ssh_connection_id ? "existing" : "inline",
         );
 
-        let params = initialConnection.params;
-        try {
-          const fullConn = await fetchConnectionWithCredentials(
-            initialConnection.id,
-          );
-          params = fullConn.params;
-        } catch {
-          // fallback: use params without secrets (backend will retrieve from keychain)
-        }
+        const params = initialConnection.params;
 
         if (Array.isArray(db)) {
           setSelectedDatabasesState(db);
-          setFormData({ ...params, database: db[0] ?? "" });
+          setFormData({ ...params, database: db[0] ?? "", save_in_keychain: false });
         } else {
           setSelectedDatabasesState([]);
-          setFormData({ ...params });
+          setFormData({ ...params, save_in_keychain: false });
         }
 
         // Auto-load available databases when editing a multi-db connection
@@ -362,15 +358,16 @@ export const NewConnectionModal = ({
           loadDatabases(params);
         }
       } else {
-        setName("");
+        setName("localhost");
         setDriver("mysql");
         setFormData({
           host: "localhost",
           port: 3306,
-          username: "",
+          username: "root",
           database: "",
           ssh_enabled: false,
           ssh_port: 22,
+          save_in_keychain: false,
         });
         setSelectedDatabasesState([]);
         setSshMode("existing");
@@ -384,14 +381,17 @@ export const NewConnectionModal = ({
   }, [isOpen, initialConnection]);
 
   const handleDriverChange = (newDriver: string) => {
+    const defaultHost = newDriver === "sqlite" ? "" : "localhost";
     setDriver(newDriver);
+    setName(defaultHost);
+    setNameDirty(false);
     setFormData({
       driver: newDriver,
-      host: "",
+      host: defaultHost,
       port: drivers.find((d) => d.id === newDriver)?.default_port ?? undefined,
-      username: "",
+      username: getDefaultUsername(newDriver),
       password: "",
-      database: "",
+      database: getDefaultDatabase(newDriver),
       ssl_mode: "",
       ssh_enabled: false,
       ssh_connection_id: undefined,
@@ -424,10 +424,12 @@ export const NewConnectionModal = ({
       const testParams: Partial<ConnectionParams> = {
         driver,
         ...formData,
+        save_in_keychain: false,
         port: formData.port != null ? Number(formData.port) : undefined,
         database: isMultiDb
           ? (selectedDatabasesState[0] ??
-            (typeof formData.database === "string" ? formData.database : ""))
+            availableDatabases[0] ??
+            "information_schema")
           : formData.database,
       };
       const result = await invoke<string>("test_connection", {
@@ -472,16 +474,36 @@ export const NewConnectionModal = ({
       nameInputRef.current?.focus();
       return;
     }
-    if (isMultiDb) {
-      if (selectedDatabasesState.length === 0) {
-        setStatus("error");
-        setMessage(t("newConnection.noDatabasesSelected"));
-        setTestResult("error");
-        setActiveTab("databases");
-        setDatabasesTabError(true);
-        return;
-      }
-    } else if (
+    if (isNetworkDriver && !formData.host?.trim()) {
+      setStatus("error");
+      setMessage("请填写主机地址");
+      setTestResult("error");
+      return;
+    }
+    if (isNetworkDriver && !formData.port) {
+      setStatus("error");
+      setMessage("请填写端口");
+      setTestResult("error");
+      return;
+    }
+    if (isNetworkDriver && !formData.username?.trim()) {
+      setStatus("error");
+      setMessage("请填写用户名");
+      setTestResult("error");
+      return;
+    }
+    if (
+      isNetworkDriver &&
+      !initialConnection &&
+      !formData.password?.trim()
+    ) {
+      setStatus("error");
+      setMessage("请填写密码");
+      setTestResult("error");
+      return;
+    }
+    if (
+      !isMultiDb &&
       !noConnectionRequired &&
       (!formData.database ||
         (typeof formData.database === "string" && !formData.database.trim()))
@@ -495,14 +517,30 @@ export const NewConnectionModal = ({
     setMessage("");
     setTestResult(null);
     try {
+      let databasesForSave = selectedDatabasesState;
+      if (isMultiDb && databasesForSave.length === 0) {
+        const loadedDatabases =
+          availableDatabases.length > 0 ? availableDatabases : await loadDatabases();
+        if (loadedDatabases.length === 0) {
+          setStatus("error");
+          setMessage(t("newConnection.failLoadDatabases"));
+          setTestResult("error");
+          setActiveTab("databases");
+          return;
+        }
+        databasesForSave = loadedDatabases;
+        setSelectedDatabasesState(loadedDatabases);
+      }
+
       const params: Partial<ConnectionParams> = {
         driver,
         ...formData,
         port: formData.port != null ? Number(formData.port) : undefined,
+        save_in_keychain: false,
         database: isMultiDb
-          ? selectedDatabasesState.length === 1
-            ? selectedDatabasesState[0]
-            : selectedDatabasesState
+          ? databasesForSave.length === 1
+            ? databasesForSave[0]
+            : databasesForSave
           : formData.database,
       };
       if (initialConnection) {
@@ -575,7 +613,12 @@ export const NewConnectionModal = ({
         setFormData((prev) => ({
           ...prev,
           ...parsedFields,
+          save_in_keychain: false,
         }));
+        if (!nameDirty && parsedFields.host) {
+          setName(parsedFields.host);
+          if (nameError) setNameError(false);
+        }
 
         void loadDatabases(parsedFields);
       } else {
@@ -592,23 +635,16 @@ export const NewConnectionModal = ({
   // ── rendered general tab content ──
   const generalTabContent = (
     <div className="space-y-4">
-      {/* API-based: no connection form needed — plugin may provide custom content via slot */}
+      {/* API-based drivers are not enabled in the Mavicat core build. */}
       {noConnectionRequired ? (
-        hasConnectionContentSlot ? (
-          <SlotAnchor
-            name="connection-modal.connection_content"
-            context={dbFieldSlotContext}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 gap-3 text-muted">
-            <Info size={22} className="opacity-40" />
-            <p className="text-xs text-center">
-              {t("newConnection.noGeneralSettings", {
-                defaultValue: "No general settings available for this driver.",
-              })}
-            </p>
-          </div>
-        )
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-muted">
+          <Info size={22} className="opacity-40" />
+          <p className="text-xs text-center">
+            {t("newConnection.noGeneralSettings", {
+              defaultValue: "No general settings available for this driver.",
+            })}
+          </p>
+        </div>
       ) : activeDriver?.capabilities?.file_based === true ||
         activeDriver?.capabilities?.folder_based === true ? (
         <div className="flex flex-col gap-1">
@@ -657,53 +693,6 @@ export const NewConnectionModal = ({
         </div>
       ) : (
         <>
-          {connectionStringEnabled && (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] uppercase font-semibold tracking-wider text-muted">
-                  {t("newConnection.connectionString", {
-                    defaultValue: "Connection String",
-                  })}
-                </label>
-                {connectionString && (
-                  <button
-                    type="button"
-                    onClick={handleClearConnectionString}
-                    className="text-xs text-muted hover:text-primary transition-colors"
-                  >
-                    {t("common.clear", { defaultValue: "Clear" })}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={connectionString}
-                  onChange={(e) => handleConnectionStringChange(e.target.value)}
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className={clsx(
-                    "flex-1 px-3 py-2 bg-base border rounded-md text-sm text-primary placeholder:text-muted placeholder:italic focus:border-blue-500 focus:outline-none transition-colors",
-                    connectionStringError ? "border-red-500" : "border-strong",
-                  )}
-                  placeholder={connectionStringPlaceholder}
-                />
-                {connectionString && !connectionStringError && (
-                  <div className="px-3 py-2 bg-green-900/20 border border-green-500/30 rounded-md text-green-400 flex items-center">
-                    <Check size={15} />
-                  </div>
-                )}
-              </div>
-              {connectionStringError && (
-                <div className="flex items-center gap-1 text-xs text-red-400 mt-0.5">
-                  <AlertCircle size={11} /> {connectionStringError}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Host + Port */}
           <div
             className={clsx(
@@ -715,8 +704,9 @@ export const NewConnectionModal = ({
               className="col-span-2"
               label={t("newConnection.host")}
               value={formData.host}
-              onChange={(v) => updateField("host", v)}
+              onChange={updateHost}
               placeholder="localhost"
+              required
             />
             <FieldInput
               label={t("newConnection.port")}
@@ -724,6 +714,7 @@ export const NewConnectionModal = ({
               onChange={(v) => updateField("port", v)}
               type="number"
               placeholder={driver === "mysql" ? "3306" : "5432"}
+              required
             />
           </div>
 
@@ -734,6 +725,7 @@ export const NewConnectionModal = ({
               value={formData.username}
               onChange={(v) => updateField("username", v)}
               placeholder={t("newConnection.usernamePlaceholder")}
+              required
             />
             <FieldInput
               label={t("newConnection.password")}
@@ -748,8 +740,49 @@ export const NewConnectionModal = ({
                   ? "••••••••"
                   : t("newConnection.passwordPlaceholder")
               }
+              required={!initialConnection}
             />
           </div>
+
+          {connectionStringEnabled && (
+            <details className="rounded-md border border-default bg-base/60">
+              <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-secondary hover:text-primary">
+                高级：使用连接字符串
+              </summary>
+              <div className="px-3 pb-3 pt-1 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={connectionString}
+                    onChange={(e) => handleConnectionStringChange(e.target.value)}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className={clsx(
+                      "flex-1 px-3 py-2 bg-base border rounded-md text-sm text-primary placeholder:text-muted placeholder:italic focus:border-blue-500 focus:outline-none transition-colors",
+                      connectionStringError ? "border-red-500" : "border-strong",
+                    )}
+                    placeholder={connectionStringPlaceholder}
+                  />
+                  {connectionString && (
+                    <button
+                      type="button"
+                      onClick={handleClearConnectionString}
+                      className="px-3 py-2 bg-base hover:bg-surface-secondary border border-strong rounded-md text-xs text-secondary hover:text-primary transition-colors"
+                    >
+                      {t("common.clear", { defaultValue: "Clear" })}
+                    </button>
+                  )}
+                </div>
+                {connectionStringError && (
+                  <div className="flex items-center gap-1 text-xs text-red-400 mt-0.5">
+                    <AlertCircle size={11} /> {connectionStringError}
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
 
           {/* Database (single) — only shown for non-multi-db drivers */}
           {!isMultiDb && (
@@ -816,38 +849,32 @@ export const NewConnectionModal = ({
             </div>
           )}
 
-          {/* Keychain */}
-          <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
-            <input
-              type="checkbox"
-              checked={!!formData.save_in_keychain}
-              onChange={(e) => {
-                updateField("save_in_keychain", e.target.checked);
-              }}
-              className="accent-blue-500 w-3.5 h-3.5 rounded"
-            />
-            <span className="text-xs text-secondary">
-              {t("newConnection.saveKeychain")}
-            </span>
-          </label>
         </>
       )}
 
-      {/* Detect JSON in text columns (per-connection opt-in) */}
-      <label className="flex items-start gap-2 cursor-pointer select-none w-fit">
-        <input
-          type="checkbox"
-          checked={detectJsonInTextColumns}
-          onChange={(e) => setDetectJsonInTextColumns(e.target.checked)}
-          className="accent-blue-500 w-3.5 h-3.5 rounded mt-0.5"
-        />
-        <span className="text-xs text-secondary leading-snug">
-          <span className="block">{t("settings.detectJsonInTextColumns")}</span>
-          <span className="block text-muted">
-            {t("settings.detectJsonInTextColumnsDesc")}
-          </span>
-        </span>
-      </label>
+      {!noConnectionRequired && (
+        <details className="rounded-md border border-default bg-base/60">
+          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-secondary hover:text-primary">
+            高级选项
+          </summary>
+          <div className="px-3 pb-3 pt-1">
+            <label className="flex items-start gap-2 cursor-pointer select-none w-fit">
+              <input
+                type="checkbox"
+                checked={detectJsonInTextColumns}
+                onChange={(e) => setDetectJsonInTextColumns(e.target.checked)}
+                className="accent-blue-500 w-3.5 h-3.5 rounded mt-0.5"
+              />
+              <span className="text-xs text-secondary leading-snug">
+                <span className="block">{t("settings.detectJsonInTextColumns")}</span>
+                <span className="block text-muted">
+                  {t("settings.detectJsonInTextColumnsDesc")}
+                </span>
+              </span>
+            </label>
+          </div>
+        </details>
+      )}
     </div>
   );
 
@@ -857,7 +884,8 @@ export const NewConnectionModal = ({
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted">
           {t("newConnection.selectDatabasesHint", {
-            defaultValue: "Select the databases to include in this connection.",
+            defaultValue:
+              "Select databases to include, or leave empty to include all databases available to this login.",
           })}
         </p>
         <button
@@ -968,7 +996,9 @@ export const NewConnectionModal = ({
               ? t("newConnection.selectedDatabases", {
                   count: selectedDatabasesState.length,
                 })
-              : t("newConnection.noDatabasesSelected")}
+              : t("newConnection.allDatabasesSelected", {
+                  defaultValue: "All available databases will be included",
+                })}
           </div>
         </div>
       ) : (
@@ -1305,14 +1335,6 @@ export const NewConnectionModal = ({
                     spellCheck={false}
                     className="w-full px-3 py-2 bg-base border border-strong rounded-md text-sm text-primary placeholder:text-muted placeholder:italic focus:border-blue-500 focus:outline-none transition-colors"
                   />
-                  {formData.save_in_keychain &&
-                    sshPasswordDirty &&
-                    !formData.ssh_password && (
-                      <p className="text-[10px] text-amber-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle size={10} />{" "}
-                        {t("newConnection.sshPasswordMissing")}
-                      </p>
-                    )}
                 </div>
               </div>
               <FieldInput
@@ -1354,6 +1376,7 @@ export const NewConnectionModal = ({
             value={name}
             onChange={(e) => {
               setName(e.target.value);
+              setNameDirty(true);
               if (nameError) setNameError(false);
             }}
             placeholder={t("newConnection.namePlaceholder")}
@@ -1369,6 +1392,9 @@ export const NewConnectionModal = ({
                 : "text-primary placeholder:text-muted/50",
             )}
           />
+          <span className="text-red-400 text-sm -ml-2" title="必填">
+            *
+          </span>
           <span className="text-xs text-muted bg-surface-secondary px-2 py-0.5 rounded-full font-medium capitalize">
             {activeDriver?.name ?? driver}
           </span>

@@ -22,11 +22,6 @@ import {
   shouldUseCachedSchema,
   createSchemaCacheEntry,
 } from "../utils/editor";
-import {
-  createNotebookFromState,
-  evictFromCache,
-  flushAllPendingSaves,
-} from "../utils/notebookStore";
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const { activeConnectionId } = useDatabase();
@@ -44,7 +39,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   // Load tabs from file storage when connection changes
   useEffect(() => {
     if (!activeConnectionId) {
-      setTabs([]);
       setIsLoading(false);
       return;
     }
@@ -52,25 +46,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const loadPreferences = async () => {
       setIsLoading(true);
       try {
-        const { tabs: loadedTabs, activeTabId: loadedActiveTabId } = await loadEditorPreferences(activeConnectionId);
-
-        // Migrate old notebook tabs: notebookState → notebookId
-        for (const tab of loadedTabs) {
-          if (tab.type === "notebook" && tab.notebookState && !tab.notebookId) {
-            try {
-              const { notebookId } = await createNotebookFromState(
-                tab.title,
-                tab.notebookState,
-              );
-              tab.notebookId = notebookId;
-              tab.notebookState = undefined;
-            } catch (e) {
-              console.error("Failed to migrate notebook tab:", e);
-            }
-          }
-        }
+        const { tabs: restoredTabs, activeTabId: loadedActiveTabId } = await loadEditorPreferences(activeConnectionId);
+        const loadedTabs = restoredTabs.filter((tab) => tab.type !== "notebook");
 
         if (loadedTabs.length > 0) {
+          const restoredActiveTab = loadedActiveTabId && loadedTabs.some((tab) => tab.id === loadedActiveTabId)
+            ? loadedActiveTabId
+            : loadedTabs[0].id;
           // Merge loaded tabs with tabs from other connections
           setTabs((prev) => {
             const tabsFromOtherConnections = prev.filter(t => t.connectionId !== activeConnectionId);
@@ -78,7 +60,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           });
           setActiveTabIds((prev) => ({
             ...prev,
-            [activeConnectionId]: loadedActiveTabId || loadedTabs[0].id,
+            [activeConnectionId]: restoredActiveTab,
           }));
         } else {
           // Create initial tab if no tabs exist, preserving other connections' tabs
@@ -119,15 +101,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     [activeConnectionId],
   );
 
-  // Flush all pending notebook saves on app close
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      flushAllPendingSaves();
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
-
   // Save tabs to file storage when they change
   useEffect(() => {
     if (!activeConnectionId || isLoading) return;
@@ -160,8 +133,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       const existing = findExistingTableTab(
         tabsRef.current,
         activeConnectionId,
-        partial?.activeTable || undefined,
+        partial?.type === "table_design"
+          ? partial?.designTable || undefined
+          : partial?.activeTable || undefined,
         partial?.schema,
+        partial?.type === "table_design" ? "table_design" : "table",
       );
       if (existing) {
         setActiveTabId(existing.id);
@@ -187,12 +163,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const closeTab = useCallback(
     (id: string) => {
-      // Flush and evict notebook cache for the closed tab
-      const closedTab = tabsRef.current.find((t) => t.id === id);
-      if (closedTab?.notebookId) {
-        evictFromCache(closedTab.notebookId);
-      }
-
       setTabs((prev) => {
         const {
           newTabs,
@@ -299,6 +269,85 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setTabs((prev) => updateTabInList(prev, id, partial));
   }, []);
 
+  const moveTabToConnection = useCallback(
+    async (
+      id: string,
+      targetConnectionId: string,
+      partial?: Partial<Tab>,
+    ): Promise<boolean> => {
+      const currentTabs = tabsRef.current;
+      const tab = currentTabs.find((item) => item.id === id);
+      if (!tab) return false;
+
+      const sourceConnectionId = tab.connectionId;
+      const movedTab: Tab = {
+        ...tab,
+        ...partial,
+        id,
+        connectionId: targetConnectionId,
+      };
+      const nextTabs = currentTabs.map((item) =>
+        item.id === id ? movedTab : item,
+      );
+      const sourceTabs = nextTabs.filter(
+        (item) => item.connectionId === sourceConnectionId,
+      );
+      const targetTabs = nextTabs.filter(
+        (item) => item.connectionId === targetConnectionId,
+      );
+      const sourceActiveTabId =
+        activeTabIds[sourceConnectionId] === id
+          ? sourceTabs[0]?.id ?? null
+          : activeTabIds[sourceConnectionId] ?? null;
+
+      setTabs(nextTabs);
+      setActiveTabIds((prev) => ({
+        ...prev,
+        [sourceConnectionId]: sourceActiveTabId ?? "",
+        [targetConnectionId]: id,
+      }));
+
+      await Promise.all([
+        saveTabsToStorage(sourceConnectionId, sourceTabs, sourceActiveTabId),
+        saveTabsToStorage(targetConnectionId, targetTabs, id),
+      ]);
+
+      return true;
+    },
+    [activeTabIds],
+  );
+
+  const closeTabsForDatabase = useCallback(
+    async (connectionId: string, database: string): Promise<number> => {
+      const currentTabs = tabsRef.current;
+      const tabsToClose = currentTabs.filter(
+        (tab) => tab.connectionId === connectionId && tab.schema === database,
+      );
+      if (tabsToClose.length === 0) return 0;
+
+      const closingIds = new Set(tabsToClose.map((tab) => tab.id));
+      const nextTabs = currentTabs.filter((tab) => !closingIds.has(tab.id));
+      const connectionTabs = nextTabs.filter(
+        (tab) => tab.connectionId === connectionId,
+      );
+      const currentActiveId = activeTabIds[connectionId] ?? null;
+      const nextActiveTabId =
+        currentActiveId && !closingIds.has(currentActiveId)
+          ? currentActiveId
+          : connectionTabs[0]?.id ?? null;
+
+      setTabs(nextTabs);
+      setActiveTabIds((prev) => ({
+        ...prev,
+        [connectionId]: nextActiveTabId ?? "",
+      }));
+
+      await saveTabsToStorage(connectionId, connectionTabs, nextActiveTabId);
+      return tabsToClose.length;
+    },
+    [activeTabIds],
+  );
+
   const getSchema = useCallback(
     async (
       connectionId: string,
@@ -344,6 +393,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       addTab,
       closeTab,
       updateTab,
+      moveTabToConnection,
+      closeTabsForDatabase,
       setActiveTabId,
       closeAllTabs,
       closeOtherTabs,
@@ -358,6 +409,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       addTab,
       closeTab,
       updateTab,
+      moveTabToConnection,
+      closeTabsForDatabase,
       setActiveTabId,
       closeAllTabs,
       closeOtherTabs,

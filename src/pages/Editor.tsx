@@ -2,17 +2,15 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { reconstructTableQuery } from "../utils/editor";
-import { isMultiDatabaseCapable } from "../utils/database";
+import { getDatabaseList, isMultiDatabaseCapable } from "../utils/database";
 import { isReadonly } from "../utils/driverCapabilities";
+import { getDriverIcon } from "../utils/driverUI";
 import {
   generateTempId,
   initializeNewRow,
   validatePendingInsertion,
   insertionToBackendData,
 } from "../utils/pendingInsertions";
-import { AiQueryModal } from "../components/modals/AiQueryModal";
-import { AiExplainModal } from "../components/modals/AiExplainModal";
-import { AiDropdownButton } from "../components/ui/AiDropdownButton";
 import { VisualExplainModal } from "../components/modals/VisualExplainModal";
 import {
   Play,
@@ -30,20 +28,19 @@ import {
   Network,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ArrowLeftToLine,
   ArrowRightToLine,
   XCircle,
   Trash2,
   Check,
   Undo2,
-  BookOpen,
   Hash,
   Loader2,
   Copy,
   FileText,
   FileJson,
+  FileSpreadsheet,
+  Wand2,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -59,7 +56,9 @@ import { QueryModal } from "../components/modals/QueryModal";
 import { QueryParamsModal } from "../components/modals/QueryParamsModal";
 import { ErrorModal } from "../components/modals/ErrorModal";
 import { VisualQueryBuilder } from "../components/ui/VisualQueryBuilder";
+import { TableDesigner } from "../components/ui/TableDesigner";
 import { ContextMenu } from "../components/ui/ContextMenu";
+import { NavicatDatabaseIcon } from "../components/icons/NavicatStyleIcons";
 import {
   ExportProgressModal,
   type ExportStatus,
@@ -79,14 +78,13 @@ import {
 } from "../utils/queryParameters";
 import { formatDuration } from "../utils/formatTime";
 import { SqlEditorWrapper } from "../components/ui/SqlEditorWrapper";
-import { NotebookView } from "../components/notebook/NotebookView";
-import { extractSqlFromCells } from "../utils/notebook";
-import { createNotebook } from "../utils/notebookStore";
 import { registerSqlAutocomplete } from "../utils/autocomplete";
 import { type OnMount, type Monaco } from "@monaco-editor/react";
 import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useAlert } from "../hooks/useAlert";
 import { useDatabase } from "../hooks/useDatabase";
+import { useDrivers } from "../hooks/useDrivers";
 import { useSavedQueries } from "../hooks/useSavedQueries";
 import { useQueryHistory } from "../hooks/useQueryHistory";
 import { useSettings } from "../hooks/useSettings";
@@ -102,7 +100,11 @@ import type {
   ForeignKey,
 } from "../types/editor";
 import { buildForeignKeyFilterClause } from "../utils/foreignKeys";
-import { formatSqlIdentifier } from "../utils/identifiers";
+import { formatSqlIdentifier, quoteTableRef } from "../utils/identifiers";
+import { beautifySql } from "../utils/sqlFormatter";
+import { rowsToCSV, rowsToJSON } from "../utils/clipboard";
+import { rowsToSqlCopy } from "../utils/sqlCopy";
+import { toErrorMessage } from "../utils/errors";
 import {
   getTabScrollState,
   getAdjacentTabIndex,
@@ -122,6 +124,53 @@ interface EditorState {
   title?: string;
 }
 
+type ExportFormat = "csv" | "json" | "excel" | "sql";
+type ExportScope = "page" | "filtered" | "all";
+
+const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string }> = {
+  csv: { label: "CSV", extension: "csv" },
+  json: { label: "JSON", extension: "json" },
+  excel: { label: "Excel", extension: "xls" },
+  sql: { label: "SQL", extension: "sql" },
+};
+
+const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
+  page: "当前页",
+  filtered: "当前筛选全部",
+  all: "全部数据",
+};
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500, 1000];
+const SQL_IDENTIFIER_CHARS = /[\w$."`\[\]\u4e00-\u9fa5]/;
+
+function normalizeSqlIdentifierPart(part: string): string {
+  return part
+    .trim()
+    .replace(/^[`"\[]+|[`"\]]+$/g, "")
+    .replace(/``/g, "`")
+    .replace(/""/g, '"');
+}
+
+function getSqlIdentifierAtPosition(
+  line: string,
+  oneBasedColumn: number,
+): string | null {
+  const index = Math.max(0, oneBasedColumn - 1);
+  let start = index;
+  let end = index;
+
+  while (start > 0 && SQL_IDENTIFIER_CHARS.test(line[start - 1] ?? "")) {
+    start--;
+  }
+  while (end < line.length && SQL_IDENTIFIER_CHARS.test(line[end] ?? "")) {
+    end++;
+  }
+
+  const raw = line.slice(start, end).trim();
+  if (!raw || !/[A-Za-z0-9_\u4e00-\u9fa5`"\[]/.test(raw)) return null;
+  return raw;
+}
+
 interface ExportProgress {
   rows_processed: number;
 }
@@ -136,19 +185,28 @@ export const Editor = () => {
   const { t } = useTranslation();
   const {
     activeConnectionId,
+    openConnectionIds,
     tables,
     views,
     activeDriver,
     activeSchema,
     activeCapabilities,
+    schemas,
+    selectedSchemas,
     selectedDatabases,
     activeConnectionName,
     activeDatabaseName,
     schemaDataMap,
     databaseDataMap,
+    connections,
+    connect,
+    switchConnection,
+    loadSchemaData,
+    loadDatabaseData,
   } = useDatabase();
+  const { allDrivers } = useDrivers();
   const { explorerConnectionId } = useConnectionLayoutContext();
-  const { settings } = useSettings();
+  const { settings, updateSetting } = useSettings();
   const { saveQuery } = useSavedQueries();
   const { addEntry: addHistoryEntry } = useQueryHistory();
   const {
@@ -163,6 +221,7 @@ export const Editor = () => {
     closeOtherTabs,
     closeTabsToLeft,
     closeTabsToRight,
+    moveTabToConnection,
   } = useEditor();
   const location = useLocation();
   const { matchesShortcut } = useKeybindings();
@@ -218,18 +277,6 @@ export const Editor = () => {
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (!tab) return;
 
-      // Notebook: extract all SQL cells
-      if (tab.type === "notebook" && tab.notebookState) {
-        const allSql = extractSqlFromCells(tab.notebookState.cells);
-        addTab({
-          type: "console",
-          title: `Console - ${tab.title}`,
-          query: allSql,
-          connectionId: tab.connectionId,
-        });
-        return;
-      }
-
       const effectiveSchema =
         activeCapabilities?.schemas === true ? tab.schema : undefined;
       const tabForQuery = { ...tab, schema: effectiveSchema };
@@ -271,8 +318,10 @@ export const Editor = () => {
 
   const [showNewRowModal, setShowNewRowModal] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<ExportScope>("filtered");
   const [editorHeight, setEditorHeight] = useState(300);
   const editorHeightRef = useRef(300);
+  const resultPageSizeRef = useRef(settings.resultPageSize);
   const [isResultsCollapsed, setIsResultsCollapsed] = useState(false);
   const isDragging = useRef(false);
   const rafRef = useRef<number | null>(null);
@@ -284,14 +333,10 @@ export const Editor = () => {
     useState(false);
   const [isTabSwitcherOpen, setIsTabSwitcherOpen] = useState(false);
   const [isRunDropdownOpen, setIsRunDropdownOpen] = useState(false);
-  const [isDbDropdownOpen, setIsDbDropdownOpen] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [isAiExplainModalOpen, setIsAiExplainModalOpen] = useState(false);
   const [isVisualExplainOpen, setIsVisualExplainOpen] = useState(false);
   const [visualExplainQuery, setVisualExplainQuery] = useState<string | null>(null);
   const [isExplainSelectionOpen, setIsExplainSelectionOpen] = useState(false);
   const [explainSelectableQueries, setExplainSelectableQueries] = useState<{ query: string; index: number }[]>([]);
-  const [isEditingPage, setIsEditingPage] = useState(false);
   const [tempPage, setTempPage] = useState("1");
   const [isCountLoading, setIsCountLoading] = useState(false);
   const [applyToAll, setApplyToAll] = useState(false);
@@ -302,14 +347,74 @@ export const Editor = () => {
     settings.csvDelimiter ?? ",",
   );
 
+  useEffect(() => {
+    resultPageSizeRef.current = settings.resultPageSize;
+  }, [settings.resultPageSize]);
+
   const activeTabType = activeTab?.type;
   const activeTabQuery = activeTab?.query;
   const isTableTab = activeTab?.type === "table";
+  const isDesignTab = activeTab?.type === "table_design";
   const isNotebookTab = activeTab?.type === "notebook";
   const isMultiDb =
     isMultiDatabaseCapable(activeCapabilities) && selectedDatabases.length > 1;
   const isEditorOpen =
     !isTableTab && (activeTab?.isEditorOpen ?? activeTab?.type !== "table");
+  const activeConnection = activeConnectionId
+    ? connections.find((connection) => connection.id === activeConnectionId) ?? null
+    : null;
+  const driverById = useMemo(
+    () => new Map(allDrivers.map((driver) => [driver.id, driver])),
+    [allDrivers],
+  );
+  const activeConnectionDriver = activeConnection
+    ? driverById.get(activeConnection.params.driver) ?? null
+    : null;
+  const canSwitchQueryContext =
+    activeTab?.type === "console" || activeTab?.type === "query_builder";
+  const queryDatabaseOptions = useMemo(() => {
+    const names = new Set<string>();
+
+    if (activeCapabilities?.schemas === true) {
+      selectedSchemas.forEach((schema) => names.add(schema));
+      schemas.forEach((schema) => names.add(schema));
+      Object.keys(schemaDataMap).forEach((schema) => names.add(schema));
+    } else if (isMultiDatabaseCapable(activeCapabilities)) {
+      selectedDatabases.forEach((database) => names.add(database));
+      Object.keys(databaseDataMap).forEach((database) => names.add(database));
+      if (activeConnection) {
+        getDatabaseList(activeConnection.params.database).forEach((database) =>
+          names.add(database),
+        );
+      }
+    } else {
+      if (activeDatabaseName) names.add(activeDatabaseName);
+      if (activeConnection) {
+        getDatabaseList(activeConnection.params.database).forEach((database) =>
+          names.add(database),
+        );
+      }
+    }
+
+    return Array.from(names).filter((name) => name.trim().length > 0);
+  }, [
+    activeCapabilities,
+    activeConnection,
+    activeDatabaseName,
+    databaseDataMap,
+    schemaDataMap,
+    schemas,
+    selectedDatabases,
+    selectedSchemas,
+  ]);
+  const activeQueryDatabase =
+    activeTab?.schema ??
+    (activeCapabilities?.schemas === true
+      ? activeSchema
+      : isMultiDatabaseCapable(activeCapabilities)
+        ? selectedDatabases[0]
+        : activeDatabaseName) ??
+    "";
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
@@ -323,7 +428,7 @@ export const Editor = () => {
   useEffect(() => {
     const updateTitle = async () => {
       try {
-        let title = "tabularis";
+        let title = "Mavicat";
         if (activeConnectionName && activeDatabaseName) {
           const schemaSuffix =
             activeSchema && activeCapabilities?.schemas === true
@@ -336,7 +441,7 @@ export const Editor = () => {
           } else {
             dbDisplay = activeDatabaseName;
           }
-          title = `tabularis - ${activeConnectionName} (${dbDisplay}${schemaSuffix})`;
+          title = `Mavicat - ${activeConnectionName} (${dbDisplay}${schemaSuffix})`;
         }
         await invoke("set_window_title", { title });
       } catch (e) {
@@ -361,6 +466,107 @@ export const Editor = () => {
       if (activeTabId) updateTab(activeTabId, partial);
     },
     [activeTabId, updateTab],
+  );
+
+  const handleQueryConnectionChange = useCallback(
+    async (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const nextConnectionId = event.target.value;
+      if (!nextConnectionId || nextConnectionId === activeConnectionId) return;
+
+      const sourceConnectionId = activeTab?.connectionId ?? activeConnectionId;
+      let movedCurrentTab = false;
+
+      try {
+        if (activeTabId && canSwitchQueryContext) {
+          movedCurrentTab = await moveTabToConnection(activeTabId, nextConnectionId, {
+            schema: undefined,
+            result: null,
+            results: undefined,
+            activeResultId: undefined,
+            error: "",
+            executionTime: null,
+            selectedRows: [],
+            pendingChanges: undefined,
+            pendingDeletions: undefined,
+            pendingInsertions: undefined,
+          });
+        }
+
+        if (openConnectionIds.includes(nextConnectionId)) {
+          switchConnection(nextConnectionId);
+        } else {
+          await connect(nextConnectionId);
+        }
+        navigate("/editor");
+      } catch (error) {
+        if (movedCurrentTab && activeTabId && sourceConnectionId) {
+          await moveTabToConnection(activeTabId, sourceConnectionId, activeTab ?? undefined);
+          if (openConnectionIds.includes(sourceConnectionId)) {
+            switchConnection(sourceConnectionId);
+          }
+        }
+        showAlert(String(error), {
+          title: t("general.error"),
+          kind: "error",
+        });
+      }
+    },
+    [
+      activeConnectionId,
+      activeTab,
+      activeTabId,
+      canSwitchQueryContext,
+      connect,
+      moveTabToConnection,
+      navigate,
+      openConnectionIds,
+      showAlert,
+      switchConnection,
+      t,
+    ],
+  );
+
+  const handleQueryDatabaseChange = useCallback(
+    async (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const nextDatabase = event.target.value;
+      if (!nextDatabase || !activeConnectionId || !activeTabId) return;
+
+      updateTab(activeTabId, {
+        schema: nextDatabase,
+        result: null,
+        results: undefined,
+        activeResultId: undefined,
+        error: "",
+        executionTime: null,
+        selectedRows: [],
+        pendingChanges: undefined,
+        pendingDeletions: undefined,
+        pendingInsertions: undefined,
+      });
+
+      try {
+        if (activeCapabilities?.schemas === true) {
+          await loadSchemaData(nextDatabase, activeConnectionId);
+        } else if (isMultiDatabaseCapable(activeCapabilities)) {
+          await loadDatabaseData(nextDatabase, activeConnectionId);
+        }
+      } catch (error) {
+        showAlert(String(error), {
+          title: t("general.error"),
+          kind: "error",
+        });
+      }
+    },
+    [
+      activeCapabilities,
+      activeConnectionId,
+      activeTabId,
+      loadDatabaseData,
+      loadSchemaData,
+      showAlert,
+      t,
+      updateTab,
+    ],
   );
 
   // Placeholder Logic - memoized to avoid recalculation on every render
@@ -673,11 +879,11 @@ export const Editor = () => {
 
       try {
         const start = performance.now();
-        // Use settings.resultPageSize for Page Size (pagination), ignoring the "Total Limit" input which is handled in SQL
+        // Use resultPageSize for Page Size (pagination), ignoring the "Total Limit" input which is handled in SQL
         // Fallback to 100 if settings not loaded yet
         const pageSize =
-          settings.resultPageSize && settings.resultPageSize > 0
-            ? settings.resultPageSize
+          resultPageSizeRef.current && resultPageSizeRef.current > 0
+            ? resultPageSizeRef.current
             : 100;
         const res = await invoke<QueryResult>("execute_query", {
           connectionId: activeConnectionId,
@@ -759,7 +965,6 @@ export const Editor = () => {
     [
       activeConnectionId,
       updateTab,
-      settings.resultPageSize,
       fetchPkColumn,
       t,
       activeDriver,
@@ -808,8 +1013,8 @@ export const Editor = () => {
       }
 
       const pageSize =
-        settings.resultPageSize && settings.resultPageSize > 0
-          ? settings.resultPageSize
+        resultPageSizeRef.current && resultPageSizeRef.current > 0
+          ? resultPageSizeRef.current
           : 100;
       const schema = targetTab?.schema ?? activeSchema;
       const historyDb = schema
@@ -918,7 +1123,7 @@ export const Editor = () => {
 
       updateTab(targetTabId, { results: liveResults, isLoading: false });
     },
-    [activeConnectionId, updateTab, settings.resultPageSize, activeSchema, t, isMultiDb, activeDatabaseName, addHistoryEntry],
+    [activeConnectionId, updateTab, activeSchema, t, isMultiDb, activeDatabaseName, addHistoryEntry],
   );
 
   const runResultEntryPage = useCallback(
@@ -931,8 +1136,8 @@ export const Editor = () => {
       if (!entry) return;
 
       const pageSize =
-        settings.resultPageSize && settings.resultPageSize > 0
-          ? settings.resultPageSize
+        resultPageSizeRef.current && resultPageSizeRef.current > 0
+          ? resultPageSizeRef.current
           : 100;
       const schema = currentTab?.schema ?? activeSchema;
 
@@ -995,7 +1200,7 @@ export const Editor = () => {
         }
       }
     },
-    [activeConnectionId, updateTab, settings.resultPageSize, activeSchema, t],
+    [activeConnectionId, updateTab, activeSchema, t],
   );
 
   const loadCount = useCallback(async () => {
@@ -1074,6 +1279,52 @@ export const Editor = () => {
       setIsQuerySelectionModalOpen(true);
     }
   }, [activeTab, runQuery, runMultipleQueries]);
+
+  const handleBeautifySql = useCallback(() => {
+    if (!activeTab || activeTab.readOnly || activeTab.type !== "console") return;
+
+    const editor = editorsRef.current[activeTab.id];
+    const fallbackSql = activeTab.query ?? "";
+    const selection = editor?.getSelection();
+    const hasSelection = !!selection && !selection.isEmpty();
+    const selectedText =
+      editor && selection && hasSelection
+        ? editor.getModel()?.getValueInRange(selection) ?? ""
+        : "";
+    const sourceSql = hasSelection ? selectedText : editor?.getValue() ?? fallbackSql;
+
+    if (!sourceSql.trim()) return;
+
+    try {
+      const formattedSql = beautifySql(sourceSql, activeDriver);
+      if (formattedSql === sourceSql.trim()) return;
+
+      if (editor) {
+        const model = editor.getModel();
+        const range = hasSelection && selection
+          ? selection
+          : model?.getFullModelRange();
+
+        if (range) {
+          editor.executeEdits("beautify-sql", [
+            {
+              range,
+              text: formattedSql,
+              forceMoveMarkers: true,
+            },
+          ]);
+          editor.pushUndoStop();
+          updateTab(activeTab.id, { query: editor.getValue() });
+          editor.focus();
+          return;
+        }
+      }
+
+      updateTab(activeTab.id, { query: formattedSql });
+    } catch (error) {
+      showAlert(`SQL 格式化失败：${toErrorMessage(error)}`, { kind: "error" });
+    }
+  }, [activeDriver, activeTab, showAlert, updateTab]);
 
   const openExplainForQuery = useCallback((query: string) => {
     setVisualExplainQuery(query);
@@ -1615,7 +1866,7 @@ export const Editor = () => {
           affected_rows: 0,
           pagination: {
             page: 1,
-            page_size: settings.resultPageSize || 100,
+            page_size: resultPageSizeRef.current || 100,
             total_rows: null,
             has_more: false,
           },
@@ -1679,7 +1930,6 @@ export const Editor = () => {
     activeTab,
     updateTab,
     t,
-    settings.resultPageSize,
     activeSchema,
     showAlert,
   ]);
@@ -2050,6 +2300,111 @@ export const Editor = () => {
     });
   }, [activeTab, updateActiveTab, applyToAll]);
 
+  const resolveEditorTableReference = useCallback(
+    (rawIdentifier: string): { table: string; schema?: string } | null => {
+      const parts = rawIdentifier
+        .split(".")
+        .map(normalizeSqlIdentifierPart)
+        .filter(Boolean);
+      if (parts.length === 0) return null;
+
+      const tableName = parts[parts.length - 1];
+      const explicitSchema =
+        parts.length > 1 ? parts[parts.length - 2] : undefined;
+      const matches = (name: string) =>
+        name.localeCompare(tableName, undefined, {
+          sensitivity: "accent",
+        }) === 0;
+
+      if (activeCapabilities?.schemas === true) {
+        const schemaCandidates = (
+          explicitSchema
+            ? [explicitSchema]
+            : [activeSchema, ...selectedSchemas, ...Object.keys(schemaDataMap)]
+        ).filter(Boolean) as string[];
+
+        for (const schema of schemaCandidates) {
+          const found = schemaDataMap[schema]?.tables.find((table) =>
+            matches(table.name),
+          );
+          if (found) return { table: found.name, schema };
+        }
+
+        const found = tables.find((table) => matches(table.name));
+        if (found) {
+          return { table: found.name, schema: activeSchema ?? undefined };
+        }
+      } else if (isMultiDatabaseCapable(activeCapabilities)) {
+        const databaseCandidates = (
+          explicitSchema
+            ? [explicitSchema]
+            : [
+                activeTab?.schema,
+                ...selectedDatabases,
+                ...Object.keys(databaseDataMap),
+              ]
+        ).filter(Boolean) as string[];
+
+        for (const database of databaseCandidates) {
+          const found = databaseDataMap[database]?.tables.find((table) =>
+            matches(table.name),
+          );
+          if (found) return { table: found.name, schema: database };
+        }
+
+        const found = tables.find((table) => matches(table.name));
+        if (found) {
+          return { table: found.name, schema: activeTab?.schema ?? undefined };
+        }
+      } else {
+        const found = tables.find((table) => matches(table.name));
+        if (found) return { table: found.name };
+      }
+
+      return null;
+    },
+    [
+      activeCapabilities,
+      activeSchema,
+      activeTab?.schema,
+      databaseDataMap,
+      schemaDataMap,
+      selectedDatabases,
+      selectedSchemas,
+      tables,
+    ],
+  );
+
+  const openEditorTableReference = useCallback(
+    (rawIdentifier: string) => {
+      const resolved = resolveEditorTableReference(rawIdentifier);
+      if (!resolved) return false;
+
+      const query = `SELECT * FROM ${quoteTableRef(
+        resolved.table,
+        activeDriver,
+        resolved.schema,
+      )}`;
+      const tabId = addTab({
+        type: "table",
+        title: resolved.schema
+          ? `${resolved.table} (${resolved.schema})`
+          : resolved.table,
+        query,
+        activeTable: resolved.table,
+        schema: resolved.schema,
+        result: null,
+      });
+      if (!tabId) return false;
+
+      setTimeout(() => {
+        runQuery(query, 1, tabId);
+      }, 0);
+      return true;
+    },
+    [activeDriver, addTab, resolveEditorTableReference, runQuery],
+  );
+
   const handleEditorMount = (
     editor: Parameters<OnMount>[0],
     monaco: Monaco,
@@ -2098,6 +2453,23 @@ export const Editor = () => {
           openExplainForQueryRef.current(explainable[0].query);
         }
       },
+    });
+    editor.onMouseDown((event) => {
+      const browserEvent = event.event.browserEvent as MouseEvent;
+      if (!browserEvent.ctrlKey && !browserEvent.metaKey) return;
+
+      const position = event.target.position;
+      const model = editor.getModel();
+      if (!position || !model) return;
+
+      const line = model.getLineContent(position.lineNumber);
+      const identifier = getSqlIdentifierAtPosition(line, position.column);
+      if (!identifier) return;
+
+      if (openEditorTableReference(identifier)) {
+        browserEvent.preventDefault();
+        browserEvent.stopPropagation();
+      }
     });
   };
 
@@ -2259,7 +2631,64 @@ export const Editor = () => {
     setExportState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  const handleExportCommon = async (format: "csv" | "json") => {
+  const escapeExcelCell = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const rowsToExcelHtml = (rows: unknown[][], columns: string[]) => {
+    const header = columns
+      .map((column) => `<th>${escapeExcelCell(column)}</th>`)
+      .join("");
+    const body = rows
+      .map(
+        (row) =>
+          `<tr>${columns
+            .map((_, index) => {
+              const value = row[index];
+              const text =
+                value === null || value === undefined
+                  ? ""
+                  : typeof value === "string"
+                    ? value
+                    : JSON.stringify(value);
+              return `<td>${escapeExcelCell(text)}</td>`;
+            })
+            .join("")}</tr>`,
+      )
+      .join("");
+    return `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:4px 8px;mso-number-format:"\\@";}</style></head><body><table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+  };
+
+  const buildCurrentPageExportText = (
+    format: ExportFormat,
+    tableName: string,
+  ) => {
+    const result = activeTab?.result;
+    if (!result) return "";
+
+    if (format === "json") return rowsToJSON(result.rows, result.columns);
+    if (format === "excel") return rowsToExcelHtml(result.rows, result.columns);
+    if (format === "sql") {
+      return rowsToSqlCopy({
+        mode: "insert",
+        tableName,
+        columns: result.columns,
+        rows: result.rows,
+        driver: activeDriver,
+        schema: activeCapabilities?.schemas === true ? activeTab?.schema : undefined,
+      });
+    }
+    return rowsToCSV(result.rows, "NULL", csvDelimiter);
+  };
+
+  const handleExportCommon = async (
+    format: ExportFormat,
+    scope: ExportScope = exportScope,
+  ) => {
     if (!activeTab || !activeConnectionId) return;
 
     const effectiveSchema =
@@ -2267,18 +2696,52 @@ export const Editor = () => {
     const tabForQuery = { ...activeTab, schema: effectiveSchema };
     const query =
       activeTab.type === "table" && activeTab.activeTable
-        ? reconstructTableQuery(tabForQuery, activeDriver ?? undefined)
+        ? scope === "all"
+          ? reconstructTableQuery(
+              {
+                ...tabForQuery,
+                filterClause: "",
+                sortClause: "",
+                limitClause: undefined,
+              },
+              activeDriver ?? undefined,
+            )
+          : reconstructTableQuery(tabForQuery, activeDriver ?? undefined, {
+              limitOverride: scope === "filtered" ? null : undefined,
+            })
         : activeTab.query;
 
     if (!query || !query.trim()) return;
 
     try {
+      const meta = EXPORT_FILE_META[format];
+      const exportTableName =
+        activeTab.type === "table" && activeTab.activeTable
+          ? activeTab.activeTable
+          : extractTableName(query) || undefined;
       const filePath = await save({
-        filters: [{ name: format.toUpperCase(), extensions: [format] }],
-        defaultPath: `result_${Date.now()}.${format}`,
+        filters: [{ name: meta.label, extensions: [meta.extension] }],
+        defaultPath: `result_${Date.now()}.${meta.extension}`,
       });
 
       if (!filePath) return;
+
+      setExportMenuOpen(false);
+
+      if (scope === "page") {
+        const pageText = buildCurrentPageExportText(
+          format,
+          exportTableName ?? "export_result",
+        );
+        await writeTextFile(filePath, pageText);
+        setExportState({
+          isOpen: true,
+          status: "completed",
+          rowsProcessed: activeTab.result?.rows.length ?? 0,
+          fileName: filePath.split(/[/\\]/).pop() || filePath,
+        });
+        return;
+      }
 
       setExportState({
         isOpen: true,
@@ -2286,7 +2749,6 @@ export const Editor = () => {
         rowsProcessed: 0,
         fileName: filePath.split(/[/\\]/).pop() || filePath, // Show only filename
       });
-      setExportMenuOpen(false);
 
       await invoke("export_query_to_file", {
         connectionId: activeConnectionId,
@@ -2294,6 +2756,8 @@ export const Editor = () => {
         filePath,
         format,
         csvDelimiter: format === "csv" ? csvDelimiter : undefined,
+        exportTableName,
+        exportSchema: effectiveSchema,
       });
 
       // Success: update modal state instead of showing toast
@@ -2313,6 +2777,8 @@ export const Editor = () => {
 
   const handleExportCSV = () => handleExportCommon("csv");
   const handleExportJSON = () => handleExportCommon("json");
+  const handleExportExcel = () => handleExportCommon("excel");
+  const handleExportSQL = () => handleExportCommon("sql");
 
   const handleRunDropdownToggle = useCallback(() => {
     if (!isRunDropdownOpen) {
@@ -2342,6 +2808,75 @@ export const Editor = () => {
     }
     setIsRunDropdownOpen((prev) => !prev);
   }, [isRunDropdownOpen, activeTab]);
+
+  const pagination = activeTab?.result?.pagination;
+  const totalPages =
+    pagination?.total_rows != null
+      ? Math.max(1, Math.ceil(pagination.total_rows / pagination.page_size))
+      : null;
+  const currentPageSize =
+    pagination?.page_size ??
+    (settings.resultPageSize && settings.resultPageSize > 0
+      ? settings.resultPageSize
+      : 100);
+  const pageSizeOptions = useMemo(
+    () =>
+      Array.from(new Set([...PAGE_SIZE_OPTIONS, currentPageSize]))
+        .filter((size) => size > 0)
+        .sort((a, b) => a - b),
+    [currentPageSize],
+  );
+  const pageNumbers = useMemo(() => {
+    if (!pagination) return [];
+    if (totalPages === null) return [pagination.page];
+    const windowSize = 5;
+    const halfWindow = Math.floor(windowSize / 2);
+    let start = Math.max(1, pagination.page - halfWindow);
+    const end = Math.min(totalPages, start + windowSize - 1);
+    start = Math.max(1, end - windowSize + 1);
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [pagination, totalPages]);
+  useEffect(() => {
+    if (pagination) {
+      setTempPage(String(pagination.page));
+    }
+  }, [pagination?.page]);
+  const gotoPage = useCallback(
+    (page: number) => {
+      if (!activeTab?.result?.pagination || activeTab.isLoading) return;
+      const safePage =
+        totalPages === null ? Math.max(1, page) : Math.min(totalPages, Math.max(1, page));
+      runQuery(activeTab.query, safePage);
+    },
+    [activeTab, runQuery, totalPages],
+  );
+  const handlePageSizeChange = useCallback(
+    (nextPageSize: number) => {
+      if (
+        !activeTab?.result?.pagination ||
+        activeTab.isLoading ||
+        !Number.isFinite(nextPageSize) ||
+        nextPageSize <= 0 ||
+        nextPageSize === currentPageSize
+      ) {
+        return;
+      }
+
+      resultPageSizeRef.current = nextPageSize;
+      void updateSetting("resultPageSize", nextPageSize);
+      runQuery(activeTab.query, 1);
+    },
+    [activeTab, currentPageSize, runQuery, updateSetting],
+  );
+  const commitPageInput = useCallback(() => {
+    if (!pagination) return;
+    const nextPage = parseInt(tempPage, 10);
+    if (!Number.isNaN(nextPage) && nextPage >= 1) {
+      gotoPage(nextPage);
+      return;
+    }
+    setTempPage(String(pagination.page));
+  }, [gotoPage, pagination, tempPage]);
 
   if (!activeTab) {
     return (
@@ -2408,12 +2943,10 @@ export const Editor = () => {
               {activeTabId === tab.id && (
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500" />
               )}
-              {tab.type === "table" ? (
+              {tab.type === "table" || tab.type === "table_design" ? (
                 <TableIcon size={12} className="text-blue-400 shrink-0" />
               ) : tab.type === "query_builder" ? (
                 <Network size={12} className="text-purple-400 shrink-0" />
-              ) : tab.type === "notebook" ? (
-                <BookOpen size={12} className="text-orange-400 shrink-0" />
               ) : (
                 <FileCode size={12} className="text-green-500 shrink-0" />
               )}
@@ -2464,25 +2997,86 @@ export const Editor = () => {
         >
           <Network size={16} />
         </button>
-        <button
-          onClick={async () => {
-            const title = "Notebook";
-            const { notebookId } = await createNotebook(title);
-            addTab({
-              type: "notebook",
-              notebookId,
-              ...(isMultiDb ? { schema: selectedDatabases[0] } : {}),
-            });
-          }}
-          className="flex items-center justify-center w-9 h-full text-orange-400 hover:text-white hover:bg-surface-secondary border-l border-default transition-colors shrink-0"
-          title={t("editor.newNotebook")}
-        >
-          <BookOpen size={16} />
-        </button>
       </div>
 
-      {/* Toolbar — hidden for notebook tabs */}
-      {!isNotebookTab && <div className="flex items-center py-2 pl-2 pr-3 border-b border-default bg-elevated gap-2 h-[50px]">
+      {/* Toolbar — hidden for notebook and table design tabs */}
+      {!isNotebookTab && !isDesignTab && <div className="flex items-center py-2 pl-2 pr-3 border-b border-default bg-elevated gap-2 h-[50px]">
+        {canSwitchQueryContext && (
+          <div className="flex items-center gap-2 shrink-0">
+            <label
+              className={clsx(
+                "relative flex items-center h-[34px] min-w-[160px] max-w-[240px] rounded border border-strong bg-surface-secondary text-sm text-primary overflow-hidden",
+                activeTab.isLoading && "opacity-70",
+              )}
+              title={activeConnection?.name ?? t("editor.noActiveSession")}
+            >
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 pointer-events-none">
+                {activeConnectionDriver ? (
+                  getDriverIcon(activeConnectionDriver, 16)
+                ) : (
+                  <Database size={16} className="text-muted" />
+                )}
+              </span>
+              <select
+                aria-label={t("connections.connection")}
+                value={activeConnectionId ?? ""}
+                onChange={(event) => void handleQueryConnectionChange(event)}
+                disabled={connections.length === 0 || activeTab.isLoading}
+                className="w-full h-full appearance-none bg-transparent pl-8 pr-7 text-sm font-medium outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                style={CHEVRON_SELECT_STYLE}
+              >
+                {!activeConnectionId && (
+                  <option value="">{t("editor.noActiveSession")}</option>
+                )}
+                {connections.map((connection) => (
+                  <option key={connection.id} value={connection.id}>
+                    {connection.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label
+              className={clsx(
+                "relative flex items-center h-[34px] min-w-[180px] max-w-[280px] rounded border border-strong bg-surface-secondary text-sm text-primary overflow-hidden",
+                (queryDatabaseOptions.length === 0 || activeTab.isLoading) &&
+                  "opacity-70",
+              )}
+              title={activeQueryDatabase || activeDatabaseName || ""}
+            >
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 pointer-events-none">
+                <NavicatDatabaseIcon size={17} active />
+              </span>
+              <select
+                aria-label={t("editor.activeDatabase")}
+                value={activeQueryDatabase}
+                onChange={(event) => void handleQueryDatabaseChange(event)}
+                disabled={queryDatabaseOptions.length === 0 || activeTab.isLoading}
+                className="w-full h-full appearance-none bg-transparent pl-8 pr-7 text-sm font-medium outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                style={CHEVRON_SELECT_STYLE}
+              >
+                {!activeQueryDatabase && (
+                  <option value="">{activeDatabaseName ?? "-"}</option>
+                )}
+                {activeQueryDatabase &&
+                  !queryDatabaseOptions.includes(activeQueryDatabase) && (
+                    <option value={activeQueryDatabase}>
+                      {activeQueryDatabase}
+                    </option>
+                  )}
+                {queryDatabaseOptions.length === 0 && (
+                  <option value="">{activeDatabaseName ?? "-"}</option>
+                )}
+                {queryDatabaseOptions.map((database) => (
+                  <option key={database} value={database}>
+                    {database}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+
         {!activeTab.readOnly && activeTab.isLoading ? (
           <button
             onClick={stopQuery}
@@ -2580,6 +3174,18 @@ export const Editor = () => {
           </button>
         )}
 
+        {activeTab.type === "console" && !activeTab.readOnly && (
+          <button
+            onClick={handleBeautifySql}
+            disabled={activeTab.isLoading}
+            className="flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border border-strong bg-surface-secondary text-primary hover:bg-blue-500/15 hover:border-blue-500/40 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="美化 SQL"
+          >
+            <Wand2 size={16} />
+            美化 SQL
+          </button>
+        )}
+
         <div className="relative ml-auto">
           <button
             onClick={() => setExportMenuOpen(!exportMenuOpen)}
@@ -2611,8 +3217,28 @@ export const Editor = () => {
               />
               <div
                 role="menu"
-                className="absolute top-full right-0 mt-1 w-44 bg-elevated border border-strong rounded-md shadow-xl z-50 flex flex-col py-1 overflow-hidden"
+                className="absolute top-full right-0 mt-1 w-56 bg-elevated border border-strong rounded-md shadow-xl z-50 flex flex-col py-1 overflow-hidden"
               >
+                <div className="px-3 py-2 border-b border-default">
+                  <label className="block text-[10px] uppercase tracking-wide text-muted mb-1">
+                    导出范围
+                  </label>
+                  <select
+                    value={exportScope}
+                    onChange={(event) =>
+                      setExportScope(event.target.value as ExportScope)
+                    }
+                    className="w-full h-8 bg-surface-secondary border border-strong rounded px-2 text-xs text-primary outline-none"
+                  >
+                    {(["page", "filtered", "all"] as ExportScope[]).map(
+                      (scope) => (
+                        <option key={scope} value={scope}>
+                          {EXPORT_SCOPE_LABELS[scope]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
                 <button
                   role="menuitem"
                   onClick={handleExportCSV}
@@ -2631,53 +3257,29 @@ export const Editor = () => {
                   <span className="flex-1">JSON</span>
                   <span className="text-xs text-muted">.json</span>
                 </button>
+                <button
+                  role="menuitem"
+                  onClick={handleExportExcel}
+                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
+                >
+                  <FileSpreadsheet size={14} className="shrink-0 opacity-80" />
+                  <span className="flex-1">Excel</span>
+                  <span className="text-xs text-muted">.xls</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={handleExportSQL}
+                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
+                >
+                  <FileCode size={14} className="shrink-0 opacity-80" />
+                  <span className="flex-1">SQL</span>
+                  <span className="text-xs text-muted">.sql</span>
+                </button>
               </div>
             </>
           )}
         </div>
-        {!isTableTab && isMultiDb && activeTab.type !== "query_builder" ? (
-          <div className="relative ml-2">
-            <button
-              onClick={() => setIsDbDropdownOpen((v) => !v)}
-              className="flex items-center gap-1.5 px-2 py-1 bg-surface-secondary border border-strong rounded text-xs text-primary hover:bg-surface transition-colors h-[30px]"
-              title={t("editor.activeDatabase")}
-            >
-              <Database size={12} className="text-muted shrink-0" />
-              <span className="max-w-[120px] truncate">
-                {activeTab.schema || selectedDatabases[0]}
-              </span>
-              <ChevronDown size={12} className="text-muted shrink-0" />
-            </button>
-            {isDbDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsDbDropdownOpen(false)}
-                />
-                <div className="absolute top-full right-0 mt-1 min-w-[140px] max-h-[280px] overflow-y-auto bg-surface-secondary border border-strong rounded shadow-xl z-50 flex flex-col py-1">
-                  {selectedDatabases.map((db) => (
-                    <button
-                      key={db}
-                      onClick={() => {
-                        updateActiveTab({ schema: db });
-                        setIsDbDropdownOpen(false);
-                      }}
-                      className={clsx(
-                        "text-left px-3 py-1.5 text-xs hover:bg-surface transition-colors flex items-center gap-2",
-                        (activeTab.schema || selectedDatabases[0]) === db
-                          ? "text-white font-medium"
-                          : "text-secondary",
-                      )}
-                    >
-                      <Database size={11} className="text-muted shrink-0" />
-                      {db}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
+        {!canSwitchQueryContext && (
           <span className="text-xs text-muted ml-2">
             {activeConnectionId
               ? t("editor.connected")
@@ -2692,23 +3294,6 @@ export const Editor = () => {
 
         const isActive = tab.id === activeTabId;
 
-        // Notebook tabs get full-height rendering
-        if (tab.type === "notebook") {
-          return (
-            <div
-              key={tab.id}
-              style={{ display: isActive ? "flex" : "none" }}
-              className="flex-1 flex flex-col min-h-0 overflow-hidden"
-            >
-              <NotebookView
-                tab={tab}
-                updateTab={updateTab}
-                connectionId={activeConnectionId || ""}
-              />
-            </div>
-          );
-        }
-
         const isVisible = isActive && !isTableTab && isEditorOpen;
 
         return (
@@ -2716,12 +3301,24 @@ export const Editor = () => {
             key={tab.id}
             data-editor-panel
             style={{
-              height: isResultsCollapsed ? "calc(100vh - 109px)" : editorHeight,
+              height:
+                tab.type === "table_design"
+                  ? "calc(100% - 36px)"
+                  : isResultsCollapsed
+                    ? "calc(100vh - 109px)"
+                    : editorHeight,
               display: isVisible ? "block" : "none",
             }}
             className="relative"
           >
-            {tab.type === "query_builder" ? (
+            {tab.type === "table_design" ? (
+              <TableDesigner
+                connectionId={tab.connectionId}
+                tableName={tab.designTable ?? tab.activeTable ?? ""}
+                driver={activeDriver ?? "sqlite"}
+                schema={tab.schema}
+              />
+            ) : tab.type === "query_builder" ? (
               <VisualQueryBuilder />
             ) : (
               <SqlEditorWrapper
@@ -2745,7 +3342,7 @@ export const Editor = () => {
             )}
 
             {/* Editor overlay buttons — bottom-right */}
-            {tab.type !== "query_builder" && (
+            {tab.type !== "query_builder" && tab.type !== "table_design" && (
               <div className="absolute bottom-2 right-6 z-10 flex items-center gap-1">
                 {/* Visual Explain — hidden for read-only definition tabs */}
                 {!tab.readOnly && (
@@ -2759,15 +3356,6 @@ export const Editor = () => {
                   {t("editor.visualExplain.buttonShort")}
                 </button>
                 )}
-                {/* AI dropdown — only if AI enabled */}
-                {settings.aiEnabled && (
-                  <AiDropdownButton
-                    onGenerate={() => setIsAiModalOpen(true)}
-                    onExplain={() => setIsAiExplainModalOpen(true)}
-                    disableAll={!activeConnectionId}
-                    disableExplain={!tab.query?.trim()}
-                  />
-                )}
               </div>
             )}
           </div>
@@ -2775,7 +3363,7 @@ export const Editor = () => {
       })}
 
       {/* Resize Bar & Results Panel */}
-      {!isNotebookTab && (isTableTab || !isResultsCollapsed) ? (
+      {!isNotebookTab && !isDesignTab && (isTableTab || !isResultsCollapsed) ? (
         <>
           {isTableTab ? (
             <TableToolbar
@@ -2949,149 +3537,124 @@ export const Editor = () => {
                       )}
                     </div>
 
-                    {/* Pagination Controls */}
                     {activeTab.result.pagination && (
-                      <div className="flex items-center gap-1 bg-surface-secondary rounded border border-strong">
-                        <button
-                          disabled={
-                            activeTab.result.pagination.page === 1 ||
-                            activeTab.isLoading
-                          }
-                          onClick={() => runQuery(activeTab.query, 1)}
-                          className="p-1 hover:bg-surface-tertiary text-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="First Page"
-                        >
-                          <ChevronsLeft size={14} />
-                        </button>
-                        <button
-                          disabled={
-                            activeTab.result.pagination.page === 1 ||
-                            activeTab.isLoading
-                          }
-                          onClick={() =>
-                            runQuery(
-                              activeTab.query,
-                              activeTab.result!.pagination!.page - 1,
-                            )
-                          }
-                          className="p-1 hover:bg-surface-tertiary text-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border-l border-strong"
-                          title="Previous Page"
-                        >
-                          <ChevronLeft size={14} />
-                        </button>
-
-                        <div
-                          className="px-3 text-secondary text-xs font-medium cursor-pointer hover:bg-surface-tertiary transition-colors min-w-[80px] text-center py-1"
-                          onClick={() => {
-                            setIsEditingPage(true);
-                            setTempPage(
-                              String(activeTab.result!.pagination!.page),
-                            );
-                          }}
-                          title={t("editor.jumpToPage")}
-                        >
-                          {isEditingPage ? (
-                            <input
-                              autoFocus
-                              type="text"
-                              className="w-full bg-transparent text-center focus:outline-none text-white p-0 m-0 border-none h-full"
-                              value={tempPage}
-                              onChange={(e) => setTempPage(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  const newPage = parseInt(tempPage);
-                                  const totalRows =
-                                    activeTab.result!.pagination!.total_rows;
-                                  if (!isNaN(newPage) && newPage >= 1) {
-                                    if (
-                                      totalRows === null ||
-                                      newPage <=
-                                        Math.ceil(
-                                          totalRows /
-                                            activeTab.result!.pagination!
-                                              .page_size,
-                                        )
-                                    ) {
-                                      runQuery(activeTab.query, newPage);
-                                    }
-                                  }
-                                  setIsEditingPage(false);
-                                } else if (e.key === "Escape") {
-                                  setIsEditingPage(false);
-                                }
-                                e.stopPropagation();
-                              }}
-                              onBlur={() => setIsEditingPage(false)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
+                      <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
+                        <div className="flex items-center gap-2 text-secondary whitespace-nowrap">
+                          {activeTab.result.pagination.total_rows !== null ? (
+                            <span>共 {activeTab.result.pagination.total_rows} 条</span>
                           ) : (
                             <>
-                              {activeTab.result.pagination.total_rows !== null
-                                ? t("editor.pageOf", {
-                                    current: activeTab.result.pagination.page,
-                                    total: Math.ceil(
-                                      activeTab.result.pagination.total_rows /
-                                        activeTab.result.pagination.page_size,
-                                    ),
-                                  })
-                                : t("editor.page", {
-                                    current: activeTab.result.pagination.page,
-                                  })}
+                              <span>共 -- 条</span>
+                              <button
+                                disabled={isCountLoading || activeTab.isLoading}
+                                onClick={loadCount}
+                                className="h-8 px-2 inline-flex items-center gap-1 rounded-md border border-default bg-base text-secondary hover:bg-surface-secondary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={t("editor.loadRowCount")}
+                              >
+                                {isCountLoading ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Hash size={14} />
+                                )}
+                                <span>统计</span>
+                              </button>
                             </>
                           )}
                         </div>
 
-                        {/* Count load button or spinner */}
-                        {activeTab.result.pagination.total_rows === null && (
-                          <button
-                            disabled={isCountLoading || activeTab.isLoading}
-                            onClick={loadCount}
-                            className="p-1 hover:bg-surface-tertiary text-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border-l border-strong"
-                            title={t("editor.loadRowCount")}
+                        <div className="relative">
+                          <select
+                            value={currentPageSize}
+                            disabled={activeTab.isLoading}
+                            onChange={(event) =>
+                              handlePageSizeChange(Number(event.target.value))
+                            }
+                            className="h-9 min-w-[116px] appearance-none rounded-md border border-default bg-base pl-4 pr-9 text-primary shadow-sm outline-none transition-colors hover:border-strong focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="每页条数"
                           >
-                            {isCountLoading ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Hash size={14} />
-                            )}
-                          </button>
-                        )}
+                            {pageSizeOptions.map((size) => (
+                              <option key={size} value={size}>
+                                {size}条/页
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={16}
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+                          />
+                        </div>
 
-                        <button
-                          disabled={
-                            !activeTab.result.pagination.has_more ||
-                            activeTab.isLoading
-                          }
-                          onClick={() =>
-                            runQuery(
-                              activeTab.query,
-                              activeTab.result!.pagination!.page + 1,
-                            )
-                          }
-                          className="p-1 hover:bg-surface-tertiary text-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border-l border-strong"
-                          title="Next Page"
-                        >
-                          <ChevronRight size={14} />
-                        </button>
-                        <button
-                          disabled={
-                            activeTab.result.pagination.total_rows === null ||
-                            activeTab.isLoading
-                          }
-                          onClick={() =>
-                            runQuery(
-                              activeTab.query,
-                              Math.ceil(
-                                activeTab.result!.pagination!.total_rows! /
-                                  activeTab.result!.pagination!.page_size,
-                              ),
-                            )
-                          }
-                          className="p-1 hover:bg-surface-tertiary text-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border-l border-strong"
-                          title="Last Page"
-                        >
-                          <ChevronsRight size={14} />
-                        </button>
+                        <div className="inline-flex h-9 overflow-hidden rounded-md border border-default bg-base shadow-sm">
+                          <button
+                            disabled={
+                              activeTab.result.pagination.page === 1 ||
+                              activeTab.isLoading
+                            }
+                            onClick={() =>
+                              gotoPage(activeTab.result!.pagination!.page - 1)
+                            }
+                            className="w-10 inline-flex items-center justify-center border-r border-default text-secondary hover:bg-surface-secondary hover:text-primary disabled:opacity-35 disabled:cursor-not-allowed"
+                            title="上一页"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+
+                          {pageNumbers.map((pageNumber) => (
+                            <button
+                              key={pageNumber}
+                              disabled={activeTab.isLoading}
+                              onClick={() => gotoPage(pageNumber)}
+                              className={clsx(
+                                "min-w-10 px-3 border-r border-default text-sm font-semibold transition-colors disabled:cursor-not-allowed",
+                                pageNumber === activeTab.result!.pagination!.page
+                                  ? "bg-surface-secondary text-blue-500"
+                                  : "text-primary hover:bg-surface-secondary",
+                              )}
+                            >
+                              {pageNumber}
+                            </button>
+                          ))}
+
+                          <button
+                            disabled={
+                              !activeTab.result.pagination.has_more ||
+                              activeTab.isLoading
+                            }
+                            onClick={() =>
+                              gotoPage(activeTab.result!.pagination!.page + 1)
+                            }
+                            className="w-10 inline-flex items-center justify-center text-secondary hover:bg-surface-secondary hover:text-primary disabled:opacity-35 disabled:cursor-not-allowed"
+                            title="下一页"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-secondary whitespace-nowrap">
+                          <span>前往</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            disabled={activeTab.isLoading}
+                            value={tempPage}
+                            onChange={(event) =>
+                              setTempPage(event.target.value.replace(/[^\d]/g, ""))
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                commitPageInput();
+                              } else if (event.key === "Escape") {
+                                setTempPage(
+                                  String(activeTab.result!.pagination!.page),
+                                );
+                              }
+                            }}
+                            onBlur={commitPageInput}
+                            className="h-9 w-20 rounded-md border border-default bg-base px-3 text-center text-primary shadow-sm outline-none transition-colors hover:border-strong focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={t("editor.jumpToPage")}
+                          />
+                          <span>页</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -3325,19 +3888,6 @@ export const Editor = () => {
           title={t("editor.saveQuery")}
         />
       )}
-      <AiQueryModal
-        isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
-        onInsert={(q) => {
-          updateActiveTab({ query: q });
-          runQuery(q, 1);
-        }}
-      />
-      <AiExplainModal
-        isOpen={isAiExplainModalOpen}
-        onClose={() => setIsAiExplainModalOpen(false)}
-        query={activeTab.query}
-      />
       <VisualExplainModal
         isOpen={isVisualExplainOpen}
         onClose={() => {

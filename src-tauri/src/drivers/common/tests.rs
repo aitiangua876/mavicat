@@ -210,7 +210,9 @@ fn test_strip_limit_offset_table_name_contains_limit() {
 #[test]
 fn test_strip_limit_offset_table_name_contains_limit_with_real_limit() {
     assert_eq!(
-        strip_limit_offset("SELECT * FROM tapp_appointment_message_event_limit ORDER BY id LIMIT 10"),
+        strip_limit_offset(
+            "SELECT * FROM tapp_appointment_message_event_limit ORDER BY id LIMIT 10"
+        ),
         "SELECT * FROM tapp_appointment_message_event_limit ORDER BY id"
     );
 }
@@ -508,7 +510,10 @@ fn test_parse_unsafe_bigint_string_returns_outside_safe_range() {
         parse_unsafe_bigint_string("-9007199254740992"),
         Some(-JS_MAX_SAFE_INTEGER - 1)
     );
-    assert_eq!(parse_unsafe_bigint_string(&i64::MAX.to_string()), Some(i64::MAX));
+    assert_eq!(
+        parse_unsafe_bigint_string(&i64::MAX.to_string()),
+        Some(i64::MAX)
+    );
 }
 
 #[test]

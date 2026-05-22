@@ -1,0 +1,215 @@
+:root {
+  --desktop-radius-xs: 2px;
+  --desktop-radius-sm: 3px;
+  --desktop-radius-md: 5px;
+  --desktop-radius-lg: 6px;
+  --desktop-control-height: 30px;
+  --desktop-control-height-sm: 26px;
+  --desktop-dialog-border: color-mix(in srgb, var(--border-strong) 82%, #ffffff 18%);
+  --desktop-dialog-shadow: 0 18px 48px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --desktop-popover-shadow: 0 10px 28px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --desktop-control-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --desktop-button-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 1px rgba(0, 0, 0, 0.28);
+  --desktop-primary-gradient: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-primary) 88%, #ffffff 12%) 0%,
+    color-mix(in srgb, var(--accent-primary) 78%, #000000 22%) 100%
+  );
+  --desktop-secondary-gradient: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-secondary) 86%, #ffffff 8%) 0%,
+    color-mix(in srgb, var(--surface-secondary) 86%, #000000 12%) 100%
+  );
+}
+
+/* Desktop density and shape reset. Keep the product polished, but remove the web-card feel. */
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl,
+.rounded-theme-lg,
+.rounded-theme-xl {
+  border-radius: var(--desktop-radius-lg) !important;
+}
+
+.rounded-md,
+.rounded,
+.rounded-theme,
+.rounded-theme-sm {
+  border-radius: var(--desktop-radius-md) !important;
+}
+
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  box-shadow: var(--desktop-popover-shadow) !important;
+}
+
+.backdrop-blur-sm,
+.backdrop-blur,
+.backdrop-blur-md {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  border-radius: var(--desktop-radius-md) !important;
+  box-shadow: var(--desktop-control-shadow);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select {
+  min-height: var(--desktop-control-height);
+}
+
+button {
+  letter-spacing: 0;
+}
+
+button:not(:disabled) {
+  -webkit-app-region: no-drag;
+}
+
+button[class*="bg-blue-600"],
+button[class*="bg-green-600"],
+button[class*="bg-indigo-600"] {
+  box-shadow: var(--desktop-button-shadow) !important;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+button[class*="bg-blue-600"] {
+  background: var(--desktop-primary-gradient) !important;
+}
+
+button[class*="bg-green-600"] {
+  background: linear-gradient(180deg, #23a75f 0%, #177843 100%) !important;
+}
+
+button[class*="bg-red-600"] {
+  background: linear-gradient(180deg, #d84d4d 0%, #a72727 100%) !important;
+  box-shadow: var(--desktop-button-shadow) !important;
+}
+
+button[class*="hover:-translate-y"],
+button[class*="hover\\:-translate-y"] {
+  transform: none !important;
+}
+
+/* Dialogs and popovers should read like native tool windows, not marketing cards. */
+.mavicat-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.46);
+}
+
+.mavicat-modal-overlay > .bg-elevated,
+.mavicat-modal-overlay > .bg-base {
+  border-color: var(--desktop-dialog-border) !important;
+  border-radius: var(--desktop-radius-lg) !important;
+  box-shadow: var(--desktop-dialog-shadow) !important;
+}
+
+.mavicat-modal-overlay h2,
+.mavicat-modal-overlay h3 {
+  letter-spacing: 0;
+}
+
+.mavicat-modal-overlay input,
+.mavicat-modal-overlay textarea,
+.mavicat-modal-overlay select {
+  background: color-mix(in srgb, var(--bg-base) 88%, #ffffff 4%) !important;
+}
+
+.mavicat-desktop-button {
+  min-height: var(--desktop-control-height);
+  border-radius: var(--desktop-radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--desktop-secondary-gradient);
+  color: var(--text-primary);
+  box-shadow: var(--desktop-button-shadow);
+}
+
+.mavicat-desktop-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--border-focus) 64%, var(--border-strong));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-tertiary) 88%, #ffffff 8%) 0%,
+    color-mix(in srgb, var(--surface-secondary) 90%, #000000 10%) 100%
+  );
+}
+
+.mavicat-desktop-button-primary {
+  border-color: color-mix(in srgb, var(--accent-primary) 72%, #ffffff 10%);
+  background: var(--desktop-primary-gradient);
+  color: #ffffff;
+}
+
+.mavicat-context-menu {
+  border-radius: var(--desktop-radius-md);
+  border: 1px solid var(--desktop-dialog-border);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #ffffff 4%);
+  box-shadow: var(--desktop-popover-shadow);
+  padding: 3px;
+}
+
+.mavicat-context-menu__item {
+  min-height: 26px;
+  border-radius: var(--desktop-radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.mavicat-context-menu__item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-active) 28%, transparent);
+}
+
+.mavicat-select-popover {
+  border-radius: var(--desktop-radius-md);
+  border: 1px solid var(--desktop-dialog-border);
+  background: color-mix(in srgb, var(--bg-elevated) 96%, #ffffff 4%);
+  box-shadow: var(--desktop-popover-shadow);
+}
+
+.mavicat-select-option {
+  min-height: 26px;
+  border-radius: var(--desktop-radius-sm);
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
+.mavicat-toolbar,
+[class*="toolbar"] {
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.mavicat-toolbar button,
+[class*="toolbar"] button {
+  border-radius: var(--desktop-radius-sm) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base: #1f1f1f;
+    --bg-elevated: #2a2a2a;
+    --bg-overlay: #333333;
+    --bg-input: #222222;
+    --bg-tooltip: #303030;
+    --surface-primary: #2d2d2d;
+    --surface-secondary: #393939;
+    --surface-tertiary: #464646;
+    --surface-hover: #3f3f3f;
+    --border-subtle: #303030;
+    --border-default: #484848;
+    --border-strong: #5d5d5d;
+    --text-primary: #f1f1f1;
+    --text-secondary: #c4c4c4;
+    --text-muted: #8f98a8;
+    --text-disabled: #686868;
+  }
+}

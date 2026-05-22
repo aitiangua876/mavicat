@@ -81,7 +81,7 @@ export const ContextMenu = ({ x, y, items, onClose, children, boundaryRight }: C
     <div 
       ref={menuRef}
       style={style}
-      className="fixed z-50 min-w-[160px] bg-surface-secondary border border-strong rounded-lg shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
+      className="mavicat-context-menu fixed z-50 min-w-[170px] animate-in fade-in duration-100"
     >
       {items.map((item, index) => {
         // Render separator
@@ -106,10 +106,10 @@ export const ContextMenu = ({ x, y, items, onClose, children, boundaryRight }: C
             }}
             disabled={item.disabled}
             className={`
-              w-full text-left px-3 py-2 text-sm flex items-center gap-2
+              mavicat-context-menu__item w-full text-left flex items-center gap-2
               ${item.disabled
                 ? 'text-muted/50 cursor-not-allowed'
-                : `hover:bg-surface-tertiary ${item.danger ? 'text-red-400' : 'text-primary'}`
+                : `${item.danger ? 'text-red-400' : 'text-primary'}`
               }
             `}
           >

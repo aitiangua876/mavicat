@@ -6,13 +6,26 @@ import type { Tab } from '../types/editor';
 export interface CleanedTab {
   id: string;
   title: string;
-  type: 'console' | 'table' | 'query_builder' | 'notebook';
+  type: 'console' | 'table' | 'table_design' | 'query_builder' | 'notebook';
   query: string;
   page: number;
   activeTable: string | null;
+  designTable?: string;
   pkColumn: string | null;
+  result?: Tab['result'];
+  error?: string;
+  executionTime?: number | null;
+  autoIncrementColumns?: string[];
+  defaultValueColumns?: string[];
+  nullableColumns?: string[];
+  columnMetadata?: Tab['columnMetadata'];
+  foreignKeys?: Tab['foreignKeys'];
   connectionId: string;
   flowState?: Tab['flowState'];
+  pendingChanges?: Tab['pendingChanges'];
+  pendingDeletions?: Tab['pendingDeletions'];
+  pendingInsertions?: Tab['pendingInsertions'];
+  selectedRows?: number[];
   isEditorOpen?: boolean;
   filterClause?: string;
   sortClause?: string;
@@ -21,11 +34,14 @@ export interface CleanedTab {
   notebookId?: string;
   schema?: string;
   readOnly?: boolean;
+  results?: Tab['results'];
+  activeResultId?: string;
 }
 
 /**
- * Removes temporary/runtime data from a tab, keeping only persistent state.
- * Excludes: result, error, executionTime, isLoading, pendingChanges, pendingDeletions, selectedRows
+ * Removes runtime-only data from a tab, keeping the visible workbench state
+ * so closing the app or disconnecting a connection can restore tabs intact.
+ * Excludes: isLoading and deprecated notebookState.
  * For notebook tabs: only persists notebookId reference, not the full notebookState.
  *
  * @param tab - The tab to clean
@@ -39,9 +55,22 @@ export function cleanTabForStorage(tab: Tab): CleanedTab {
     query: tab.query,
     page: tab.page,
     activeTable: tab.activeTable,
+    designTable: tab.designTable,
     pkColumn: tab.pkColumn,
+    result: tab.result,
+    error: tab.error,
+    executionTime: tab.executionTime,
+    autoIncrementColumns: tab.autoIncrementColumns,
+    defaultValueColumns: tab.defaultValueColumns,
+    nullableColumns: tab.nullableColumns,
+    columnMetadata: tab.columnMetadata,
+    foreignKeys: tab.foreignKeys,
     connectionId: tab.connectionId,
     flowState: tab.flowState,
+    pendingChanges: tab.pendingChanges,
+    pendingDeletions: tab.pendingDeletions,
+    pendingInsertions: tab.pendingInsertions,
+    selectedRows: tab.selectedRows,
     isEditorOpen: tab.isEditorOpen,
     filterClause: tab.filterClause,
     sortClause: tab.sortClause,
@@ -50,6 +79,8 @@ export function cleanTabForStorage(tab: Tab): CleanedTab {
     notebookId: tab.notebookId,
     schema: tab.schema,
     readOnly: tab.readOnly,
+    results: tab.results,
+    activeResultId: tab.activeResultId,
   };
 }
 
@@ -68,15 +99,31 @@ export function restoreTabFromStorage(cleanedTab: Partial<Tab>): Tab {
     query: cleanedTab.query || '',
     page: cleanedTab.page || 1,
     activeTable: cleanedTab.activeTable || null,
+    designTable: cleanedTab.designTable,
     pkColumn: cleanedTab.pkColumn || null,
     connectionId: cleanedTab.connectionId || '',
-    result: null,
-    error: '',
-    executionTime: null,
+    result: cleanedTab.result || null,
+    error: cleanedTab.error || '',
+    executionTime: cleanedTab.executionTime ?? null,
+    autoIncrementColumns: cleanedTab.autoIncrementColumns,
+    defaultValueColumns: cleanedTab.defaultValueColumns,
+    nullableColumns: cleanedTab.nullableColumns,
+    columnMetadata: cleanedTab.columnMetadata,
+    foreignKeys: cleanedTab.foreignKeys,
     isLoading: false,
-    pendingChanges: undefined,
-    pendingDeletions: undefined,
-    selectedRows: undefined,
+    pendingChanges: cleanedTab.pendingChanges,
+    pendingDeletions: cleanedTab.pendingDeletions,
+    pendingInsertions: cleanedTab.pendingInsertions,
+    selectedRows: cleanedTab.selectedRows,
+    isEditorOpen: cleanedTab.isEditorOpen,
+    filterClause: cleanedTab.filterClause,
+    sortClause: cleanedTab.sortClause,
+    limitClause: cleanedTab.limitClause,
+    queryParams: cleanedTab.queryParams,
+    schema: cleanedTab.schema,
+    readOnly: cleanedTab.readOnly,
+    results: cleanedTab.results,
+    activeResultId: cleanedTab.activeResultId,
     notebookId: cleanedTab.notebookId,
     notebookState: undefined,
   };

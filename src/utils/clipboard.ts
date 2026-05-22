@@ -1,4 +1,5 @@
 import { formatCellValue } from './dataGrid';
+import { rowsToSqlCopy } from './sqlCopy';
 
 export function rowToCSV(row: unknown[], nullLabel: string = "null", delimiter: string = ","): string {
   return row
@@ -40,30 +41,18 @@ export function getSelectedRows(
   return sortedIndices.map((idx) => data[idx]);
 }
 
-function sqlValue(cell: unknown): string {
-  if (cell === null || cell === undefined) return "NULL";
-  if (typeof cell === "boolean") return cell ? "TRUE" : "FALSE";
-  if (typeof cell === "number") return String(cell);
-  const str = typeof cell === "object" ? JSON.stringify(cell) : String(cell);
-  return `'${str.replace(/'/g, "''")}'`;
-}
-
-function rowToSqlInsert(
-  row: unknown[],
-  columns: string[],
-  tableName: string,
-): string {
-  const cols = columns.map((c) => `\`${c}\``).join(", ");
-  const vals = row.map(sqlValue).join(", ");
-  return `INSERT INTO \`${tableName}\` (${cols}) VALUES (${vals});`;
-}
-
 export function rowsToSqlInsert(
   rows: unknown[][],
   columns: string[],
   tableName: string,
 ): string {
-  return rows.map((row) => rowToSqlInsert(row, columns, tableName)).join("\n");
+  return rowsToSqlCopy({
+    mode: "insert",
+    tableName,
+    columns,
+    rows,
+    driver: "mysql",
+  });
 }
 
 export async function copyTextToClipboard(

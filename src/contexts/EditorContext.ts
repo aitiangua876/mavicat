@@ -12,6 +12,12 @@ export interface EditorContextType {
   closeTabsToLeft: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   updateTab: (id: string, partial: Partial<Tab>) => void;
+  moveTabToConnection: (
+    id: string,
+    connectionId: string,
+    partial?: Partial<Tab>,
+  ) => Promise<boolean>;
+  closeTabsForDatabase: (connectionId: string, database: string) => Promise<number>;
   setActiveTabId: (id: string) => void;
   getSchema: (connectionId: string, schemaVersion?: number, schema?: string) => Promise<TableSchema[]>;
 }

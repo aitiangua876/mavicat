@@ -24,5 +24,33 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "tests/components/layout/Accordion.test.tsx", "tests/components/layout/NavItem.test.tsx"]
+  "include": ["src", "tests/components/layout/Accordion.test.tsx", "tests/components/layout/NavItem.test.tsx"],
+  "exclude": [
+    "src/components/notebook/**",
+    "src/components/settings/AiActivityPanel.tsx",
+    "src/components/settings/AiTab.tsx",
+    "src/components/settings/PluginSettingsPage.tsx",
+    "src/components/settings/PluginsTab.tsx",
+    "src/components/settings/ai-activity/**",
+    "src/contexts/PluginModalContext.ts",
+    "src/contexts/PluginModalProvider.tsx",
+    "src/contexts/PluginSlotContext.ts",
+    "src/contexts/PluginSlotProvider.tsx",
+    "src/contexts/UpdateContext.ts",
+    "src/contexts/UpdateProvider.tsx",
+    "src/hooks/useAiActivity.ts",
+    "src/hooks/usePluginApi.ts",
+    "src/hooks/usePluginRegistry.ts",
+    "src/hooks/usePluginSlotRegistry.ts",
+    "src/hooks/useUpdate.ts",
+    "src/pages/McpPage.tsx",
+    "src/types/ai.ts",
+    "src/types/notebook.ts",
+    "src/types/pluginSlots.ts",
+    "src/utils/aiActivity.ts",
+    "src/utils/notebook*.ts",
+    "src/utils/pluginConfig.ts",
+    "src/utils/pluginModuleLoader.ts",
+    "src/pluginApi.ts"
+  ]
 }

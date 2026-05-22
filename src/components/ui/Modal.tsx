@@ -12,14 +12,14 @@ export const Modal = ({
   isOpen,
   onClose,
   children,
-  overlayClassName = "fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm",
+  overlayClassName = "",
 }: ModalProps) => {
   useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={overlayClassName}>{children}</div>,
+    <div className={`mavicat-modal-overlay ${overlayClassName}`.trim()}>{children}</div>,
     document.body,
   );
 };

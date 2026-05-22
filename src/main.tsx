@@ -12,24 +12,21 @@ import { SavedQueriesProvider } from './contexts/SavedQueriesProvider';
 import { QueryHistoryProvider } from './contexts/QueryHistoryProvider';
 import { EditorProvider } from './contexts/EditorProvider';
 import { ThemeProvider } from './contexts/ThemeProvider';
-import { UpdateProvider } from './contexts/UpdateProvider';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <UpdateProvider>
-      <ThemeProvider>
-        <SettingsProvider>
-          <DatabaseProvider>
-            <SavedQueriesProvider>
-              <QueryHistoryProvider>
-                <EditorProvider>
-                  <App />
-                </EditorProvider>
-              </QueryHistoryProvider>
-            </SavedQueriesProvider>
-          </DatabaseProvider>
-        </SettingsProvider>
-      </ThemeProvider>
-    </UpdateProvider>
+    <ThemeProvider>
+      <SettingsProvider>
+        <DatabaseProvider>
+          <SavedQueriesProvider>
+            <QueryHistoryProvider>
+              <EditorProvider>
+                <App />
+              </EditorProvider>
+            </QueryHistoryProvider>
+          </SavedQueriesProvider>
+        </DatabaseProvider>
+      </SettingsProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

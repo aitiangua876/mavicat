@@ -105,12 +105,12 @@ export const Select = ({
   const dropdown = isOpen && !disabled && (
     <div
       ref={dropdownRef}
-      className="fixed z-[200] bg-elevated border border-strong rounded-lg shadow-xl max-h-60 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+      className="mavicat-select-popover fixed z-[200] max-h-60 flex flex-col overflow-hidden animate-in fade-in duration-100"
       style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}
     >
       {searchable && (
-        <div className="p-2 border-b border-default bg-elevated">
-          <div className="flex items-center gap-2 bg-base border border-strong rounded px-2 py-1.5 focus-within:border-blue-500 transition-colors">
+        <div className="p-1.5 border-b border-default bg-elevated">
+          <div className="flex items-center gap-2 bg-base border border-strong rounded px-2 py-1 focus-within:border-blue-500 transition-colors">
             <Search size={14} className="text-muted shrink-0" />
             <input
               ref={searchInputRef}
@@ -135,16 +135,16 @@ export const Select = ({
 
       <div className="overflow-y-auto flex-1 p-1 scrollbar-thin scrollbar-thumb-surface-tertiary scrollbar-track-transparent">
         {filteredOptions.length === 0 ? (
-          <div className="p-3 text-sm text-muted text-center italic">{noResultsLabel}</div>
+          <div className="p-2 text-xs text-muted text-center italic">{noResultsLabel}</div>
         ) : (
           filteredOptions.map((option) => (
             <button
               key={option}
               onClick={() => handleSelect(option)}
               className={clsx(
-                "w-full text-left px-3 py-2 text-sm rounded transition-colors truncate",
+                "mavicat-select-option w-full text-left transition-colors truncate",
                 value === option
-                  ? "bg-blue-600/10 text-blue-400 font-medium"
+                  ? "bg-blue-600/20 text-blue-200 font-medium"
                   : "text-primary hover:bg-surface-secondary"
               )}
               title={getLabel(option)}
@@ -165,7 +165,7 @@ export const Select = ({
         onClick={handleToggle}
         disabled={disabled}
         className={clsx(
-          "w-full bg-base border rounded px-3 py-2 text-sm text-primary flex items-center justify-between transition-colors",
+          "w-full bg-base border rounded px-2.5 py-1.5 text-sm text-primary flex items-center justify-between transition-colors",
           disabled
             ? "opacity-50 cursor-not-allowed border-default"
             : hasError

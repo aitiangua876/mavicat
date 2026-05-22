@@ -1,10 +1,12 @@
-use std::sync::Arc;
 use crate::{
-    commands::{expand_ssh_connection_params, find_connection_by_id, resolve_connection_params_with_id},
+    commands::{
+        expand_ssh_connection_params, find_connection_by_id, resolve_connection_params_with_id,
+    },
     drivers::{driver_trait::DatabaseDriver, registry::get_driver},
     models::ColumnDefinition,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tauri::{AppHandle, Runtime};
 
 #[derive(Deserialize, Debug)]
@@ -116,7 +118,15 @@ pub async fn execute_clipboard_import<R: Runtime>(
         add_new_columns(drv.as_ref(), &params, &req, schema_ref, &tbl_ref).await?;
     }
 
-    insert_rows(drv.as_ref(), &params, &req, schema_ref, &tbl_ref, table_created).await
+    insert_rows(
+        drv.as_ref(),
+        &params,
+        &req,
+        schema_ref,
+        &tbl_ref,
+        table_created,
+    )
+    .await
 }
 
 async fn add_new_columns(
@@ -151,7 +161,10 @@ async fn insert_rows(
     table_created: bool,
 ) -> Result<ClipboardImportResult, String> {
     if req.rows.is_empty() {
-        return Ok(ClipboardImportResult { rows_inserted: 0, table_created });
+        return Ok(ClipboardImportResult {
+            rows_inserted: 0,
+            table_created,
+        });
     }
 
     let col_list = req
@@ -175,11 +188,23 @@ async fn insert_rows(
 
         drv.execute_query(params, &insert_sql, None, 1, schema_ref)
             .await
-            .map_err(|e| format!("Failed to insert rows (batch starting at {}): {e}", rows_inserted))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to insert rows (batch starting at {}): {e}",
+                    rows_inserted
+                )
+            })?;
 
         rows_inserted += chunk.len();
     }
 
-    log::info!("Clipboard import complete: {} rows inserted into {}", rows_inserted, tbl_ref);
-    Ok(ClipboardImportResult { rows_inserted, table_created })
+    log::info!(
+        "Clipboard import complete: {} rows inserted into {}",
+        rows_inserted,
+        tbl_ref
+    );
+    Ok(ClipboardImportResult {
+        rows_inserted,
+        table_created,
+    })
 }
