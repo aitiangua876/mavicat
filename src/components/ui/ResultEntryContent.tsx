@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Check } from "lucide-react";
 import { DataGrid } from "./DataGrid";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { PaginationControls } from "./PaginationControls";
@@ -55,6 +56,38 @@ export function ResultEntryContent({
     return (
       <div className="flex items-center justify-center h-full text-surface-tertiary text-sm">
         {t("editor.executePrompt")}
+      </div>
+    );
+  }
+
+  if (entry.result.columns.length === 0) {
+    const content = (
+      <div className="rounded border border-default bg-elevated px-4 py-3 text-sm text-secondary">
+        <div className="flex items-center gap-2 text-primary font-medium mb-1">
+          <Check size={15} className="text-green-400" />
+          SQL 执行完成
+        </div>
+        <div>
+          影响行数：
+          <span className="font-mono text-primary">
+            {entry.result.affected_rows}
+          </span>
+          {entry.executionTime !== null && (
+            <span className="text-muted ml-2 font-mono">
+              ({formatDuration(entry.executionTime)})
+            </span>
+          )}
+        </div>
+      </div>
+    );
+
+    if (compact) {
+      return <div className="px-3 py-2">{content}</div>;
+    }
+
+    return (
+      <div className="h-full flex items-center justify-center bg-base">
+        {content}
       </div>
     );
   }

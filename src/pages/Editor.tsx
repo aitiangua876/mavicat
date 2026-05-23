@@ -413,7 +413,7 @@ export const Editor = () => {
     (activeCapabilities?.schemas === true
       ? activeSchema
       : isMultiDatabaseCapable(activeCapabilities)
-        ? selectedDatabases[0]
+        ? activeSchema ?? selectedDatabases[0]
         : activeDatabaseName) ??
     "";
 
@@ -1246,12 +1246,11 @@ export const Editor = () => {
     if (!editorsRef.current[activeTab.id]) {
       // Fallback: use saved query when editor ref is not available (e.g. after tab restore)
       if (activeTab.query?.trim()) {
-        const queries = splitQueries(activeTab.query);
+        const queries = splitQueries(activeTab.query)
+          .map((query) => query.trim())
+          .filter(Boolean);
         if (queries.length <= 1) runQuery(queries[0] || activeTab.query, 1);
-        else {
-          setSelectableQueries(queries);
-          setIsQuerySelectionModalOpen(true);
-        }
+        else runMultipleQueries(queries);
       }
       return;
     }
@@ -1262,11 +1261,13 @@ export const Editor = () => {
       : undefined;
 
     if (selectedText && selection && !selection.isEmpty()) {
-      const selectedQueries = splitQueries(selectedText);
+      const selectedQueries = splitQueries(selectedText)
+        .map((query) => query.trim())
+        .filter(Boolean);
       if (selectedQueries.length > 1) {
         runMultipleQueries(selectedQueries);
       } else {
-        runQuery(selectedText, 1);
+        runQuery(selectedQueries[0] || selectedText, 1);
       }
       return;
     }
@@ -1274,12 +1275,11 @@ export const Editor = () => {
     const fullText = editor.getValue();
     if (!fullText.trim()) return;
 
-    const queries = splitQueries(fullText);
+    const queries = splitQueries(fullText)
+      .map((query) => query.trim())
+      .filter(Boolean);
     if (queries.length <= 1) runQuery(queries[0] || fullText, 1);
-    else {
-      setSelectableQueries(queries);
-      setIsQuerySelectionModalOpen(true);
-    }
+    else runMultipleQueries(queries);
   }, [activeTab, runQuery, runMultipleQueries]);
 
   const handleBeautifySql = useCallback(() => {
@@ -2428,7 +2428,9 @@ export const Editor = () => {
           : undefined;
         const text = (selectedText || ed.getValue()).trim();
         if (!text) return;
-        const queries = splitQueries(text);
+        const queries = splitQueries(text)
+          .map((query) => query.trim())
+          .filter(Boolean);
         if (queries.length > 1) {
           runMultipleQueriesRef.current(queries);
         } else {
@@ -2986,7 +2988,11 @@ export const Editor = () => {
           onClick={() =>
             addTab({
               type: "console",
-              ...(isMultiDb ? { schema: selectedDatabases[0] } : {}),
+              ...(isMultiDb
+                ? { schema: activeSchema ?? selectedDatabases[0] }
+                : activeCapabilities?.schemas === true && activeSchema
+                  ? { schema: activeSchema }
+                  : {}),
             })
           }
           className="flex items-center justify-center w-9 h-full text-muted hover:text-white hover:bg-surface-secondary border-l border-default transition-colors shrink-0"
@@ -3785,43 +3791,62 @@ export const Editor = () => {
                 )}
 
                 <div className="flex-1 min-h-0 overflow-hidden">
-                  <DataGrid
-                    key={`${activeTab.id}-${activeTab.sortClause || "none"}-${activeTab.filterClause || "none"}-${activeTab.result?.rows.length || 0}-${Object.keys(activeTab.pendingInsertions || {}).length}`}
-                    columns={activeTab.result?.columns || []}
-                    data={activeTab.result?.rows || []}
-                    tableName={activeTab.activeTable}
-                    pkColumn={activeTab.pkColumn}
-                    autoIncrementColumns={activeTab.autoIncrementColumns}
-                    defaultValueColumns={activeTab.defaultValueColumns}
-                    nullableColumns={activeTab.nullableColumns}
-                    columnMetadata={activeTab.columnMetadata}
-                    foreignKeys={activeTab.foreignKeys}
-                    onForeignKeyNavigate={handleForeignKeyNavigate}
-                    connectionId={activeConnectionId}
-                    onRefresh={handleRefresh}
-                    pendingChanges={activeTab.pendingChanges}
-                    pendingDeletions={activeTab.pendingDeletions}
-                    pendingInsertions={activeTab.pendingInsertions}
-                    onPendingChange={handlePendingChange}
-                    onPendingInsertionChange={handlePendingInsertionChange}
-                    onDiscardInsertion={handleDiscardInsertion}
-                    onRevertDeletion={handleRevertDeletion}
-                    onMarkForDeletion={handleMarkForDeletion}
-                    onMarkMultipleForDeletion={handleMarkMultipleForDeletion}
-                    onDuplicateRow={handleDuplicateRow}
-                    selectedRows={new Set(activeTab.selectedRows || [])}
-                    onSelectionChange={handleSelectionChange}
-                    copyFormat={copyFormat}
-                    csvDelimiter={csvDelimiter}
-                    sortClause={activeTab.sortClause}
-                    onSort={
-                      activeTab.type === "table" &&
-                      (activeTab.result?.rows.length ?? 0) > 0
-                        ? handleSort
-                        : undefined
-                    }
-                    readonly={driverReadonly}
-                  />
+                  {activeTab.result &&
+                  activeTab.result.columns.length === 0 &&
+                  Object.keys(activeTab.pendingInsertions || {}).length === 0 ? (
+                    <div className="h-full flex items-center justify-center bg-base">
+                      <div className="rounded border border-default bg-elevated px-5 py-4 text-sm text-secondary shadow-sm">
+                        <div className="flex items-center gap-2 text-primary font-medium mb-1">
+                          <Check size={16} className="text-green-400" />
+                          SQL 执行完成
+                        </div>
+                        <div>
+                          影响行数：
+                          <span className="font-mono text-primary">
+                            {activeTab.result.affected_rows}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <DataGrid
+                      key={`${activeTab.id}-${activeTab.sortClause || "none"}-${activeTab.filterClause || "none"}-${activeTab.result?.rows.length || 0}-${Object.keys(activeTab.pendingInsertions || {}).length}`}
+                      columns={activeTab.result?.columns || []}
+                      data={activeTab.result?.rows || []}
+                      tableName={activeTab.activeTable}
+                      pkColumn={activeTab.pkColumn}
+                      autoIncrementColumns={activeTab.autoIncrementColumns}
+                      defaultValueColumns={activeTab.defaultValueColumns}
+                      nullableColumns={activeTab.nullableColumns}
+                      columnMetadata={activeTab.columnMetadata}
+                      foreignKeys={activeTab.foreignKeys}
+                      onForeignKeyNavigate={handleForeignKeyNavigate}
+                      connectionId={activeConnectionId}
+                      onRefresh={handleRefresh}
+                      pendingChanges={activeTab.pendingChanges}
+                      pendingDeletions={activeTab.pendingDeletions}
+                      pendingInsertions={activeTab.pendingInsertions}
+                      onPendingChange={handlePendingChange}
+                      onPendingInsertionChange={handlePendingInsertionChange}
+                      onDiscardInsertion={handleDiscardInsertion}
+                      onRevertDeletion={handleRevertDeletion}
+                      onMarkForDeletion={handleMarkForDeletion}
+                      onMarkMultipleForDeletion={handleMarkMultipleForDeletion}
+                      onDuplicateRow={handleDuplicateRow}
+                      selectedRows={new Set(activeTab.selectedRows || [])}
+                      onSelectionChange={handleSelectionChange}
+                      copyFormat={copyFormat}
+                      csvDelimiter={csvDelimiter}
+                      sortClause={activeTab.sortClause}
+                      onSort={
+                        activeTab.type === "table" &&
+                        (activeTab.result?.rows.length ?? 0) > 0
+                          ? handleSort
+                          : undefined
+                      }
+                      readonly={driverReadonly}
+                    />
+                  )}
                 </div>
               </div>
             ) : (

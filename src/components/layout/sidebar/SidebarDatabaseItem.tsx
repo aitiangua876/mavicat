@@ -33,6 +33,8 @@ interface SidebarDatabaseItemProps {
   driver: string;
   schemaVersion: number;
   isOpen: boolean;
+  isSelected?: boolean;
+  onSelectDatabase: (database: string) => void;
   onOpenDatabase: (database: string) => void;
   onCloseDatabase: (database: string) => void;
   onRefreshDatabase: (database: string) => void;
@@ -74,6 +76,8 @@ export const SidebarDatabaseItem = ({
   driver,
   schemaVersion,
   isOpen,
+  isSelected = false,
+  onSelectDatabase,
   onOpenDatabase,
   onCloseDatabase,
   onRefreshDatabase,
@@ -130,6 +134,10 @@ export const SidebarDatabaseItem = ({
     onOpenDatabase(databaseName);
   };
 
+  const handleSelect = () => {
+    onSelectDatabase(databaseName);
+  };
+
   const handleToggle = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (isOpen) {
@@ -147,7 +155,12 @@ export const SidebarDatabaseItem = ({
     <div className="flex flex-col">
       {/* Database header */}
       <div
-        className="flex items-center justify-between px-2 py-1 group/db cursor-pointer hover:bg-surface-secondary transition-colors"
+        className={`flex items-center justify-between px-2 py-1 group/db cursor-pointer transition-colors ${
+          isSelected
+            ? "bg-emerald-600/25 text-primary border-l-2 border-emerald-400"
+            : "border-l-2 border-transparent hover:bg-surface-secondary"
+        }`}
+        onClick={handleSelect}
         onDoubleClick={handleOpen}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -170,7 +183,11 @@ export const SidebarDatabaseItem = ({
             active={isOpen}
             className="shrink-0"
           />
-          <span className={`text-[15px] font-semibold truncate ${isOpen ? "text-secondary" : "text-muted"}`}>
+          <span
+            className={`text-[15px] font-semibold truncate ${
+              isSelected ? "text-emerald-50" : isOpen ? "text-secondary" : "text-muted"
+            }`}
+          >
             {databaseName}
           </span>
           {isLoaded && (

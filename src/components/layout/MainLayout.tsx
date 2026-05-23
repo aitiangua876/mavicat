@@ -344,7 +344,15 @@ function WorkbenchToolbar() {
     }
 
     if (action === 'query') {
-      addTab({ type: 'console' });
+      const queryDatabase =
+        activeSchema ||
+        (isMultiDatabaseCapable(activeCapabilities)
+          ? selectedDatabases[0] || activeDatabaseName || undefined
+          : undefined);
+      addTab({
+        type: 'console',
+        ...(queryDatabase ? { schema: queryDatabase } : {}),
+      });
       navigate('/editor');
       return;
     }

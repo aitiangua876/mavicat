@@ -403,6 +403,10 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
     }
   };
 
+  const selectDatabaseNode = (database: string) => {
+    setActiveTable(null, database);
+  };
+
   const closeDatabaseNode = (database: string) => {
     setOpenDatabaseNames((prev) => {
       const next = new Set(prev);
@@ -1152,6 +1156,8 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       driver={activeDriver!}
                       schemaVersion={schemaVersion}
                       isOpen={openDatabaseNames.has(dbName)}
+                      isSelected={activeSchema === dbName}
+                      onSelectDatabase={selectDatabaseNode}
                       onOpenDatabase={openDatabaseNode}
                       onCloseDatabase={closeDatabaseNode}
                       onRefreshDatabase={refreshDatabaseData}
