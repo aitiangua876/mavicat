@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mavicat Open</title>
+    <link rel="icon" href="/assets/mavicat-icon.png" type="image/png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Mavicat home">
+        <img class="brand-mark" src="/assets/mavicat-icon.png" alt="" />
+        <span>Mavicat</span>
+      </a>
+      <nav class="nav">
+        <a href="#workflow">工作流</a>
+        <a href="#features">能力</a>
+        <a href="#security">安全</a>
+        <a href="#versions">下载</a>
+        <a href="#admin" id="admin-nav" hidden>后台</a>
+      </nav>
+      <div class="account">
+        <span id="current-user" class="current-user"></span>
+        <button class="ghost" id="password-button" type="button" hidden>修改密码</button>
+        <button class="ghost" id="logout-button" type="button" hidden>退出</button>
+        <button class="primary" id="login-button" type="button">登录</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <div class="hero-copy">
+          <p class="eyebrow">Native database workspace</p>
+          <h1>Mavicat</h1>
+          <p class="lead">
+            一个面向开发者、DBA 和数据团队的桌面数据库管理工具。把连接管理、SQL 编辑、
+            数据浏览、导入导出、结构同步、备份恢复和跨平台安装包分发放进同一套清晰的工作流。
+          </p>
+          <div class="hero-actions">
+            <a class="primary hero-button" href="#versions">下载 Mavicat</a>
+            <a class="secondary hero-button" href="#workflow">查看工作流</a>
+          </div>
+          <div class="hero-meta" aria-label="Mavicat supported platforms">
+            <span>Windows</span>
+            <span>macOS Intel</span>
+            <span>macOS Apple Silicon</span>
+            <span>Linux</span>
+          </div>
+        </div>
+        <div class="hero-visual" aria-label="Mavicat preview">
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
+          <img src="/assets/mavicat-workspace.svg" alt="Mavicat 数据库管理工作区截图" />
+        </div>
+      </section>
+
+      <section class="quick-download">
+        <div>
+          <p class="eyebrow">Current release</p>
+          <h2>选择系统，直接下载安装包</h2>
+        </div>
+        <a class="primary hero-button" href="#versions">前往下载中心</a>
+      </section>
+
+      <section class="workflow-band" id="workflow">
+        <div class="section-heading">
+          <p class="eyebrow">Workflow</p>
+          <h2>围绕数据库日常操作设计</h2>
+        </div>
+        <div class="workflow-grid">
+          <article>
+            <span>01</span>
+            <h3>连接与分组</h3>
+            <p>按环境组织连接，快速定位本地、测试和生产数据库。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>查询与补全</h3>
+            <p>在 SQL 编辑器中执行查询、格式化语句，并通过字段补全减少来回查表。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>浏览与编辑</h3>
+            <p>表数据、结构、索引和关系在同一工作区内切换，适合高频数据排查。</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>交付与迁移</h3>
+            <p>围绕导入、导出、备份、结构同步和数据迁移形成完整桌面工作台。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="advantage-band">
+        <div class="section-heading">
+          <p class="eyebrow">Why Mavicat</p>
+          <h2>比拼工具堆叠，更适合日常数据库工作</h2>
+        </div>
+        <div class="advantage-layout">
+          <article>
+            <h3>一个窗口完成高频操作</h3>
+            <p>连接树、SQL 控制台、结果网格、对象结构和导出流程并排协作，不需要在多个工具之间切换。</p>
+          </article>
+          <article>
+            <h3>面向桌面端的原生体验</h3>
+            <p>Tauri 桌面壳配合系统文件、钥匙串和窗口能力，保持轻量、跨平台，同时保留本地应用的稳定手感。</p>
+          </article>
+          <article>
+            <h3>为团队分发准备</h3>
+            <p>官网后台可管理版本并上传不同平台架构安装包，访问用户可以直接下载对应版本。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="feature-band" id="features">
+        <div class="section-heading">
+          <p class="eyebrow">Capabilities</p>
+          <h2>面向真实数据库工作的核心能力</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-icon">DB</span>
+            <h3>多数据库支持</h3>
+            <p>覆盖 MySQL、MariaDB、PostgreSQL、SQLite、SQL Server 和 Redis。</p>
+          </article>
+          <article>
+            <span class="feature-icon">SQL</span>
+            <h3>SQL 编辑器</h3>
+            <p>执行、格式化、参数化和历史记录，适合长时间查询工作。</p>
+          </article>
+          <article>
+            <span class="feature-icon">GRID</span>
+            <h3>结果网格</h3>
+            <p>大表浏览、分页、筛选、复制和导出，减少临时脚本处理。</p>
+          </article>
+          <article>
+            <span class="feature-icon">SYNC</span>
+            <h3>结构同步</h3>
+            <p>对比结构、迁移数据和备份恢复，覆盖开发到交付的关键步骤。</p>
+          </article>
+          <article>
+            <span class="feature-icon">SSH</span>
+            <h3>SSH 隧道</h3>
+            <p>通过 SSH 访问内网数据库，适合云服务器、堡垒机和生产隔离环境。</p>
+          </article>
+          <article>
+            <span class="feature-icon">ER</span>
+            <h3>结构图谱</h3>
+            <p>表、视图、字段、索引、外键和 ER 关系图帮助快速理解数据库结构。</p>
+          </article>
+          <article>
+            <span class="feature-icon">JSON</span>
+            <h3>数据查看器</h3>
+            <p>JSON 文档、查询结果和导出数据可视化查看，减少临时格式化成本。</p>
+          </article>
+          <article>
+            <span class="feature-icon">I18N</span>
+            <h3>多语言界面</h3>
+            <p>内置多套主题和多语言，适配不同团队的桌面使用习惯。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="security-band" id="security">
+        <div>
+          <p class="eyebrow">Local-first security</p>
+          <h2>连接凭据留在你的设备上</h2>
+          <p>
+            Mavicat 桌面端基于 Tauri 构建，优先使用系统级能力处理文件、密钥和更新。
+            连接信息、查询历史和本地配置围绕本机工作流设计，适合内部数据库和生产环境日常维护。
+          </p>
+        </div>
+        <div class="security-list">
+          <span>OS-native keychain</span>
+          <span>SSH tunnel workflow</span>
+          <span>Local history and saved queries</span>
+          <span>Cross-platform installers</span>
+        </div>
+      </section>
+
+      <section class="downloads-band" id="versions">
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Release center</p>
+            <h2>版本与下载</h2>
+          </div>
+          <p class="download-note">管理员上传安装包后，Windows、macOS 和不同架构会在这里自动生成下载入口。</p>
+        </div>
+        <div id="versions-list" class="versions-list"></div>
+      </section>
+
+      <section class="admin-band" id="admin" hidden>
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Admin console</p>
+            <h2>版本管理</h2>
+          </div>
+          <button class="primary" id="new-version-button" type="button">新增版本</button>
+        </div>
+        <div id="admin-list" class="admin-list"></div>
+      </section>
+    </main>
+
+    <dialog id="auth-dialog" class="dialog">
+      <form method="dialog" class="dialog-shell">
+        <button class="icon-button close-dialog" type="button" data-close="auth-dialog" aria-label="Close">×</button>
+        <h2 id="auth-title">登录</h2>
+        <div class="tab-row">
+          <button class="tab active" id="show-login" type="button">登录</button>
+          <button class="tab" id="show-register" type="button">注册</button>
+        </div>
+        <label>
+          用户名
+          <input id="auth-username" name="username" autocomplete="username" />
+        </label>
+        <label>
+          密码
+          <input id="auth-password" name="password" type="password" autocomplete="current-password" />
+        </label>
+        <p id="auth-message" class="form-message"></p>
+        <button class="primary full-width" id="auth-submit" type="button">登录</button>
+      </form>
+    </dialog>
+
+    <dialog id="password-dialog" class="dialog">
+      <form method="dialog" class="dialog-shell">
+        <button class="icon-button close-dialog" type="button" data-close="password-dialog" aria-label="Close">×</button>
+        <h2>修改密码</h2>
+        <label>
+          当前密码
+          <input id="current-password" type="password" autocomplete="current-password" />
+        </label>
+        <label>
+          新密码
+          <input id="new-password" type="password" autocomplete="new-password" />
+        </label>
+        <p id="password-message" class="form-message"></p>
+        <button class="primary full-width" id="password-submit" type="button">保存</button>
+      </form>
+    </dialog>
+
+    <dialog id="version-dialog" class="dialog wide-dialog">
+      <form method="dialog" class="dialog-shell">
+        <button class="icon-button close-dialog" type="button" data-close="version-dialog" aria-label="Close">×</button>
+        <h2 id="version-dialog-title">新增版本</h2>
+        <input id="version-id" type="hidden" />
+        <div class="two-column">
+          <label>
+            版本号
+            <input id="version-number" placeholder="1.0.0" />
+          </label>
+          <label>
+            通道
+            <select id="version-channel">
+              <option value="stable">Stable</option>
+              <option value="beta">Beta</option>
+              <option value="nightly">Nightly</option>
+            </select>
+          </label>
+        </div>
+        <div class="two-column">
+          <label>
+            标题
+            <input id="version-title" placeholder="Mavicat 1.0.0" />
+          </label>
+          <label>
+            发布日期
+            <input id="version-date" type="date" />
+          </label>
+        </div>
+        <label>
+          更新说明
+          <textarea id="version-notes" rows="5"></textarea>
+        </label>
+        <label class="check-row">
+          <input id="version-published" type="checkbox" />
+          已发布
+        </label>
+        <p id="version-message" class="form-message"></p>
+        <button class="primary full-width" id="version-submit" type="button">保存版本</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
