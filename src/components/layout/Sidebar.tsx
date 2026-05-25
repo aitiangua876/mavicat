@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
+import { ask } from "@tauri-apps/plugin-dialog";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,11 +16,13 @@ import {
   Settings,
   Shield,
   Terminal,
+  Trash2,
 } from "lucide-react";
 import { useDatabase } from "../../hooks/useDatabase";
 import { useSidebarResize } from "../../hooks/useSidebarResize";
 import { useConnectionManager, type ConnectionStatus } from "../../hooks/useConnectionManager";
 import { useDrivers } from "../../hooks/useDrivers";
+import { useAlert } from "../../hooks/useAlert";
 import { getDriverColor, getDriverIcon } from "../../utils/driverUI";
 import { ExplorerSidebar, type SidebarTab } from "./ExplorerSidebar";
 import { PanelDatabaseProvider } from "./PanelDatabaseProvider";
@@ -48,6 +52,7 @@ export const Sidebar = () => {
     handleSwitch,
   } = useConnectionManager();
   const { allDrivers } = useDrivers();
+  const { showAlert } = useAlert();
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("structure");
   const [search, setSearch] = useState("");
@@ -63,7 +68,9 @@ export const Sidebar = () => {
 
   useEffect(() => {
     if (!activeConnectionId) return;
-    setExpandedConnectionIds((prev) => new Set(prev).add(activeConnectionId));
+    queueMicrotask(() => {
+      setExpandedConnectionIds((prev) => new Set(prev).add(activeConnectionId));
+    });
   }, [activeConnectionId]);
 
   const filteredConnections = useMemo(() => {
@@ -191,6 +198,34 @@ export const Sidebar = () => {
     handleSwitch(connectionId);
   };
 
+  const deleteConnection = async (connection: ConnectionStatus) => {
+    const confirmed = await ask(
+      `确定要删除连接“${connection.name}”吗？\n\n此操作会删除连接配置，无法撤销。`,
+      { title: "删除连接", kind: "warning" },
+    );
+    if (!confirmed) return;
+
+    try {
+      if (connection.isOpen) {
+        await closeConnection(connection.id);
+      }
+      await invoke("delete_connection", { id: connection.id });
+      setExpandedConnectionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(connection.id);
+        return next;
+      });
+      await loadConnections();
+      showAlert(`已删除连接“${connection.name}”`, { title: "删除连接", kind: "info" });
+    } catch (error) {
+      console.error("Failed to delete connection", error);
+      showAlert(`删除连接失败：${error instanceof Error ? error.message : String(error)}`, {
+        title: "删除连接",
+        kind: "error",
+      });
+    }
+  };
+
   const handleConnectionContextMenu = (
     event: React.MouseEvent,
     connectionId: string,
@@ -242,6 +277,12 @@ export const Sidebar = () => {
           icon: Power,
           action: () => void closeConnection(contextConnection.id),
           disabled: !contextConnection.isOpen,
+          danger: true,
+        },
+        {
+          label: "删除连接...",
+          icon: Trash2,
+          action: () => void deleteConnection(contextConnection),
           danger: true,
         },
       ]

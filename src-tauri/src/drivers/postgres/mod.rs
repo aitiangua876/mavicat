@@ -27,11 +27,13 @@ pub async fn get_schemas(params: &ConnectionParams) -> Result<Vec<String>, Strin
     let pool = get_postgres_pool(params).await?;
     let rows = query_all(
         &pool,
-        "SELECT schema_name::text FROM information_schema.schemata \
-WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'pg_toast') \
-AND schema_name NOT LIKE 'pg_temp_%' \
-AND schema_name NOT LIKE 'pg_toast_temp_%' \
-ORDER BY schema_name",
+        "SELECT n.nspname::text AS schema_name \
+FROM pg_namespace n \
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') \
+AND n.nspname NOT LIKE 'pg_temp_%' \
+AND n.nspname NOT LIKE 'pg_toast_temp_%' \
+AND (has_schema_privilege(n.oid, 'USAGE') OR has_schema_privilege(n.oid, 'CREATE')) \
+ORDER BY n.nspname",
         &[],
     )
     .await?;

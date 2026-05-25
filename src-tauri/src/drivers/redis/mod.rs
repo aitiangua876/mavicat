@@ -393,28 +393,42 @@ impl DatabaseDriver for RedisDriver {
         _schema: Option<&str>,
     ) -> Result<Vec<TableInfo>, String> {
         let mut connection = connect(params).await?;
-        let (_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
-            .arg(0)
-            .arg("MATCH")
-            .arg("*")
-            .arg("COUNT")
-            .arg(300)
-            .query_async(&mut connection)
-            .await
-            .map_err(|error| error.to_string())?;
+        let mut cursor = 0_u64;
+        let mut tables = Vec::new();
 
-        let mut tables = Vec::with_capacity(keys.len());
-        for key in keys {
-            let key_type: String = redis::cmd("TYPE")
-                .arg(&key)
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg("*")
+                .arg("COUNT")
+                .arg(500)
                 .query_async(&mut connection)
                 .await
-                .unwrap_or_else(|_| "unknown".to_string());
-            tables.push(TableInfo {
-                name: key,
-                comment: Some(format!("Redis {}", key_type)),
-            });
+                .map_err(|error| error.to_string())?;
+
+            for key in keys {
+                let key_type: String = redis::cmd("TYPE")
+                    .arg(&key)
+                    .query_async(&mut connection)
+                    .await
+                    .unwrap_or_else(|_| "unknown".to_string());
+                tables.push(TableInfo {
+                    name: key,
+                    comment: Some(format!("Redis {}", key_type)),
+                });
+                if tables.len() >= 2_000 {
+                    tables.sort_by(|a, b| a.name.cmp(&b.name));
+                    return Ok(tables);
+                }
+            }
+
+            cursor = next_cursor;
+            if cursor == 0 {
+                break;
+            }
         }
+
         tables.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(tables)
     }

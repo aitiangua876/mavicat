@@ -579,7 +579,15 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
             // Ignore - no saved selection exists yet
           }
 
-          const validSelection = savedSelection.filter(s => schemasResult.includes(s));
+          const savedValidSelection = savedSelection.filter(s => schemasResult.includes(s));
+          const isLegacyPublicOnlySelection =
+            savedValidSelection.length === 1 &&
+            savedValidSelection[0] === 'public' &&
+            schemasResult.length > 1;
+          const validSelection =
+            savedValidSelection.length === 0 || isLegacyPublicOnlySelection
+              ? schemasResult
+              : savedValidSelection;
 
           if (validSelection.length > 0) {
             let preferredSchema = validSelection[0];

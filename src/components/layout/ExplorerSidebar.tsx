@@ -63,6 +63,7 @@ import { SidebarRoutineItem } from "./sidebar/SidebarRoutineItem";
 import { SidebarSchemaItem } from "./sidebar/SidebarSchemaItem";
 import { SidebarDatabaseItem } from "./sidebar/SidebarDatabaseItem";
 import { SidebarTriggerItem } from "./sidebar/SidebarTriggerItem";
+import { RedisKeyTree } from "./sidebar/RedisKeyTree";
 import { QueryHistorySection } from "./sidebar/QueryHistorySection";
 import { useConnectionLayoutContext } from "../../hooks/useConnectionLayoutContext";
 import type { ForeignKey, Index, TableColumn } from "../../types/schema";
@@ -1436,6 +1437,15 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                         <div className="text-center p-2 text-xs text-muted italic">
                           {objectFilter ? t("sidebar.noTablesMatch") : t("sidebar.noTables")}
                         </div>
+                      ) : activeDriver === "redis" ? (
+                        <RedisKeyTree
+                          keys={tables}
+                          activeKey={activeTable}
+                          search={objectFilter}
+                          onKeyClick={handleTableClick}
+                          onKeyDoubleClick={handleOpenTable}
+                          onContextMenu={handleContextMenu}
+                        />
                       ) : (
                         <div>
                           {filtered.map((table) => (

@@ -16,6 +16,20 @@ pub struct AiDatabaseContext {
     pub driver: Option<String>,
     pub tables: Vec<String>,
     pub current_sql: Option<String>,
+    pub last_result: Option<AiResultContext>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiResultContext {
+    pub query: Option<String>,
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<serde_json::Value>>,
+    pub row_count: Option<usize>,
+    pub total_rows: Option<i64>,
+    pub affected_rows: Option<i64>,
+    pub truncated: Option<bool>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -141,6 +155,7 @@ fn build_system_prompt(context: &AiDatabaseContext) -> String {
             .join(", ")
     };
     let current_sql = context.current_sql.as_deref().unwrap_or("").trim();
+    let result_summary = build_result_summary(context.last_result.as_ref());
 
     format!(
         r#"你是 Mavicat 的数据库助手，必须使用中文简洁回答。
@@ -150,9 +165,14 @@ fn build_system_prompt(context: &AiDatabaseContext) -> String {
 已加载表：{tables}
 当前编辑器 SQL：
 {current_sql}
+最近执行结果：
+{result_summary}
 
 你可以帮助生成、解释、优化 SQL。需要提供 SQL 时，必须使用 ```sql fenced code block。
 不要虚构不存在的表或字段；不确定时先说明需要用户补充。
+如果最近执行结果已经证明表、字段或数据存在，不要重复生成同一条验证 SQL，应该直接承认结果并继续下一步。
+如果用户说“就是这张表”“结果在这里”“已经查到了”等纠正信息，优先相信用户和最近执行结果，不要机械反问。
+当用户已经给出明确表名但字段未知时，下一步应直接生成查看字段/注释/样例数据的查询，而不是再次确认表名。
 SELECT、WITH、SHOW、DESCRIBE、EXPLAIN 类型查询可以建议一键执行。
 INSERT、UPDATE、DELETE、REPLACE、MERGE、CREATE、ALTER、DROP、TRUNCATE 等写入或结构变更必须提示用户二次确认后才能执行。"#,
         connection = context.connection_name.as_deref().unwrap_or("-"),
@@ -168,7 +188,74 @@ INSERT、UPDATE、DELETE、REPLACE、MERGE、CREATE、ALTER、DROP、TRUNCATE �
         } else {
             current_sql
         },
+        result_summary = result_summary,
     )
+}
+
+fn build_result_summary(result: Option<&AiResultContext>) -> String {
+    let Some(result) = result else {
+        return "暂无".to_string();
+    };
+
+    if let Some(error) = result
+        .error
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        return format!("上一条 SQL 执行失败：{error}");
+    }
+
+    let columns = if result.columns.is_empty() {
+        "-".to_string()
+    } else {
+        result.columns.join(", ")
+    };
+    let rows = if result.rows.is_empty() {
+        "无返回行".to_string()
+    } else {
+        result
+            .rows
+            .iter()
+            .take(8)
+            .map(|row| {
+                row.iter()
+                    .map(format_json_cell)
+                    .collect::<Vec<_>>()
+                    .join(" | ")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let query = result.query.as_deref().unwrap_or("-").trim();
+    let query = if query.is_empty() { "-" } else { query };
+    let total = result
+        .total_rows
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let affected = result
+        .affected_rows
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let truncated = if result.truncated.unwrap_or(false) {
+        "是"
+    } else {
+        "否"
+    };
+
+    format!(
+        "SQL：{query}\n列：{columns}\n本次返回行数：{row_count}\n总行数：{total}\n影响行数：{affected}\n是否截断：{truncated}\n前几行：\n{rows}",
+        row_count = result.row_count.unwrap_or(result.rows.len()),
+    )
+}
+
+fn format_json_cell(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "NULL".to_string(),
+        serde_json::Value::String(value) => value.clone(),
+        serde_json::Value::Bool(value) => value.to_string(),
+        serde_json::Value::Number(value) => value.to_string(),
+        other => other.to_string(),
+    }
 }
 
 fn extract_sql_blocks(content: &str) -> Vec<AiSqlBlock> {
@@ -279,5 +366,33 @@ update users set name = 'a' where id = 1;
         let block = classify_sql_block("-- explain\n/* test */\nDELETE FROM users WHERE id = 1");
         assert_eq!(block.kind, "mutation");
         assert!(block.requires_confirmation);
+    }
+
+    #[test]
+    fn system_prompt_includes_recent_result_context() {
+        let prompt = build_system_prompt(&AiDatabaseContext {
+            connection_name: Some("测试RDS".to_string()),
+            database_name: Some("vat_zhongche".to_string()),
+            schema: None,
+            driver: Some("mysql".to_string()),
+            tables: vec![],
+            current_sql: Some("SELECT TABLE_NAME FROM information_schema.tables".to_string()),
+            last_result: Some(AiResultContext {
+                query: Some("SELECT TABLE_NAME FROM information_schema.tables".to_string()),
+                columns: vec!["TABLE_NAME".to_string()],
+                rows: vec![vec![serde_json::Value::String(
+                    "input_invoice_receivable".to_string(),
+                )]],
+                row_count: Some(1),
+                total_rows: Some(1),
+                affected_rows: Some(0),
+                truncated: Some(false),
+                error: None,
+            }),
+        });
+
+        assert!(prompt.contains("最近执行结果"));
+        assert!(prompt.contains("input_invoice_receivable"));
+        assert!(prompt.contains("不要重复生成同一条验证 SQL"));
     }
 }

@@ -50,6 +50,7 @@ import { DataGrid } from "../components/ui/DataGrid";
 import { DatabaseObjectView } from "../components/ui/DatabaseObjectView";
 import { MultiResultPanel } from "../components/ui/MultiResultPanel";
 import { ErrorDisplay } from "../components/ui/ErrorDisplay";
+import { RedisKeyInspector } from "../components/ui/RedisKeyInspector";
 import { NewRowModal } from "../components/modals/NewRowModal";
 import { QuerySelectionModal } from "../components/modals/QuerySelectionModal";
 import { ExplainSelectionModal } from "../components/modals/ExplainSelectionModal";
@@ -113,6 +114,7 @@ import { beautifySql } from "../utils/sqlFormatter";
 import { rowsToCSV, rowsToJSON } from "../utils/clipboard";
 import { rowsToSqlCopy } from "../utils/sqlCopy";
 import { toErrorMessage } from "../utils/errors";
+import type { AiResultContext } from "../types/ai";
 import {
   getTabScrollState,
   getAdjacentTabIndex,
@@ -147,6 +149,25 @@ const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
   filtered: "当前筛选全部",
   all: "全部数据",
 };
+
+function summarizeAiQueryResult(
+  query: string | undefined,
+  result: QueryResult | null | undefined,
+  error?: string | null,
+): AiResultContext | null {
+  if (!result && !error) return null;
+
+  return {
+    query: query ?? null,
+    columns: result?.columns ?? [],
+    rows: result?.rows?.slice(0, 8) ?? [],
+    rowCount: result?.rows?.length ?? 0,
+    totalRows: result?.pagination?.total_rows ?? null,
+    affectedRows: result?.affected_rows ?? null,
+    truncated: result?.truncated ?? false,
+    error: error || null,
+  };
+}
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500, 1000];
 const SQL_IDENTIFIER_CHARS = /[\w$."`\x5B\]\u4e00-\u9fa5]/;
@@ -463,6 +484,28 @@ export const Editor = () => {
         activeTab?.type === "console"
           ? activeTab.query
           : activeTab?.query ?? "",
+      lastResult: (() => {
+        if (!activeTab) return null;
+        if (activeTab.results && activeTab.results.length > 0) {
+          const activeEntry =
+            activeTab.results.find((entry) => entry.id === activeTab.activeResultId) ??
+            [...activeTab.results]
+              .reverse()
+              .find((entry) => entry.result || entry.error);
+          if (activeEntry) {
+            return summarizeAiQueryResult(
+              activeEntry.query,
+              activeEntry.result,
+              activeEntry.error,
+            );
+          }
+        }
+        return summarizeAiQueryResult(
+          activeTab.query,
+          activeTab.result,
+          activeTab.error,
+        );
+      })(),
     }),
     [
       activeConnectionName,
@@ -471,8 +514,7 @@ export const Editor = () => {
       activeSchema,
       activeDriver,
       aiContextTables,
-      activeTab?.type,
-      activeTab?.query,
+      activeTab,
     ],
   );
 
@@ -4093,7 +4135,16 @@ export const Editor = () => {
                 )}
 
                 <div className="flex-1 min-h-0 overflow-hidden">
-                  {activeTab.result &&
+                  {activeDriver === "redis" && activeConnectionId && activeTab.activeTable ? (
+                    <RedisKeyInspector
+                      connectionId={activeConnectionId}
+                      redisKey={activeTab.activeTable}
+                      onDeleted={() => {
+                        showAlert("Redis Key 已删除", { kind: "info" });
+                        handleCloseTab(activeTab.id);
+                      }}
+                    />
+                  ) : activeTab.result &&
                   activeTab.result.columns.length === 0 &&
                   Object.keys(activeTab.pendingInsertions || {}).length === 0 ? (
                     <div className="h-full flex items-center justify-center bg-base">

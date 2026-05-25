@@ -21,7 +21,7 @@ import {
   Wand2,
 } from "lucide-react";
 import clsx from "clsx";
-import type { AiMessage, AiSqlBlock } from "../../types/ai";
+import type { AiMessage, AiResultContext, AiSqlBlock } from "../../types/ai";
 
 const AI_MODELS = [
   "gpt-5.4",
@@ -56,6 +56,7 @@ export interface AiDatabaseContext {
   driver?: string | null;
   tables: string[];
   currentSql?: string | null;
+  lastResult?: AiResultContext | null;
 }
 
 interface AiQueryAssistantPanelProps {

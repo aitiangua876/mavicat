@@ -1,3 +1,5 @@
+use redis::AsyncCommands;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -374,6 +376,374 @@ fn save_connections_and_invalidate<R: Runtime>(
 }
 
 // --- Commands ---
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedisKeyInfo {
+    pub key: String,
+    pub key_type: String,
+    pub ttl: i64,
+    pub size: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedisKeyValue {
+    pub key: String,
+    pub key_type: String,
+    pub ttl: i64,
+    pub size: Option<u64>,
+    pub value: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedisSaveKeyRequest {
+    pub connection_id: String,
+    pub key: String,
+    pub key_type: String,
+    pub value: serde_json::Value,
+    pub ttl: Option<i64>,
+}
+
+fn redis_selected_db(params: &ConnectionParams) -> u8 {
+    params.database.primary().parse::<u8>().unwrap_or(0).min(15)
+}
+
+fn redis_connection_url(params: &ConnectionParams) -> String {
+    let host = params.host.as_deref().unwrap_or("localhost");
+    let port = params.port.unwrap_or(6379);
+    let db = redis_selected_db(params);
+    let password = params.password.as_deref().unwrap_or_default();
+    let username = params.username.as_deref().unwrap_or_default();
+
+    let credentials = match (username.is_empty(), password.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => format!(":{}@", encode(password)),
+        (false, true) => format!("{}@", encode(username)),
+        (false, false) => format!("{}:{}@", encode(username), encode(password)),
+    };
+
+    format!("redis://{}{}:{}/{}", credentials, host, port, db)
+}
+
+async fn redis_connection_for<R: Runtime>(
+    app: &AppHandle<R>,
+    connection_id: &str,
+) -> Result<redis::aio::MultiplexedConnection, String> {
+    let saved_conn = find_connection_by_id(app, connection_id)?;
+    if saved_conn.params.driver != "redis" {
+        return Err("当前连接不是 Redis".to_string());
+    }
+    let expanded_params = expand_ssh_connection_params(app, &saved_conn.params).await?;
+    let params = resolve_connection_params_with_id(&expanded_params, connection_id)?;
+    let client = redis::Client::open(redis_connection_url(&params)).map_err(|e| e.to_string())?;
+    client
+        .get_multiplexed_async_connection()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+async fn redis_key_info(
+    connection: &mut redis::aio::MultiplexedConnection,
+    key: &str,
+) -> Result<RedisKeyInfo, String> {
+    let key_type: String = redis::cmd("TYPE")
+        .arg(key)
+        .query_async(connection)
+        .await
+        .unwrap_or_else(|_| "unknown".to_string());
+    let ttl: i64 = redis::cmd("TTL")
+        .arg(key)
+        .query_async(connection)
+        .await
+        .unwrap_or(-2);
+    let size: Option<u64> = redis::cmd("MEMORY")
+        .arg("USAGE")
+        .arg(key)
+        .query_async(connection)
+        .await
+        .ok();
+
+    Ok(RedisKeyInfo {
+        key: key.to_string(),
+        key_type,
+        ttl,
+        size,
+    })
+}
+
+#[tauri::command]
+pub async fn redis_scan_keys<R: Runtime>(
+    app: AppHandle<R>,
+    connection_id: String,
+    pattern: Option<String>,
+    limit: Option<u32>,
+) -> Result<Vec<RedisKeyInfo>, String> {
+    let mut connection = redis_connection_for(&app, &connection_id).await?;
+    let raw_pattern = pattern.unwrap_or_else(|| "*".to_string());
+    let match_pattern = if raw_pattern.trim().is_empty() {
+        "*".to_string()
+    } else if raw_pattern.contains('*') || raw_pattern.contains('?') || raw_pattern.contains('[') {
+        raw_pattern
+    } else {
+        format!("{}*", raw_pattern)
+    };
+    let max_keys = limit.unwrap_or(1000).clamp(50, 10_000) as usize;
+
+    let mut cursor = 0_u64;
+    let mut keys = Vec::new();
+    loop {
+        let (next_cursor, batch): (u64, Vec<String>) = redis::cmd("SCAN")
+            .arg(cursor)
+            .arg("MATCH")
+            .arg(&match_pattern)
+            .arg("COUNT")
+            .arg(500)
+            .query_async(&mut connection)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        for key in batch {
+            keys.push(redis_key_info(&mut connection, &key).await?);
+            if keys.len() >= max_keys {
+                keys.sort_by(|a, b| a.key.cmp(&b.key));
+                return Ok(keys);
+            }
+        }
+
+        cursor = next_cursor;
+        if cursor == 0 {
+            break;
+        }
+    }
+
+    keys.sort_by(|a, b| a.key.cmp(&b.key));
+    Ok(keys)
+}
+
+#[tauri::command]
+pub async fn redis_get_key<R: Runtime>(
+    app: AppHandle<R>,
+    connection_id: String,
+    key: String,
+) -> Result<RedisKeyValue, String> {
+    let mut connection = redis_connection_for(&app, &connection_id).await?;
+    let info = redis_key_info(&mut connection, &key).await?;
+    if info.key_type == "none" {
+        return Err("Key 不存在或已过期".to_string());
+    }
+
+    let value = match info.key_type.as_str() {
+        "hash" => {
+            let values: Vec<(String, String)> = redis::cmd("HGETALL")
+                .arg(&key)
+                .query_async(&mut connection)
+                .await
+                .map_err(|e| e.to_string())?;
+            serde_json::Value::Array(
+                values
+                    .into_iter()
+                    .map(|(field, value)| serde_json::json!({ "field": field, "value": value }))
+                    .collect(),
+            )
+        }
+        "list" => {
+            let values: Vec<String> = redis::cmd("LRANGE")
+                .arg(&key)
+                .arg(0)
+                .arg(-1)
+                .query_async(&mut connection)
+                .await
+                .map_err(|e| e.to_string())?;
+            serde_json::Value::Array(
+                values
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, value)| serde_json::json!({ "index": index, "value": value }))
+                    .collect(),
+            )
+        }
+        "set" => {
+            let values: Vec<String> = redis::cmd("SMEMBERS")
+                .arg(&key)
+                .query_async(&mut connection)
+                .await
+                .map_err(|e| e.to_string())?;
+            serde_json::Value::Array(values.into_iter().map(serde_json::Value::String).collect())
+        }
+        "zset" => {
+            let values: Vec<(String, f64)> = redis::cmd("ZRANGE")
+                .arg(&key)
+                .arg(0)
+                .arg(-1)
+                .arg("WITHSCORES")
+                .query_async(&mut connection)
+                .await
+                .map_err(|e| e.to_string())?;
+            serde_json::Value::Array(
+                values
+                    .into_iter()
+                    .map(|(member, score)| serde_json::json!({ "member": member, "score": score }))
+                    .collect(),
+            )
+        }
+        _ => {
+            let value: Option<String> = connection.get(&key).await.map_err(|e| e.to_string())?;
+            value
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null)
+        }
+    };
+
+    Ok(RedisKeyValue {
+        key,
+        key_type: info.key_type,
+        ttl: info.ttl,
+        size: info.size,
+        value,
+    })
+}
+
+#[tauri::command]
+pub async fn redis_save_key<R: Runtime>(
+    app: AppHandle<R>,
+    request: RedisSaveKeyRequest,
+) -> Result<(), String> {
+    let mut connection = redis_connection_for(&app, &request.connection_id).await?;
+    let ttl = request.ttl.unwrap_or(-1);
+
+    redis::cmd("DEL")
+        .arg(&request.key)
+        .query_async::<i64>(&mut connection)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match request.key_type.as_str() {
+        "hash" => {
+            let entries = request
+                .value
+                .as_array()
+                .ok_or_else(|| "Hash 值必须是数组".to_string())?;
+            if entries.is_empty() {
+                redis::cmd("HSET")
+                    .arg(&request.key)
+                    .arg("__empty__")
+                    .arg("")
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                redis::cmd("HDEL")
+                    .arg(&request.key)
+                    .arg("__empty__")
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            } else {
+                let mut command = redis::cmd("HSET");
+                command.arg(&request.key);
+                for entry in entries {
+                    command
+                        .arg(entry.get("field").and_then(|v| v.as_str()).unwrap_or(""))
+                        .arg(entry.get("value").and_then(|v| v.as_str()).unwrap_or(""));
+                }
+                command
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        "list" => {
+            let entries = request
+                .value
+                .as_array()
+                .ok_or_else(|| "List 值必须是数组".to_string())?;
+            if !entries.is_empty() {
+                let mut command = redis::cmd("RPUSH");
+                command.arg(&request.key);
+                for entry in entries {
+                    command.arg(entry.get("value").and_then(|v| v.as_str()).unwrap_or(""));
+                }
+                command
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        "set" => {
+            let entries = request
+                .value
+                .as_array()
+                .ok_or_else(|| "Set 值必须是数组".to_string())?;
+            if !entries.is_empty() {
+                let mut command = redis::cmd("SADD");
+                command.arg(&request.key);
+                for entry in entries {
+                    command.arg(entry.as_str().unwrap_or(""));
+                }
+                command
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        "zset" => {
+            let entries = request
+                .value
+                .as_array()
+                .ok_or_else(|| "ZSet 值必须是数组".to_string())?;
+            if !entries.is_empty() {
+                let mut command = redis::cmd("ZADD");
+                command.arg(&request.key);
+                for entry in entries {
+                    command
+                        .arg(entry.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0))
+                        .arg(entry.get("member").and_then(|v| v.as_str()).unwrap_or(""));
+                }
+                command
+                    .query_async::<i64>(&mut connection)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        _ => {
+            let value = request
+                .value
+                .as_str()
+                .ok_or_else(|| "String 值必须是文本".to_string())?;
+            connection
+                .set::<_, _, ()>(&request.key, value)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    if ttl > 0 {
+        redis::cmd("EXPIRE")
+            .arg(&request.key)
+            .arg(ttl)
+            .query_async::<i64>(&mut connection)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn redis_delete_key<R: Runtime>(
+    app: AppHandle<R>,
+    connection_id: String,
+    key: String,
+) -> Result<u64, String> {
+    let mut connection = redis_connection_for(&app, &connection_id).await?;
+    let deleted: u64 = redis::cmd("DEL")
+        .arg(key)
+        .query_async(&mut connection)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(deleted)
+}
 
 #[tauri::command]
 pub async fn get_connection_by_id<R: Runtime>(
