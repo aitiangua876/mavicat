@@ -736,51 +736,81 @@ function initGlyphTrail() {
   const layer = document.createElement("div");
   let lastSpawn = 0;
   let ambientTimer = 0;
+  let lastPointer = null;
 
   layer.className = "glyph-trail";
   layer.setAttribute("aria-hidden", "true");
   document.body.append(layer);
   document.body.classList.add("glyph-trail-ready");
 
-  function spawnGlyph(x, y, ambient = false, burstIndex = 0) {
+  function spawnGlyph(x, y, ambient = false, burstIndex = 0, vector = null) {
     const glyph = document.createElement("span");
     const angle = Math.random() * Math.PI * 2;
-    const distance = ambient ? 80 + Math.random() * 210 : 48 + Math.random() * 150;
-    const driftX = Math.cos(angle) * distance;
-    const driftY = Math.sin(angle) * distance - (ambient ? 20 : 8);
-    const duration = ambient ? 6.2 + Math.random() * 2.8 : 4.2 + Math.random() * 2.4;
+    const distance = ambient ? 56 + Math.random() * 140 : 22 + Math.random() * 56;
+    const driftX = vector ? vector.x * distance + vector.normalX * ((Math.random() - 0.5) * 32) : Math.cos(angle) * distance;
+    const driftY = vector ? vector.y * distance + vector.normalY * ((Math.random() - 0.5) * 32) : Math.sin(angle) * distance - 12;
+    const duration = ambient ? 5.6 + Math.random() * 2.2 : 3.6 + Math.random() * 1.8;
 
     glyph.className = "trail-glyph";
     glyph.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
-    glyph.style.setProperty("--glyph-x", `${x + (Math.random() - 0.5) * (ambient ? 80 : 30)}px`);
-    glyph.style.setProperty("--glyph-y", `${y + (Math.random() - 0.5) * (ambient ? 64 : 30)}px`);
+    glyph.style.setProperty("--glyph-x", `${x + (Math.random() - 0.5) * (ambient ? 60 : 18)}px`);
+    glyph.style.setProperty("--glyph-y", `${y + (Math.random() - 0.5) * (ambient ? 48 : 18)}px`);
     glyph.style.setProperty("--glyph-dx", `${driftX.toFixed(1)}px`);
     glyph.style.setProperty("--glyph-dy", `${driftY.toFixed(1)}px`);
-    glyph.style.setProperty("--glyph-size", `${ambient ? 11 + Math.random() * 9 : 12 + Math.random() * 14}px`);
+    glyph.style.setProperty("--glyph-size", `${ambient ? 8 + Math.random() * 5 : 9 + Math.random() * 7}px`);
     glyph.style.setProperty("--glyph-duration", `${duration.toFixed(2)}s`);
-    glyph.style.setProperty("--glyph-opacity", `${ambient ? 0.20 + Math.random() * 0.24 : Math.max(0.34, 0.70 - burstIndex * 0.055 + Math.random() * 0.16)}`);
+    glyph.style.setProperty("--glyph-opacity", `${ambient ? 0.14 + Math.random() * 0.18 : Math.max(0.26, 0.54 - burstIndex * 0.04 + Math.random() * 0.12)}`);
     layer.append(glyph);
     window.setTimeout(() => glyph.remove(), duration * 1000 + 120);
   }
 
-  function spawnCluster(x, y, count, ambient = false) {
+  function spawnCluster(x, y, count, ambient = false, previous = null) {
+    const deltaX = previous ? x - previous.x : 0;
+    const deltaY = previous ? y - previous.y : 0;
+    const length = Math.hypot(deltaX, deltaY) || 1;
+    const tangent = previous
+      ? { x: deltaX / length, y: deltaY / length, normalX: -deltaY / length, normalY: deltaX / length }
+      : null;
+
     for (let index = 0; index < count; index += 1) {
-      spawnGlyph(x, y, ambient, index);
+      const progress = previous ? index / Math.max(1, count - 1) : 1;
+      const baseX = previous ? previous.x + deltaX * progress : x;
+      const baseY = previous ? previous.y + deltaY * progress : y;
+      const side = index % 2 === 0 ? -1 : 1;
+      const offset = tangent && !ambient ? 8 + Math.random() * 18 : 0;
+      const vector = tangent
+        ? {
+          x: tangent.x * (side === -1 ? -0.72 : 0.72),
+          y: tangent.y * (side === -1 ? -0.72 : 0.72),
+          normalX: tangent.normalX,
+          normalY: tangent.normalY
+        }
+        : null;
+      spawnGlyph(
+        baseX + (tangent ? tangent.normalX * offset * side : 0),
+        baseY + (tangent ? tangent.normalY * offset * side : 0),
+        ambient,
+        index,
+        vector
+      );
     }
   }
 
   window.addEventListener("pointermove", (event) => {
     const now = performance.now();
-    if (now - lastSpawn < 62) {
+    if (now - lastSpawn < 76) {
+      lastPointer = { x: event.clientX, y: event.clientY };
       return;
     }
+    const previous = lastPointer;
     lastSpawn = now;
-    spawnCluster(event.clientX, event.clientY, 4 + Math.floor(Math.random() * 3));
+    lastPointer = { x: event.clientX, y: event.clientY };
+    spawnCluster(event.clientX, event.clientY, 3 + Math.floor(Math.random() * 2), false, previous);
   }, { passive: true });
 
   ambientTimer = window.setInterval(() => {
-    spawnCluster(Math.random() * window.innerWidth, window.innerHeight * (0.18 + Math.random() * 0.66), 2 + Math.floor(Math.random() * 3), true);
-  }, 720);
+    spawnCluster(Math.random() * window.innerWidth, window.innerHeight * (0.18 + Math.random() * 0.66), 1 + Math.floor(Math.random() * 2), true);
+  }, 980);
 
   window.addEventListener("beforeunload", () => window.clearInterval(ambientTimer));
 }

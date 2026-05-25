@@ -56,16 +56,16 @@ body.glyph-trail-ready {
   position: absolute;
   left: 0;
   top: 0;
-  color: rgb(255 255 255 / 58%);
+  color: rgb(255 255 255 / 48%);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: var(--glyph-size, 16px);
   font-weight: 800;
   line-height: 1;
   mix-blend-mode: screen;
   opacity: 0;
-  text-shadow: 0 0 18px rgb(70 145 255 / 44%);
+  text-shadow: 0 0 14px rgb(70 145 255 / 34%);
   transform: translate3d(var(--glyph-x), var(--glyph-y), 0);
-  animation: glyph-drift var(--glyph-duration, 5.2s) cubic-bezier(.16, .86, .24, 1) forwards;
+  animation: glyph-drift var(--glyph-duration, 4.8s) cubic-bezier(.16, .86, .24, 1) forwards;
 }
 
 @keyframes glyph-drift {
