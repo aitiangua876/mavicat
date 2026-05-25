@@ -1,233 +1,147 @@
 <div align="center">
-  <img src="public/logo-sm.png" width="120" height="120" />
-</div>
+  <img src="public/logo-sm.png" width="120" height="120" alt="Mavicat logo" />
 
-# tabularis
+# Mavicat
 
-<p align="center">
+**Быстрое open-source desktop-приложение для тех, кто каждый день работает с SQL.**
+
+[Сайт](https://mavicat.kailingteck.com/) · [Releases](https://github.com/chenlong/Mavicat/releases) · [Issues](https://github.com/chenlong/Mavicat/issues) · [Contributing](./CONTRIBUTING.md)
+
+[![Website](https://img.shields.io/badge/Website-mavicat.kailingteck.com-22c55e)](https://mavicat.kailingteck.com/)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./LICENSE)
+[![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri)](https://v2.tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/)
+[![Stars](https://img.shields.io/github/stars/chenlong/Mavicat?style=social)](https://github.com/chenlong/Mavicat/stargazers)
+
+<p>
   <strong>README:</strong>
   <a href="./README.md">English</a> |
-  <a href="./README.it.md">Italiano</a> |
-  <a href="./README.es.md">Español</a> |
   <a href="./README.zh-CN.md">中文</a> |
-  <a href="./README.fr.md">Français</a> |
   <a href="./README.de.md">Deutsch</a> |
+  <a href="./README.es.md">Español</a> |
+  <a href="./README.fr.md">Français</a> |
+  <a href="./README.it.md">Italiano</a> |
   <a href="./README.ja.md">日本語</a> |
   <a href="./README.ru.md">Русский</a>
 </p>
+</div>
 
-Open-source десктоп-клиент для современных баз данных. Поддерживает PostgreSQL, MySQL/MariaDB и SQLite. Включает SQL-блокноты, AI-функции, интеграцию MCP и систему внешних плагинов.
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
-**Discord** — [присоединиться к серверу](https://discord.com/invite/K2hmhfHRSt), чтобы общаться с мейнтейнерами, делиться обратной связью и получать помощь от сообщества.
+Mavicat переносит привычные рабочие сценарии профессиональных database-клиентов в современное, локальное и расширяемое desktop-приложение. Оно построено на Tauri v2, Rust, React и TypeScript: нативная оболочка, быстрый интерфейс и надежная backend-логика.
 
-> Это переведённая версия документации. Актуальный и официальный источник — [README на английском](./README.md).
+Если вам нравится направление проекта, поставьте Star. Это помогает другим разработчикам найти Mavicat и поддерживает развитие open-source roadmap.
 
-## Скачать
+## Почему Mavicat?
 
-[![Windows](https://img.shields.io/badge/Windows-Download-blue?logo=windows)](https://github.com/TabularisDB/tabularis/releases/download/v0.11.0/tabularis_0.11.0_x64-setup.exe)
-[![macOS](https://img.shields.io/badge/macOS-Download-black?logo=apple)](https://github.com/TabularisDB/tabularis/releases/download/v0.11.0/tabularis_0.11.0_x64.dmg)
-[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-green?logo=linux)](https://github.com/TabularisDB/tabularis/releases/download/v0.11.0/tabularis_0.11.0_amd64.AppImage)
-[![Linux .deb](https://img.shields.io/badge/Linux-.deb-orange?logo=debian)](https://github.com/TabularisDB/tabularis/releases/download/v0.11.0/tabularis_0.11.0_amd64.deb)
-[![Linux .rpm](https://img.shields.io/badge/Linux-.rpm-red?logo=redhat)](https://github.com/TabularisDB/tabularis/releases/download/v0.11.0/tabularis-0.9.7-1.x86_64.rpm)
+- **Один workspace для ежедневной работы**: подключения, схемы, SQL, результаты, редактирование данных, дизайн таблиц, экспорт, backup, sync, миграция, Redis и AI.
+- **Привычный desktop UX**: компактное дерево подключений, object views, вкладки, панели результатов, context menu и мастера.
+- **Local-first**: подключения, история, настройки и AI-конфигурация по умолчанию хранятся локально.
+- **Rust + React**: Rust отвечает за базы данных и OS-интеграцию, React — за редактор и data grid.
+- **Открытый и расширяемый**: лицензия Apache-2.0, база Tabularis.
 
-## Установка
+## Поддерживаемые базы
 
-### Windows
-
-```bash
-winget install Debba.Tabularis
-```
-
-Либо скачать установщик со страницы [Releases](https://github.com/TabularisDB/tabularis/releases).
-
-### macOS
-
-```bash
-brew tap TabularisDB/tabularis
-brew install --cask tabularis
-```
-
-При установке напрямую из релиза может потребоваться выполнить:
-
-```bash
-xattr -c /Applications/tabularis.app
-```
-
-### Linux
-
-Snap:
-
-```bash
-sudo snap install tabularis
-```
-
-AppImage:
-
-```bash
-chmod +x tabularis_x.x.x_amd64.AppImage
-./tabularis_x.x.x_amd64.AppImage
-```
-
-Arch Linux:
-
-```bash
-yay -S tabularis-bin
-```
-
-## Обновления
-
-- При запуске приложение автоматически проверяет наличие обновлений.
-- Также можно обновиться вручную со страницы [GitHub Releases](https://github.com/TabularisDB/tabularis/releases).
-
-## Скриншоты и демо
-
-Скриншоты и демо возможностей — на [tabularis.dev](https://tabularis.dev) в разделе Features.
+| База данных | Статус |
+|---|---|
+| MySQL / MariaDB | Активно |
+| PostgreSQL | Активно |
+| SQLite | Активно |
+| SQL Server | Активно |
+| Redis | Активно, просмотр и редактирование ключей улучшаются |
+| Oracle | Запланировано, не входит в текущий milestone |
 
 ## Возможности
 
-### Управление подключениями
+### Database workspace
 
-- Поддержка PostgreSQL, MySQL/MariaDB и SQLite.
-- Локальное сохранение профилей подключений.
-- SSH-туннели и хранение паролей в системном keychain.
-- Страница подключений с режимами «сетка» и «список» и поиском в реальном времени.
+- Левое дерево со статусами подключений, баз и таблиц.
+- Страница объектов базы данных с list/icon view.
+- Right-click действия для подключений, баз, таблиц и результатов.
+- Multi-tab интерфейс для длинных рабочих сессий.
 
-### Обозреватель базы данных
+### SQL editor
 
-- Просмотр таблиц, столбцов, ключей, индексов, представлений и процедур.
-- Встроенное редактирование элементов схемы.
-- Интерактивная ER-диаграмма.
-- Быстрые действия через контекстное меню.
+- Monaco Editor с форматированием, историей, выполнением выделения или всего скрипта и multi-result output.
+- Подключение и база выбираются на уровне query tab.
+- Ctrl-click по объекту открывает данные таблицы.
+- AI assistant на уровне окна: пишет, объясняет и оптимизирует SQL; write-операции требуют подтверждения.
 
-### SQL-редактор
+### Data grid
 
-- Monaco Editor с подсветкой синтаксиса и автодополнением.
-- Изолированные вкладки для каждого подключения.
-- Выполнение нескольких запросов с раздельным отображением результатов.
-- Сохранённые запросы и встроенный AI-оверлей в редакторе.
+- Экспорт текущей страницы, всех отфильтрованных данных или всех данных.
+- CSV, JSON, Excel и SQL.
+- Видимость колонок, pagination, copy-as-SQL и result workflows.
+- В разработке: безопасное редактирование с preview, commit/rollback, undo и точным показом ошибок.
 
-### SQL-блокноты
+### Table designer
 
-- SQL- и Markdown-ячейки в одном документе.
-- Inline-результаты и графики.
-- Переменные между ячейками и глобальные параметры.
-- Последовательное выполнение всех ячеек.
+- Поля, primary keys, indexes, SQL preview и DDL.
+- Цель — надежная поверхность для ежедневной работы со схемами.
 
-### Визуальный конструктор запросов
+### Import, export, backup, migration
 
-- Построение запросов через drag-and-drop.
-- Визуальные JOIN, фильтры, агрегаты, сортировка и LIMIT.
-- Генерация SQL в реальном времени.
+- Единые мастера для export, import, backup, SQL files, schema sync и data transfer.
+- Database dictionary в HTML, Excel и Markdown.
+- Schema diff с SQL preview перед выполнением.
+- Cross-database migration с field mapping и осторожным type conversion.
 
-### Visual EXPLAIN
+### Redis
 
-- План выполнения в виде интерактивного графа.
-- Просмотр в виде таблицы, исходного вывода и опциональный AI-анализ.
-- Поддержка PostgreSQL, MySQL/MariaDB и SQLite.
+- Redis в том же workspace.
+- Иерархический просмотр, prefix search, просмотр, редактирование и удаление улучшаются.
 
-### Сетка данных
+## Скачать
 
-- Inline- и пакетное редактирование.
-- Создание, выбор и удаление строк.
-- Экспорт в CSV или JSON.
-- Начальная поддержка пространственных данных (GEOMETRY).
-- Подсветка ячеек JSON/JSONB и отдельное окно редактора (Tree / Monaco / Raw). Для каждого подключения можно включить распознавание JSON в текстовых столбцах.
+- [Официальный сайт](https://mavicat.kailingteck.com/)
+- [GitHub Releases](https://github.com/chenlong/Mavicat/releases)
 
-### Логирование
-
-- Просмотр логов в реальном времени в настройках.
-- Фильтрация по уровню.
-- Экспорт в `.log`-файлы.
-- Режим отладки в CLI: `tabularis --debug`.
-
-### Плагины
-
-- Внешняя система плагинов на JSON-RPC 2.0 через stdin/stdout.
-- Установка драйверов сообщества без перезапуска.
-- Официальный реестр: [`plugins/registry.json`](./plugins/registry.json).
-- Руководство для разработчиков: [`plugins/PLUGIN_GUIDE.md`](./plugins/PLUGIN_GUIDE.md).
-
-## Настройки
-
-Конфигурация хранится в:
-
-- Linux: `~/.config/tabularis/`
-- macOS: `~/Library/Application Support/tabularis/`
-- Windows: `%APPDATA%\\tabularis\\`
-
-Основные файлы:
-
-- `connections.json`
-- `saved_queries.json`
-- `config.json`
-- `themes/`
-- `preferences/`
-
-Поле `language` в `config.json` поддерживает значения `auto`, `en`, `it`, `es`, `zh`, `fr`, `de`, `ja`, `ru`.
-
-## AI
-
-Опциональные функции Text-to-SQL и объяснения запросов работают с провайдерами:
-
-- OpenAI
-- Anthropic
-- MiniMax
-- OpenRouter
-- Ollama
-- OpenAI-совместимые API
-
-Список моделей подгружается динамически и кэшируется локально.
-
-## MCP
-
-Запуск встроенного MCP-сервера:
-
-```bash
-tabularis --mcp
-```
-
-Поддерживаемые клиенты:
-
-- Claude Desktop
-- Cursor
-- Windsurf
-
-Доступные инструменты:
-
-- `list_connections`
-- `list_tables`
-- `describe_table`
-- `run_query`
-
-## Стек технологий
-
-- Фронтенд: React 19, TypeScript, Tailwind CSS v4.
-- Бэкенд: Rust, Tauri v2, SQLx.
+Mavicat ориентирован на macOS, Windows и Linux. Доступные сборки могут отличаться по milestone.
 
 ## Разработка
-
-Установка зависимостей и запуск:
 
 ```bash
 pnpm install
 pnpm tauri dev
 ```
 
-Сборка:
+Build:
 
 ```bash
 pnpm tauri build
 ```
 
-## Дорожная карта
+Checks:
 
-- Удалённое управление
-- Командная палитра
-- Редактор и просмотрщик JSON/JSONB
-- Форматирование SQL / Prettier
-- Сравнение и диффы данных
-- Командная работа
+```bash
+pnpm run build
+pnpm test
+cd src-tauri && cargo test
+```
 
-## Лицензия
+## Stack
 
-Apache License 2.0
+- Tauri v2
+- Rust, SQLx, Tiberius, Redis client
+- React 19, TypeScript, Vite, Tailwind CSS
+- Monaco Editor
+- TanStack Table / virtualization
+- XYFlow
+
+## Roadmap
+
+- **P0**: безопасное редактирование, лучшее SQL execution, стабильные connection states, понятные ошибки.
+- **P1**: import/export, schema sync, data transfer, backup/restore с progress и cancel.
+- **P2**: table designer, ER diagrams, dictionary, comments, indexes, foreign keys, triggers.
+- **P3**: единые мастера, компактная sidebar, полные context menus, лучший feedback для долгих задач.
+
+## Contributing
+
+Issues, воспроизводимые bugs, UI feedback, database edge cases, переводы и pull requests приветствуются.
+
+## Лицензия и примечания
+
+Mavicat основан на [Tabularis](https://github.com/TabularisDB/tabularis) под Apache-2.0. Mavicat не связан с Navicat, TablePlus, DataGrip, DBeaver или другими упомянутыми продуктами; названия используются только для описания известных workflow.
+
+[Apache License 2.0](./LICENSE)

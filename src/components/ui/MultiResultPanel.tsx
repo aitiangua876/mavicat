@@ -25,6 +25,10 @@ import {
 import clsx from "clsx";
 import { invoke } from "@tauri-apps/api/core";
 import { ResultEntryContent } from "./ResultEntryContent";
+import type {
+  ResultExportOptions,
+  ResultExportScopeOption,
+} from "./ResultEntryContent";
 import { StackedResultItem } from "./StackedResultItem";
 import { ContextMenu } from "./ContextMenu";
 import { formatDuration } from "../../utils/formatTime";
@@ -56,6 +60,8 @@ interface MultiResultPanelProps {
   onCloseEntriesToLeft: (entryId: string) => void;
   onCloseAllEntries: () => void;
   onRenameEntry: (entryId: string, label: string) => void;
+  onExportEntry?: (entry: QueryResultEntry, options: ResultExportOptions) => void;
+  getExportScopes?: (entry: QueryResultEntry) => ResultExportScopeOption[];
 }
 
 function ResultTab({
@@ -245,6 +251,8 @@ export function MultiResultPanel({
   onCloseEntriesToLeft,
   onCloseAllEntries,
   onRenameEntry,
+  onExportEntry,
+  getExportScopes,
 }: MultiResultPanelProps) {
   const { t } = useTranslation();
   const { settings } = useSettings();
@@ -428,6 +436,12 @@ export function MultiResultPanel({
               copyFormat={copyFormat}
               csvDelimiter={csvDelimiter}
               onPageChange={(page) => onPageChange(activeEntry.id, page)}
+              onExport={
+                onExportEntry
+                  ? (options) => onExportEntry(activeEntry, options)
+                  : undefined
+              }
+              exportScopes={getExportScopes?.(activeEntry)}
             />
           </div>
         </>
@@ -494,6 +508,12 @@ export function MultiResultPanel({
                 onRerun={() => onRerunEntry(entry.id)}
                 onAiRename={() => handleAiRename(entry.id)}
                 onClose={() => onCloseEntry(entry.id)}
+                onExport={
+                  onExportEntry
+                    ? (options) => onExportEntry(entry, options)
+                    : undefined
+                }
+                exportScopes={getExportScopes?.(entry)}
               />
             ))}
           </div>

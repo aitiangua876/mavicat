@@ -16,7 +16,6 @@ import {
   Play,
   Plus,
   Minus,
-  Download,
   Square,
   ChevronDown,
   ChevronUp,
@@ -37,9 +36,6 @@ import {
   Hash,
   Loader2,
   Copy,
-  FileText,
-  FileJson,
-  FileSpreadsheet,
   Wand2,
   Sparkles,
 } from "lucide-react";
@@ -49,6 +45,10 @@ import { TableToolbar } from "../components/ui/TableToolbar";
 import { DataGrid } from "../components/ui/DataGrid";
 import { DatabaseObjectView } from "../components/ui/DatabaseObjectView";
 import { MultiResultPanel } from "../components/ui/MultiResultPanel";
+import {
+  ResultExportButton,
+  type ResultExportOptions,
+} from "../components/ui/ResultEntryContent";
 import { ErrorDisplay } from "../components/ui/ErrorDisplay";
 import { RedisKeyInspector } from "../components/ui/RedisKeyInspector";
 import { NewRowModal } from "../components/modals/NewRowModal";
@@ -99,6 +99,7 @@ import { useKeybindings } from "../hooks/useKeybindings";
 import type {
   BatchStatementResult,
   QueryResult,
+  QueryResultEntry,
   Tab,
   PendingInsertion,
   TableColumn,
@@ -135,7 +136,6 @@ interface EditorState {
 }
 
 type ExportFormat = "csv" | "json" | "excel" | "sql";
-type ExportScope = "page" | "filtered" | "all";
 
 const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string }> = {
   csv: { label: "CSV", extension: "csv" },
@@ -144,11 +144,16 @@ const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string 
   sql: { label: "SQL", extension: "sql" },
 };
 
-const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
-  page: "当前页",
-  filtered: "当前筛选全部",
-  all: "全部数据",
-};
+const QUERY_RESULT_EXPORT_SCOPES = [
+  { value: "page" as const, label: "当前页" },
+  { value: "queryAll" as const, label: "此查询全部结果" },
+];
+
+const TABLE_RESULT_EXPORT_SCOPES = [
+  { value: "page" as const, label: "当前页" },
+  { value: "filtered" as const, label: "当前筛选全部" },
+  { value: "all" as const, label: "全部数据" },
+];
 
 function summarizeAiQueryResult(
   query: string | undefined,
@@ -348,8 +353,6 @@ export const Editor = () => {
   });
 
   const [showNewRowModal, setShowNewRowModal] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [exportScope, setExportScope] = useState<ExportScope>("filtered");
   const [editorHeight, setEditorHeight] = useState(300);
   const editorHeightRef = useRef(300);
   const resultPageSizeRef = useRef(settings.resultPageSize);
@@ -2958,13 +2961,12 @@ export const Editor = () => {
     return `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:4px 8px;mso-number-format:"\\@";}</style></head><body><table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></body></html>`;
   };
 
-  const buildCurrentPageExportText = (
+  const buildResultPageExportText = (
     format: ExportFormat,
+    result: QueryResult,
     tableName: string,
+    schema?: string,
   ) => {
-    const result = activeTab?.result;
-    if (!result) return "";
-
     if (format === "json") return rowsToJSON(result.rows, result.columns);
     if (format === "excel") return rowsToExcelHtml(result.rows, result.columns);
     if (format === "sql") {
@@ -2974,65 +2976,73 @@ export const Editor = () => {
         columns: result.columns,
         rows: result.rows,
         driver: activeDriver,
-        schema: activeCapabilities?.schemas === true ? activeTab?.schema : undefined,
+        schema: activeCapabilities?.schemas === true ? schema : undefined,
       });
     }
     return rowsToCSV(result.rows, "NULL", csvDelimiter);
   };
 
-  const handleExportCommon = async (
-    format: ExportFormat,
-    scope: ExportScope = exportScope,
+  const handleResultExport = async (
+    entry: Pick<QueryResultEntry, "query" | "result" | "activeTable">,
+    options: ResultExportOptions,
+    schema?: string,
+    tableTabForScope?: Tab | null,
   ) => {
-    if (!activeTab || !activeConnectionId) return;
+    if (!activeConnectionId || !entry.result) return;
 
     const effectiveSchema =
-      activeCapabilities?.schemas === true ? activeTab.schema : undefined;
-    const tabForQuery = { ...activeTab, schema: effectiveSchema };
-    const query =
-      activeTab.type === "table" && activeTab.activeTable
-        ? scope === "all"
-          ? reconstructTableQuery(
-              {
-                ...tabForQuery,
-                filterClause: "",
-                sortClause: "",
-                limitClause: undefined,
-              },
-              activeDriver ?? undefined,
-            )
-          : reconstructTableQuery(tabForQuery, activeDriver ?? undefined, {
-              limitOverride: scope === "filtered" ? null : undefined,
-            })
-        : activeTab.query;
+      activeCapabilities?.schemas === true ? schema : undefined;
+    const isTableExport = Boolean(entry.activeTable && tableTabForScope);
+    const query = (() => {
+      if (isTableExport && entry.activeTable && tableTabForScope) {
+        const tabForQuery = { ...tableTabForScope, schema: effectiveSchema };
+        if (options.scope === "all") {
+          return reconstructTableQuery(
+            {
+              ...tabForQuery,
+              filterClause: "",
+              sortClause: "",
+              limitClause: undefined,
+            },
+            activeDriver ?? undefined,
+          );
+        }
+        if (options.scope === "filtered") {
+          return reconstructTableQuery(tabForQuery, activeDriver ?? undefined, {
+            limitOverride: null,
+          });
+        }
+      }
+      return entry.query;
+    })();
 
     if (!query || !query.trim()) return;
 
     try {
-      const meta = EXPORT_FILE_META[format];
+      const meta = EXPORT_FILE_META[options.format];
       const exportTableName =
-        activeTab.type === "table" && activeTab.activeTable
-          ? activeTab.activeTable
+        entry.activeTable
+          ? entry.activeTable
           : extractTableName(query) || undefined;
       const filePath = await save({
         filters: [{ name: meta.label, extensions: [meta.extension] }],
-        defaultPath: `result_${Date.now()}.${meta.extension}`,
+        defaultPath: `${(exportTableName || "result").replace(/[^a-zA-Z0-9_-]/g, "_")}_${Date.now()}.${meta.extension}`,
       });
 
       if (!filePath) return;
 
-      setExportMenuOpen(false);
-
-      if (scope === "page") {
-        const pageText = buildCurrentPageExportText(
-          format,
+      if (options.scope === "page") {
+        const pageText = buildResultPageExportText(
+          options.format,
+          entry.result,
           exportTableName ?? "export_result",
+          effectiveSchema,
         );
         await writeTextFile(filePath, pageText);
         setExportState({
           isOpen: true,
           status: "completed",
-          rowsProcessed: activeTab.result?.rows.length ?? 0,
+          rowsProcessed: entry.result.rows.length,
           progressPercent: 100,
           fileName: filePath.split(/[/\\]/).pop() || filePath,
         });
@@ -3051,8 +3061,8 @@ export const Editor = () => {
         connectionId: activeConnectionId,
         query,
         filePath,
-        format,
-        csvDelimiter: format === "csv" ? csvDelimiter : undefined,
+        format: options.format,
+        csvDelimiter: options.format === "csv" ? csvDelimiter : undefined,
         exportTableName,
         exportSchema: effectiveSchema,
       });
@@ -3072,11 +3082,6 @@ export const Editor = () => {
       }));
     }
   };
-
-  const handleExportCSV = () => handleExportCommon("csv");
-  const handleExportJSON = () => handleExportCommon("json");
-  const handleExportExcel = () => handleExportCommon("excel");
-  const handleExportSQL = () => handleExportCommon("sql");
 
   const handleRunDropdownToggle = useCallback(() => {
     if (!isRunDropdownOpen) {
@@ -3493,99 +3498,7 @@ export const Editor = () => {
           </button>
         )}
 
-        <div className="relative ml-auto">
-          <button
-            onClick={() => setExportMenuOpen(!exportMenuOpen)}
-            disabled={!activeTab.result || activeTab.result.rows.length === 0}
-            aria-haspopup="menu"
-            aria-expanded={exportMenuOpen}
-            className={clsx(
-              "flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-              exportMenuOpen
-                ? "bg-blue-500/15 border-blue-500/40 text-blue-400"
-                : "bg-surface-secondary enabled:hover:bg-blue-500/15 enabled:hover:border-blue-500/40 enabled:hover:text-blue-400 text-primary border-strong",
-            )}
-          >
-            <Download size={16} />
-            {t("editor.export")}
-            <ChevronDown
-              size={14}
-              className={clsx(
-                "transition-transform opacity-70",
-                exportMenuOpen && "rotate-180",
-              )}
-            />
-          </button>
-          {exportMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setExportMenuOpen(false)}
-              />
-              <div
-                role="menu"
-                className="absolute top-full right-0 mt-1 w-56 bg-elevated border border-strong rounded-md shadow-xl z-50 flex flex-col py-1 overflow-hidden"
-              >
-                <div className="px-3 py-2 border-b border-default">
-                  <label className="block text-[10px] uppercase tracking-wide text-muted mb-1">
-                    导出范围
-                  </label>
-                  <select
-                    value={exportScope}
-                    onChange={(event) =>
-                      setExportScope(event.target.value as ExportScope)
-                    }
-                    className="w-full h-8 bg-surface-secondary border border-strong rounded px-2 text-xs text-primary outline-none"
-                  >
-                    {(["page", "filtered", "all"] as ExportScope[]).map(
-                      (scope) => (
-                        <option key={scope} value={scope}>
-                          {EXPORT_SCOPE_LABELS[scope]}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-                <button
-                  role="menuitem"
-                  onClick={handleExportCSV}
-                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
-                >
-                  <FileText size={14} className="shrink-0 opacity-80" />
-                  <span className="flex-1">CSV</span>
-                  <span className="text-xs text-muted">.csv</span>
-                </button>
-                <button
-                  role="menuitem"
-                  onClick={handleExportJSON}
-                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
-                >
-                  <FileJson size={14} className="shrink-0 opacity-80" />
-                  <span className="flex-1">JSON</span>
-                  <span className="text-xs text-muted">.json</span>
-                </button>
-                <button
-                  role="menuitem"
-                  onClick={handleExportExcel}
-                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
-                >
-                  <FileSpreadsheet size={14} className="shrink-0 opacity-80" />
-                  <span className="flex-1">Excel</span>
-                  <span className="text-xs text-muted">.xls</span>
-                </button>
-                <button
-                  role="menuitem"
-                  onClick={handleExportSQL}
-                  className="flex items-center gap-2.5 text-left px-3 py-2 text-sm text-secondary hover:bg-blue-500/15 hover:text-blue-400 transition-colors"
-                >
-                  <FileCode size={14} className="shrink-0 opacity-80" />
-                  <span className="flex-1">SQL</span>
-                  <span className="text-xs text-muted">.sql</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <div className="ml-auto" />
         {!canSwitchQueryContext && (
           <span className="text-xs text-muted ml-2">
             {activeConnectionId
@@ -3861,6 +3774,10 @@ export const Editor = () => {
                     ),
                   });
                 }}
+                onExportEntry={(entry, options) =>
+                  void handleResultExport(entry, options, activeTab.schema)
+                }
+                getExportScopes={() => QUERY_RESULT_EXPORT_SCOPES}
               />
             ) : activeTab.isLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-muted">
@@ -3876,6 +3793,26 @@ export const Editor = () => {
                 {activeTab.result && (
                   <div className="p-2 bg-elevated text-xs text-secondary border-b border-default flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
+                      <ResultExportButton
+                        disabled={activeTab.isLoading || activeTab.result.rows.length === 0}
+                        scopes={
+                          activeTab.type === "table" && activeTab.activeTable
+                            ? TABLE_RESULT_EXPORT_SCOPES
+                            : QUERY_RESULT_EXPORT_SCOPES
+                        }
+                        onExport={(options) =>
+                          void handleResultExport(
+                            {
+                              query: activeTab.query,
+                              result: activeTab.result,
+                              activeTable: activeTab.activeTable,
+                            },
+                            options,
+                            activeTab.schema,
+                            activeTab.type === "table" ? activeTab : null,
+                          )
+                        }
+                      />
                       <span>
                         {t("editor.rowsRetrieved", {
                           count: activeTab.result.rows.length,

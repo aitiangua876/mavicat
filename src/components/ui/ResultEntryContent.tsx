@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Download,
+  FileCode,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+} from "lucide-react";
 import { DataGrid } from "./DataGrid";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { PaginationControls } from "./PaginationControls";
@@ -7,13 +16,123 @@ import { formatDuration } from "../../utils/formatTime";
 import { getStackedGridHeight } from "../../utils/multiResult";
 import type { QueryResultEntry } from "../../types/editor";
 
+export type ResultExportFormat = "csv" | "json" | "excel" | "sql";
+export type ResultExportScope = "page" | "queryAll" | "filtered" | "all";
+
+export interface ResultExportScopeOption {
+  value: ResultExportScope;
+  label: string;
+}
+
+export interface ResultExportOptions {
+  format: ResultExportFormat;
+  scope: ResultExportScope;
+}
+
 interface ResultEntryContentProps {
   entry: QueryResultEntry;
   connectionId: string | null;
   copyFormat: "csv" | "json" | "sql-insert";
   csvDelimiter: string;
   onPageChange: (page: number) => void;
+  onExport?: (options: ResultExportOptions) => void;
+  exportScopes?: ResultExportScopeOption[];
   compact?: boolean;
+}
+
+const EXPORT_FORMATS: Array<{
+  format: ResultExportFormat;
+  label: string;
+  extension: string;
+  icon: typeof FileText;
+}> = [
+  { format: "csv", label: "CSV", extension: ".csv", icon: FileText },
+  { format: "json", label: "JSON", extension: ".json", icon: FileJson },
+  { format: "excel", label: "Excel", extension: ".xls", icon: FileSpreadsheet },
+  { format: "sql", label: "SQL", extension: ".sql", icon: FileCode },
+];
+
+const QUERY_RESULT_EXPORT_SCOPES: ResultExportScopeOption[] = [
+  { value: "page", label: "当前页" },
+  { value: "queryAll", label: "此查询全部结果" },
+];
+
+export function ResultExportButton({
+  disabled,
+  scopes = QUERY_RESULT_EXPORT_SCOPES,
+  onExport,
+}: {
+  disabled?: boolean;
+  scopes?: ResultExportScopeOption[];
+  onExport?: (options: ResultExportOptions) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scope, setScope] = useState<ResultExportScope>(
+    scopes[0]?.value ?? "page",
+  );
+
+  if (!onExport) return null;
+
+  const selectedScope =
+    scopes.find((item) => item.value === scope)?.value ?? scopes[0]?.value ?? "page";
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen((value) => !value)}
+        className="inline-flex h-7 items-center gap-1.5 rounded border border-default bg-surface-secondary px-2 text-xs font-medium text-secondary transition-colors hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-40"
+        title="导出当前结果"
+      >
+        <Download size={13} />
+        导出
+        <ChevronDown size={12} className={isOpen ? "rotate-180" : undefined} />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute left-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-md border border-strong bg-elevated py-1 shadow-xl">
+            <div className="border-b border-default px-3 py-2">
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-muted">
+                导出范围
+              </label>
+              <select
+                value={selectedScope}
+                onChange={(event) => setScope(event.target.value as ResultExportScope)}
+                className="h-8 w-full rounded border border-strong bg-surface-secondary px-2 text-xs text-primary outline-none"
+              >
+                {scopes.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {EXPORT_FORMATS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.format}
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onExport({ format: item.format, scope: selectedScope });
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-secondary transition-colors hover:bg-blue-500/15 hover:text-blue-400"
+                >
+                  <Icon size={14} className="shrink-0 opacity-80" />
+                  <span className="flex-1">{item.label}</span>
+                  <span className="text-xs text-muted">{item.extension}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function ResultEntryContent({
@@ -22,6 +141,8 @@ export function ResultEntryContent({
   copyFormat,
   csvDelimiter,
   onPageChange,
+  onExport,
+  exportScopes,
   compact,
 }: ResultEntryContentProps) {
   const { t } = useTranslation();
@@ -118,6 +239,11 @@ export function ResultEntryContent({
       {/* Status bar */}
       <div className="p-2 bg-elevated text-xs text-secondary border-b border-default flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
+          <ResultExportButton
+            disabled={entry.isLoading || entry.result.rows.length === 0}
+            scopes={exportScopes}
+            onExport={onExport}
+          />
           <span>
             {t("editor.rowsRetrieved", {
               count: entry.result.rows.length,

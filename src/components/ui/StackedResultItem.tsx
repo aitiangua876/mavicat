@@ -13,7 +13,11 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { ResultEntryContent } from "./ResultEntryContent";
+import { ResultEntryContent, ResultExportButton } from "./ResultEntryContent";
+import type {
+  ResultExportOptions,
+  ResultExportScopeOption,
+} from "./ResultEntryContent";
 import { PaginationControls } from "./PaginationControls";
 import { ResizeHandle } from "./ResizeHandle";
 import { formatDuration } from "../../utils/formatTime";
@@ -34,6 +38,8 @@ interface StackedResultItemProps {
   onRerun: () => void;
   onAiRename: () => void;
   onClose: () => void;
+  onExport?: (options: ResultExportOptions) => void;
+  exportScopes?: ResultExportScopeOption[];
 }
 
 export function StackedResultItem({
@@ -50,6 +56,8 @@ export function StackedResultItem({
   onRerun,
   onAiRename,
   onClose,
+  onExport,
+  exportScopes,
 }: StackedResultItemProps) {
   const { t } = useTranslation();
   const [queryExpanded, setQueryExpanded] = useState(false);
@@ -203,6 +211,16 @@ export function StackedResultItem({
           </button>
         )}
 
+        {entry.result && entry.result.rows.length > 0 && (
+          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+            <ResultExportButton
+              disabled={entry.isLoading}
+              scopes={exportScopes}
+              onExport={onExport}
+            />
+          </div>
+        )}
+
         {/* Close button */}
         <button
           onClick={(e) => {
@@ -294,6 +312,8 @@ export function StackedResultItem({
                 copyFormat={copyFormat}
                 csvDelimiter={csvDelimiter}
                 onPageChange={onPageChange}
+                onExport={onExport}
+                exportScopes={exportScopes}
                 compact
               />
             </div>

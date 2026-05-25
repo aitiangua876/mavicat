@@ -26,7 +26,7 @@ use crate::commands::{
     resolve_connection_params_with_id, unregister_abort_handle, AbortHandleMap,
 };
 use crate::drivers::{mysql, postgres, sqlite};
-use crate::models::ConnectionParams;
+use crate::models::{ConnectionParams, DatabaseSelection};
 
 pub struct ExportCancellationState {
     pub handles: Arc<Mutex<AbortHandleMap>>,
@@ -158,23 +158,56 @@ async fn run_export<R: Runtime>(
     match format {
         ExportFormat::Csv => {
             let mut sink = CsvSink::new(writer, delimiter);
-            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            stream_to_sink(
+                driver,
+                params,
+                query,
+                export_schema.as_deref(),
+                &mut sink,
+                &mut progress,
+            )
+            .await?;
             sink.finish()?;
         }
         ExportFormat::Json => {
             let mut sink = JsonSink::new(writer);
-            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            stream_to_sink(
+                driver,
+                params,
+                query,
+                export_schema.as_deref(),
+                &mut sink,
+                &mut progress,
+            )
+            .await?;
             sink.finish()?;
         }
         ExportFormat::Excel => {
             let mut sink = ExcelSink::new(writer);
-            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            stream_to_sink(
+                driver,
+                params,
+                query,
+                export_schema.as_deref(),
+                &mut sink,
+                &mut progress,
+            )
+            .await?;
             sink.finish()?;
         }
         ExportFormat::Sql => {
             let dialect = SqlDialect::from_driver(driver);
-            let mut sink = SqlInsertSink::new(writer, dialect, export_table_name, export_schema);
-            stream_to_sink(driver, params, query, &mut sink, &mut progress).await?;
+            let mut sink =
+                SqlInsertSink::new(writer, dialect, export_table_name, export_schema.clone());
+            stream_to_sink(
+                driver,
+                params,
+                query,
+                export_schema.as_deref(),
+                &mut sink,
+                &mut progress,
+            )
+            .await?;
             sink.finish()?;
         }
     }
@@ -187,6 +220,7 @@ async fn stream_to_sink<S, F>(
     driver: &str,
     params: &ConnectionParams,
     query: &str,
+    schema: Option<&str>,
     sink: &mut S,
     progress: &mut ProgressEmitter<F>,
 ) -> Result<(), String>
@@ -201,8 +235,23 @@ where
     };
 
     match driver {
-        "mysql" => mysql::export::stream_query(params, query, &mut on_row).await,
-        "postgres" => postgres::export::stream_query(params, query, &mut on_row).await,
+        "mysql" => {
+            let scoped_params;
+            let params = if let Some(schema) = schema {
+                scoped_params = {
+                    let mut next = params.clone();
+                    next.database = DatabaseSelection::Single(schema.to_string());
+                    next
+                };
+                &scoped_params
+            } else {
+                params
+            };
+            mysql::export::stream_query(params, query, &mut on_row).await
+        }
+        "postgres" => {
+            postgres::export::stream_query_with_schema(params, query, schema, &mut on_row).await
+        }
         "sqlite" => sqlite::export::stream_query(params, query, &mut on_row).await,
         other => Err(format!("Unsupported driver for export: {}", other)),
     }
