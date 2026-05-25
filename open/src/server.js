@@ -6,6 +6,7 @@ import { hashPassword, makeId, paths, readDb, verifyPassword, writeDb } from "./
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? "4175", 10);
+const geoCache = new Map();
 
 mkdirSync(paths.uploadsDir, { recursive: true });
 
@@ -94,12 +95,85 @@ function normalizeText(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function getClientIp(request) {
+  const forwardedFor = request.headers["x-forwarded-for"];
+  const forwardedIp = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+  const rawIp = forwardedIp?.split(",")[0]?.trim() || request.headers["x-real-ip"] || request.socket.remoteAddress || "";
+  return String(rawIp).replace(/^::ffff:/, "");
+}
+
+function isPrivateIp(ip) {
+  return (
+    !ip ||
+    ip === "::1" ||
+    ip === "127.0.0.1" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+  );
+}
+
+function parseDevice(userAgent = "") {
+  const os = /Windows/i.test(userAgent)
+    ? "Windows"
+    : /Mac OS X|Macintosh/i.test(userAgent)
+      ? "macOS"
+      : /Android/i.test(userAgent)
+        ? "Android"
+        : /iPhone|iPad|iPod/i.test(userAgent)
+          ? "iOS"
+          : /Linux/i.test(userAgent)
+            ? "Linux"
+            : "Unknown OS";
+  const browser = /Edg\//i.test(userAgent)
+    ? "Edge"
+    : /Chrome\//i.test(userAgent)
+      ? "Chrome"
+      : /Safari\//i.test(userAgent)
+        ? "Safari"
+        : /Firefox\//i.test(userAgent)
+          ? "Firefox"
+          : "Browser";
+  return `${os} · ${browser}`;
+}
+
+async function lookupLocation(ip) {
+  if (isPrivateIp(ip)) {
+    return "本地网络";
+  }
+  if (geoCache.has(ip)) {
+    return geoCache.get(ip);
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1800);
+  try {
+    const response = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?lang=zh-CN&fields=status,country,regionName,city`,
+      { signal: controller.signal }
+    );
+    const payload = await response.json();
+    const parts = [payload.country, payload.regionName, payload.city].filter(Boolean);
+    const location = payload.status === "success" && parts.length > 0 ? parts.join(" · ") : "未知归属地";
+    geoCache.set(ip, location);
+    return location;
+  } catch {
+    return "未知归属地";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function normalizeVersionInput(body) {
+  const releaseDate = normalizeText(body.releaseDate);
+  const parsedReleaseDate = releaseDate ? new Date(releaseDate) : new Date();
   return {
     version: normalizeText(body.version),
     channel: normalizeText(body.channel, "stable"),
     title: normalizeText(body.title),
-    releaseDate: normalizeText(body.releaseDate, new Date().toISOString().slice(0, 10)),
+    releaseDate: Number.isNaN(parsedReleaseDate.getTime())
+      ? new Date().toISOString()
+      : parsedReleaseDate.toISOString(),
     notes: normalizeText(body.notes),
     published: Boolean(body.published)
   };
@@ -113,6 +187,18 @@ function validateVersionInput(input) {
     return "Title is required.";
   }
   return null;
+}
+
+function publicComment(comment) {
+  return {
+    id: comment.id,
+    body: comment.body,
+    authorName: comment.authorName,
+    authorType: comment.authorType,
+    device: comment.device,
+    location: comment.location,
+    createdAt: comment.createdAt
+  };
 }
 
 app.get("/api/me", (request, response) => {
@@ -216,8 +302,48 @@ app.get("/api/versions", (request, response) => {
   const user = getSessionUser(request);
   const versions = readDb().versions
     .filter((version) => version.published || user?.role === "admin")
-    .sort((left, right) => right.releaseDate.localeCompare(left.releaseDate));
+    .sort((left, right) => {
+      const leftTime = new Date(left.updatedAt ?? left.releaseDate ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.updatedAt ?? right.releaseDate ?? right.createdAt ?? 0).getTime();
+      return rightTime - leftTime;
+    });
   response.json({ versions });
+});
+
+app.get("/api/comments", (_request, response) => {
+  const comments = readDb().comments
+    .slice()
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .map(publicComment);
+  response.json({ comments });
+});
+
+app.post("/api/comments", async (request, response) => {
+  const body = normalizeText(request.body.body);
+  if (body.length < 2 || body.length > 1000) {
+    response.status(400).json({ message: "评论内容需为 2 到 1000 个字符。" });
+    return;
+  }
+
+  const user = getSessionUser(request);
+  const ipAddress = getClientIp(request);
+  const now = new Date().toISOString();
+  const comment = {
+    id: makeId("cmt"),
+    userId: user?.id ?? null,
+    authorName: user?.username ?? "游客",
+    authorType: user ? "user" : "guest",
+    body,
+    device: parseDevice(request.headers["user-agent"]),
+    ipAddress,
+    location: await lookupLocation(ipAddress),
+    createdAt: now
+  };
+
+  const db = readDb();
+  db.comments.push(comment);
+  writeDb(db);
+  response.status(201).json({ comment: publicComment(comment) });
 });
 
 app.post("/api/admin/versions", requireAdmin, (request, response) => {

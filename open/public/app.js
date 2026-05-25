@@ -1,6 +1,7 @@
 const state = {
   user: null,
   versions: [],
+  comments: [],
   authMode: "login"
 };
 
@@ -11,8 +12,14 @@ const nodes = {
   passwordButton: document.querySelector("#password-button"),
   adminNav: document.querySelector("#admin-nav"),
   adminBand: document.querySelector("#admin"),
+  smartDownloadButton: document.querySelector("#smart-download-button"),
+  platformDownloadLinks: document.querySelectorAll("[data-platform-download]"),
   versionsList: document.querySelector("#versions-list"),
   adminList: document.querySelector("#admin-list"),
+  commentsList: document.querySelector("#comments-list"),
+  commentForm: document.querySelector("#comment-form"),
+  commentBody: document.querySelector("#comment-body"),
+  commentMessage: document.querySelector("#comment-message"),
   authDialog: document.querySelector("#auth-dialog"),
   authTitle: document.querySelector("#auth-title"),
   authUsername: document.querySelector("#auth-username"),
@@ -81,6 +88,207 @@ function setMessage(node, message, ok = false) {
   node.classList.toggle("ok", ok);
 }
 
+function normalizeToken(value) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function getClientPlatform() {
+  const platform = normalizeToken(navigator.userAgentData?.platform || navigator.platform || "");
+  const ua = normalizeToken(navigator.userAgent);
+
+  if (platform.includes("mac") || ua.includes("macos") || ua.includes("macintosh")) {
+    return "macos";
+  }
+  if (platform.includes("win") || ua.includes("windows")) {
+    return "windows";
+  }
+  if (platform.includes("linux") || ua.includes("linux")) {
+    return "linux";
+  }
+  return "unknown";
+}
+
+function getArchitectureHints() {
+  const ua = normalizeToken(navigator.userAgent);
+  const hints = [];
+
+  if (ua.includes("arm64") || ua.includes("aarch64")) {
+    hints.push("arm64", "aarch64", "apple", "silicon");
+  }
+  if (ua.includes("x8664") || ua.includes("x64") || ua.includes("amd64") || ua.includes("win64")) {
+    hints.push("x64", "amd64", "x8664", "intel");
+  }
+  return hints;
+}
+
+function packageMatchesPlatform(pkg, platform) {
+  const value = normalizeToken(`${pkg.platform} ${pkg.label} ${pkg.originalName}`);
+
+  if (platform === "macos") {
+    return value.includes("mac") || value.includes("darwin") || value.includes("dmg");
+  }
+  if (platform === "windows") {
+    return value.includes("windows") || value.includes("win") || value.includes("exe") || value.includes("msi");
+  }
+  if (platform === "linux") {
+    return value.includes("linux") || value.includes("deb") || value.includes("rpm") || value.includes("appimage");
+  }
+  return false;
+}
+
+function scorePackage(pkg, platform, architectureHints = []) {
+  if (!packageMatchesPlatform(pkg, platform)) {
+    return -1;
+  }
+
+  const value = normalizeToken(`${pkg.arch} ${pkg.label} ${pkg.originalName}`);
+  let score = 10;
+  architectureHints.forEach((hint, index) => {
+    if (value.includes(hint)) {
+      score += 20 - index;
+    }
+  });
+  if (platform === "macos" && architectureHints.length === 0 && (value.includes("arm64") || value.includes("aarch64") || value.includes("apple"))) {
+    score += 3;
+  }
+  if (value.includes("universal")) {
+    score += 5;
+  }
+  return score;
+}
+
+function findDownloadForPlatform(platform) {
+  const architectureHints = getArchitectureHints();
+
+  for (const version of state.versions) {
+    const candidates = version.packages
+      .map((pkg) => ({ pkg, score: scorePackage(pkg, platform, architectureHints) }))
+      .filter((candidate) => candidate.score >= 0)
+      .sort((left, right) => right.score - left.score);
+
+    if (candidates.length > 0) {
+      return { version, pkg: candidates[0].pkg };
+    }
+  }
+
+  return null;
+}
+
+function getPlatformLabel(platform) {
+  return {
+    macos: "macOS",
+    windows: "Windows",
+    linux: "Linux"
+  }[platform] ?? "当前设备";
+}
+
+function applyDownloadTarget(link, match, fallbackText) {
+  if (!link) {
+    return;
+  }
+
+  if (!match) {
+    link.href = "#versions";
+    link.removeAttribute("download");
+    link.classList.add("is-unavailable");
+    link.textContent = fallbackText;
+    return;
+  }
+
+  link.href = match.pkg.url;
+  link.setAttribute("download", "");
+  link.classList.remove("is-unavailable");
+}
+
+function renderSmartDownload() {
+  const platform = getClientPlatform();
+  const platformLabel = getPlatformLabel(platform);
+  const match = platform === "unknown" ? null : findDownloadForPlatform(platform);
+
+  applyDownloadTarget(nodes.smartDownloadButton, match, `查看 ${platformLabel} 安装包`);
+  if (match) {
+    nodes.smartDownloadButton.textContent = `下载 ${match.pkg.label || `${platformLabel} 版`}`;
+    nodes.smartDownloadButton.setAttribute("title", `${match.version.version} · ${match.pkg.originalName}`);
+  } else {
+    nodes.smartDownloadButton.textContent = `查看 ${platformLabel} 安装包`;
+    nodes.smartDownloadButton.setAttribute("title", "当前设备暂未匹配到直链安装包，可在下载中心查看全部版本。");
+  }
+
+  nodes.platformDownloadLinks.forEach((link) => {
+    const targetPlatform = link.dataset.platformDownload;
+    const platformMatch = findDownloadForPlatform(targetPlatform);
+    applyDownloadTarget(link, platformMatch, link.textContent);
+    if (platformMatch) {
+      link.setAttribute("title", `${platformMatch.version.version} · ${platformMatch.pkg.label}`);
+    } else {
+      link.setAttribute("title", `查看 ${getPlatformLabel(targetPlatform)} 下载列表`);
+    }
+  });
+}
+
+function toDate(value) {
+  if (!value) {
+    return new Date();
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00`);
+  }
+  return new Date(value);
+}
+
+function toDateTimeInputValue(value) {
+  const date = toDate(value);
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return offsetDate.toISOString().slice(0, 19);
+}
+
+function formatDateTime(value) {
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) {
+    return escapeHtml(value);
+  }
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
+function renderVersionNotes(notes) {
+  const lines = String(notes ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) {
+    return `<p class="empty-state">暂无版本说明。</p>`;
+  }
+
+  return `
+    <div class="version-notes-panel">
+      <div class="release-section-title">版本说明</div>
+      <ul class="version-notes-list">
+        ${lines.map((line) => `<li>${escapeHtml(line.replace(/^[-*•]\s*/, ""))}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderVersionDetails(version, options = {}) {
+  const isOpen = Boolean(options.open);
+  const summaryText = options.latest ? "最新版本更新内容" : isOpen ? "版本说明" : "查看本版本更新内容";
+  return `
+    <details class="version-details ${options.latest ? "latest-notes" : ""}" ${isOpen ? "open" : ""}>
+      <summary>${summaryText}</summary>
+      ${renderVersionNotes(version.notes)}
+    </details>
+  `;
+}
+
 function renderShell() {
   const isSignedIn = Boolean(state.user);
   const isAdmin = state.user?.role === "admin";
@@ -102,7 +310,10 @@ function renderVersions() {
   nodes.versionsList.innerHTML = state.versions
     .map((version, index) => {
       const packages = version.packages.length
-        ? version.packages
+        ? `
+          <div class="release-section-title">安装包下载</div>
+          <div class="package-list">
+            ${version.packages
             .map(
               (pkg) => `
                 <div class="package-row">
@@ -114,7 +325,9 @@ function renderVersions() {
                 </div>
               `
             )
-            .join("")
+            .join("")}
+          </div>
+        `
         : `<p class="empty-state">安装包即将提供。</p>`;
 
       return `
@@ -127,11 +340,14 @@ function renderVersions() {
                 <span class="badge ${escapeHtml(version.channel)}">${escapeHtml(version.channel)}</span>
                 ${version.published ? "" : '<span class="badge">Draft</span>'}
               </div>
-              <p class="package-meta">${escapeHtml(version.version)} · ${escapeHtml(version.releaseDate)}</p>
+              <p class="package-meta">
+                ${escapeHtml(version.version)} · 发布时间 ${formatDateTime(version.releaseDate)}
+                ${version.updatedAt ? ` · 更新于 ${formatDateTime(version.updatedAt)}` : ""}
+              </p>
             </div>
           </div>
-          <p class="version-notes">${escapeHtml(version.notes)}</p>
-          <div class="package-list">${packages}</div>
+          ${renderVersionDetails(version, { open: index === 0, latest: index === 0 })}
+          ${packages}
         </article>
       `;
     })
@@ -164,13 +380,17 @@ function renderAdmin() {
           <div class="admin-header">
             <div>
               <h3>${escapeHtml(version.title)}</h3>
-              <p class="package-meta">${escapeHtml(version.version)} · ${escapeHtml(version.channel)} · ${version.published ? "Published" : "Draft"}</p>
+              <p class="package-meta">
+                ${escapeHtml(version.version)} · ${escapeHtml(version.channel)} · ${version.published ? "Published" : "Draft"}
+                · 更新于 ${formatDateTime(version.updatedAt ?? version.releaseDate)}
+              </p>
             </div>
             <div class="admin-actions">
-              <button class="ghost edit-version" data-id="${escapeHtml(version.id)}" type="button">编辑</button>
+              <button class="ghost edit-version" data-id="${escapeHtml(version.id)}" type="button">编辑版本/说明</button>
               <button class="danger delete-version" data-id="${escapeHtml(version.id)}" type="button">删除</button>
             </div>
           </div>
+          ${renderVersionDetails(version, { open: true })}
           <div class="package-list">${packages || '<p class="empty-state">尚未上传安装包。</p>'}</div>
           <div class="upload-panel">
             <h4>上传此版本安装包</h4>
@@ -208,16 +428,45 @@ function renderAdmin() {
     .join("");
 }
 
+function renderComments() {
+  if (state.comments.length === 0) {
+    nodes.commentsList.innerHTML = `<p class="empty-state">还没有评论，欢迎留下第一个建议。</p>`;
+    return;
+  }
+
+  nodes.commentsList.innerHTML = state.comments
+    .map(
+      (comment) => `
+        <article class="comment-card">
+          <div class="comment-header">
+            <div>
+              <div class="comment-author">
+                <span>${escapeHtml(comment.authorName)}</span>
+                <span class="badge ${comment.authorType === "user" ? "stable" : ""}">${comment.authorType === "user" ? "已登录" : "游客"}</span>
+              </div>
+              <p class="package-meta">${escapeHtml(comment.location)} · ${escapeHtml(comment.device)} · ${formatDateTime(comment.createdAt)}</p>
+            </div>
+          </div>
+          <p class="comment-body">${escapeHtml(comment.body)}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function render() {
   renderShell();
+  renderSmartDownload();
   renderVersions();
   renderAdmin();
+  renderComments();
 }
 
 async function refresh() {
-  const [me, versions] = await Promise.all([api("/api/me"), api("/api/versions")]);
+  const [me, versions, comments] = await Promise.all([api("/api/me"), api("/api/versions"), api("/api/comments")]);
   state.user = me.user;
   state.versions = versions.versions;
+  state.comments = comments.comments;
   render();
 }
 
@@ -237,7 +486,7 @@ function openVersionDialog(version = null) {
   nodes.versionNumber.value = version?.version ?? "";
   nodes.versionChannel.value = version?.channel ?? "stable";
   nodes.versionTitle.value = version?.title ?? "";
-  nodes.versionDate.value = version?.releaseDate ?? new Date().toISOString().slice(0, 10);
+  nodes.versionDate.value = toDateTimeInputValue(version?.releaseDate ?? new Date().toISOString());
   nodes.versionNotes.value = version?.notes ?? "";
   nodes.versionPublished.checked = version?.published ?? true;
   setMessage(nodes.versionMessage, "");
@@ -340,6 +589,28 @@ async function submitUpload(form) {
   }
 }
 
+async function submitComment(event) {
+  event.preventDefault();
+  const body = nodes.commentBody.value.trim();
+  if (body.length < 2) {
+    setMessage(nodes.commentMessage, "请至少输入 2 个字符。");
+    return;
+  }
+
+  try {
+    const payload = await api("/api/comments", {
+      method: "POST",
+      body: JSON.stringify({ body })
+    });
+    state.comments = [payload.comment, ...state.comments];
+    nodes.commentBody.value = "";
+    setMessage(nodes.commentMessage, "评论已发布。", true);
+    renderComments();
+  } catch (error) {
+    setMessage(nodes.commentMessage, error.message);
+  }
+}
+
 nodes.loginButton.addEventListener("click", () => {
   setAuthMode("login");
   nodes.authDialog.showModal();
@@ -362,6 +633,7 @@ nodes.passwordSubmit.addEventListener("click", submitPassword);
 
 nodes.newVersionButton.addEventListener("click", () => openVersionDialog());
 nodes.versionSubmit.addEventListener("click", submitVersion);
+nodes.commentForm.addEventListener("submit", submitComment);
 
 document.querySelectorAll(".close-dialog").forEach((button) => {
   button.addEventListener("click", () => {
@@ -403,6 +675,54 @@ nodes.adminList.addEventListener("submit", async (event) => {
     await submitUpload(form);
   }
 });
+
+function initHeroMotion() {
+  const hero = document.querySelector(".hero");
+  if (!hero) {
+    return;
+  }
+
+  let frame = 0;
+  let dragging = false;
+
+  function setPosition(clientX, clientY) {
+    if (frame) {
+      window.cancelAnimationFrame(frame);
+    }
+    frame = window.requestAnimationFrame(() => {
+      const rect = hero.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+      hero.style.setProperty("--mx", `${(x * 100).toFixed(2)}%`);
+      hero.style.setProperty("--my", `${(y * 100).toFixed(2)}%`);
+      hero.style.setProperty("--tilt-x", `${((0.5 - y) * 8).toFixed(2)}deg`);
+      hero.style.setProperty("--tilt-y", `${((x - 0.5) * 10).toFixed(2)}deg`);
+    });
+  }
+
+  hero.addEventListener("pointermove", (event) => {
+    setPosition(event.clientX, event.clientY);
+  });
+  hero.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    hero.classList.add("is-dragging");
+    hero.setPointerCapture(event.pointerId);
+    setPosition(event.clientX, event.clientY);
+  });
+  hero.addEventListener("pointerup", (event) => {
+    dragging = false;
+    hero.classList.remove("is-dragging");
+    hero.releasePointerCapture(event.pointerId);
+  });
+  hero.addEventListener("pointerleave", () => {
+    if (!dragging) {
+      hero.style.setProperty("--tilt-x", "0deg");
+      hero.style.setProperty("--tilt-y", "0deg");
+    }
+  });
+}
+
+initHeroMotion();
 
 refresh().catch((error) => {
   nodes.versionsList.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;

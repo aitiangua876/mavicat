@@ -40,6 +40,7 @@ function defaultDatabase() {
         updatedAt: now
       }
     ],
+    comments: [],
     sessions: [],
     versions: [
       {
@@ -47,7 +48,7 @@ function defaultDatabase() {
         version: "1.0.0",
         channel: "stable",
         title: "Mavicat 1.0",
-        releaseDate: now.slice(0, 10),
+        releaseDate: now,
         notes: "Initial public release package placeholder. Upload installers from the admin console.",
         published: true,
         packages: [],
@@ -67,7 +68,18 @@ function ensureDatabase() {
 
 export function readDb() {
   ensureDatabase();
-  return JSON.parse(readFileSync(dbPath, "utf8"));
+  const db = JSON.parse(readFileSync(dbPath, "utf8"));
+  if (!Array.isArray(db.comments)) {
+    db.comments = [];
+  }
+  if (Array.isArray(db.versions)) {
+    db.versions = db.versions.map((version) => ({
+      ...version,
+      createdAt: version.createdAt ?? version.releaseDate ?? new Date().toISOString(),
+      updatedAt: version.updatedAt ?? version.releaseDate ?? version.createdAt ?? new Date().toISOString()
+    }));
+  }
+  return db;
 }
 
 export function writeDb(db) {

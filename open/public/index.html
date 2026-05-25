@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mavicat Open</title>
     <link rel="icon" href="/assets/mavicat-icon.png" type="image/png" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260525-smart-download" />
   </head>
   <body>
     <header class="topbar">
@@ -18,6 +18,7 @@
         <a href="#features">能力</a>
         <a href="#security">安全</a>
         <a href="#versions">下载</a>
+        <a href="#comments">反馈</a>
         <a href="#admin" id="admin-nav" hidden>后台</a>
       </nav>
       <div class="account">
@@ -31,6 +32,7 @@
     <main>
       <section class="hero" id="home">
         <div class="hero-copy">
+          <img class="hero-logo" src="/assets/mavicat-icon.png" alt="" />
           <p class="eyebrow">Native database workspace</p>
           <h1>Mavicat</h1>
           <p class="lead">
@@ -38,19 +40,17 @@
             数据浏览、导入导出、结构同步、备份恢复和跨平台安装包分发放进同一套清晰的工作流。
           </p>
           <div class="hero-actions">
-            <a class="primary hero-button" href="#versions">下载 Mavicat</a>
+            <a class="primary hero-button" id="smart-download-button" href="#versions">检测安装包中...</a>
             <a class="secondary hero-button" href="#workflow">查看工作流</a>
           </div>
-          <div class="hero-meta" aria-label="Mavicat supported platforms">
-            <span>Windows</span>
-            <span>macOS Intel</span>
-            <span>macOS Apple Silicon</span>
-            <span>Linux</span>
+          <div class="hero-availability" aria-label="Mavicat supported platforms">
+            <span>Available on</span>
+            <a href="#versions" data-platform-download="macos">macOS</a>
+            <span>and</span>
+            <a href="#versions" data-platform-download="windows">Windows</a>
           </div>
         </div>
         <div class="hero-visual" aria-label="Mavicat preview">
-          <div class="hero-orbit orbit-one"></div>
-          <div class="hero-orbit orbit-two"></div>
           <img src="/assets/mavicat-workspace.svg" alt="Mavicat 数据库管理工作区截图" />
         </div>
       </section>
@@ -61,6 +61,63 @@
           <h2>选择系统，直接下载安装包</h2>
         </div>
         <a class="primary hero-button" href="#versions">前往下载中心</a>
+      </section>
+
+      <section class="showcase-band" id="showcase">
+        <div class="section-heading">
+          <p class="eyebrow">Product highlights</p>
+          <h2>把数据库工作的关键能力，集中到一个工作台</h2>
+          <p class="download-note">从 AI 查询助手到数据迁移、结构同步、表格复制粘贴和变更预览，Mavicat 将高频数据库操作组织成连续、清晰的桌面工作流。</p>
+        </div>
+        <div class="annotated-shot">
+          <img src="/assets/mavicat-workspace.svg" alt="Mavicat 工作台功能标注图" />
+          <article class="shot-pin pin-ai">
+            <span>AI</span>
+            <h3>查询 AI 助手</h3>
+            <p>在编辑器旁解释 SQL、生成查询、结合结果上下文给建议。</p>
+          </article>
+          <article class="shot-pin pin-grid">
+            <span>GRID</span>
+            <h3>表格复制粘贴</h3>
+            <p>把表格数据从剪贴板导入、粘贴、预览，再安全写回。</p>
+          </article>
+          <article class="shot-pin pin-migrate">
+            <span>MOVE</span>
+            <h3>数据迁移</h3>
+            <p>跨连接迁移数据，配合导入导出和备份工作流。</p>
+          </article>
+          <article class="shot-pin pin-sync">
+            <span>SYNC</span>
+            <h3>结构同步</h3>
+            <p>比较表结构差异，生成同步流程，降低上线前手工对表风险。</p>
+          </article>
+        </div>
+        <div class="highlight-grid">
+          <article>
+            <h3>变更预览</h3>
+            <p>编辑结果网格前先预览 update / delete / insert 影响，减少误操作。</p>
+          </article>
+          <article>
+            <h3>对象详情</h3>
+            <p>表、视图、字段、索引、外键与创建语句集中查看，适合接手陌生库。</p>
+          </article>
+          <article>
+            <h3>数据字典</h3>
+            <p>一键生成数据库结构说明，方便交付、评审和团队共享。</p>
+          </article>
+          <article>
+            <h3>Redis / SQL Server</h3>
+            <p>除 MySQL、PostgreSQL、SQLite 外，持续补齐更多数据库驱动。</p>
+          </article>
+          <article>
+            <h3>表设计器</h3>
+            <p>可视化维护字段、类型、索引和约束，让结构变更更直观。</p>
+          </article>
+          <article>
+            <h3>工具向导</h3>
+            <p>导入、导出、备份、建库等常用任务沉淀为统一向导流程。</p>
+          </article>
+        </div>
       </section>
 
       <section class="workflow-band" id="workflow">
@@ -190,6 +247,27 @@
         <div id="versions-list" class="versions-list"></div>
       </section>
 
+      <section class="comments-band" id="comments">
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Feedback</p>
+            <h2>给 Mavicat 提意见</h2>
+          </div>
+          <p class="download-note">无需登录也可以评论；游客评论会展示设备信息和 IP 归属地，登录用户会展示用户名和归属地。</p>
+        </div>
+        <form class="comment-form" id="comment-form">
+          <label>
+            你的建议
+            <textarea id="comment-body" rows="5" maxlength="1000" placeholder="写下你希望 Mavicat 改进的地方、遇到的问题，或想要的新功能。"></textarea>
+          </label>
+          <div class="comment-actions">
+            <p id="comment-message" class="form-message"></p>
+            <button class="primary" id="comment-submit" type="submit">发布评论</button>
+          </div>
+        </form>
+        <div id="comments-list" class="comments-list"></div>
+      </section>
+
       <section class="admin-band" id="admin" hidden>
         <div class="section-heading inline-heading">
           <div>
@@ -265,13 +343,17 @@
             <input id="version-title" placeholder="Mavicat 1.0.0" />
           </label>
           <label>
-            发布日期
-            <input id="version-date" type="date" />
+            发布时间
+            <input id="version-date" type="datetime-local" step="1" />
           </label>
         </div>
         <label>
-          更新说明
-          <textarea id="version-notes" rows="5"></textarea>
+          版本说明
+          <textarea
+            id="version-notes"
+            rows="7"
+            placeholder="每行一条说明，例如：&#10;新增 PostgreSQL 连接管理&#10;优化 SQL 编辑器补全体验&#10;修复 macOS arm64 安装包签名问题&#10;注意：升级前建议备份连接配置"
+          ></textarea>
         </label>
         <label class="check-row">
           <input id="version-published" type="checkbox" />
@@ -282,6 +364,6 @@
       </form>
     </dialog>
 
-    <script src="/app.js" type="module"></script>
+    <script src="/app.js?v=20260525-smart-download" type="module"></script>
   </body>
 </html>
