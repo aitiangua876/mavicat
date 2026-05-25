@@ -205,12 +205,12 @@ function renderSmartDownload() {
   const platformLabel = getPlatformLabel(platform);
   const match = platform === "unknown" ? null : findDownloadForPlatform(platform);
 
-  applyDownloadTarget(nodes.smartDownloadButton, match, `查看 ${platformLabel} 安装包`);
+  applyDownloadTarget(nodes.smartDownloadButton, match, `下载 ${platformLabel} 版`);
   if (match) {
-    nodes.smartDownloadButton.textContent = `下载 ${match.pkg.label || `${platformLabel} 版`}`;
+    nodes.smartDownloadButton.textContent = `下载 ${platformLabel} 版`;
     nodes.smartDownloadButton.setAttribute("title", `${match.version.version} · ${match.pkg.originalName}`);
   } else {
-    nodes.smartDownloadButton.textContent = `查看 ${platformLabel} 安装包`;
+    nodes.smartDownloadButton.textContent = `下载 ${platformLabel} 版`;
     nodes.smartDownloadButton.setAttribute("title", "当前设备暂未匹配到直链安装包，可在下载中心查看全部版本。");
   }
 
