@@ -114,8 +114,8 @@ L'écran principal rassemble arbre de connexions, éditeur SQL, grille de résul
 
 - [Site officiel](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Télécharger pour macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [Télécharger pour Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [Télécharger pour macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [Télécharger pour Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat vise macOS, Windows et Linux. Les artefacts disponibles peuvent varier selon les jalons.
 

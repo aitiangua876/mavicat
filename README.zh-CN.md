@@ -116,8 +116,8 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 
 - [Mavicat 官网](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [下载 macOS 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [下载 Windows 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [下载 macOS 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [下载 Windows 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat 通过 Tauri 打包，目标支持 macOS、Windows 和 Linux。不同里程碑可用安装包可能不同。
 

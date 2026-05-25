@@ -116,8 +116,8 @@ Get the latest builds from:
 
 - [Official website](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download for macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [Download for Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [Download for macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [Download for Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat targets macOS, Windows, and Linux through the Tauri bundler. Release artifacts may vary by milestone.
 

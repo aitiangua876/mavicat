@@ -114,8 +114,8 @@ La schermata principale riunisce albero connessioni, editor SQL, griglia risulta
 
 - [Sito ufficiale](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download per macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [Download per Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [Download per macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [Download per Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat punta a macOS, Windows e Linux. Gli artefatti disponibili possono variare per milestone.
 

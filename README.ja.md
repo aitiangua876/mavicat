@@ -114,8 +114,8 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 
 - [公式サイト](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [macOS 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [Windows 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [macOS 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [Windows 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat は macOS、Windows、Linux を対象にしています。利用可能なビルドはマイルストーンにより異なります。
 

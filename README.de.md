@@ -114,8 +114,8 @@ Der Hauptbereich kombiniert Verbindungsbaum, SQL-Editor, Ergebnisraster, Toolbar
 
 - [Offizielle Website](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download für macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
-- [Download für Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
+- [Download für macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
+- [Download für Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
 
 Mavicat zielt auf macOS, Windows und Linux. Die verfügbaren Artefakte können je nach Meilenstein variieren.
 
