@@ -1215,7 +1215,7 @@ body {
   position: relative;
   display: grid;
   width: 100%;
-  min-height: 1060px;
+  min-height: clamp(1320px, 146vh, 1540px);
   margin: 0;
   overflow: hidden;
   place-items: start center;
@@ -1408,7 +1408,7 @@ body {
 
 .quick-download {
   margin-top: 0;
-  padding-top: 86px;
+  padding-top: 92px;
 }
 
 @media (max-width: 980px) {
@@ -1417,7 +1417,7 @@ body {
   }
 
   .hero {
-    min-height: 900px;
+    min-height: 1240px;
     padding-top: 110px;
   }
 
@@ -1430,7 +1430,7 @@ body {
 
 @media (max-width: 640px) {
   .hero {
-    min-height: 880px;
+    min-height: 1110px;
     padding-right: 16px;
     padding-left: 16px;
   }
