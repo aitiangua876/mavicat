@@ -188,7 +188,7 @@ function applyDownloadTarget(link, match, fallbackText) {
   }
 
   if (!match) {
-    link.href = "#versions";
+    link.href = "/#versions";
     link.removeAttribute("download");
     link.classList.add("is-unavailable");
     link.textContent = fallbackText;

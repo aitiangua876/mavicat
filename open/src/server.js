@@ -26,7 +26,6 @@ const upload = multer({
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(paths.uploadsDir));
-app.use(express.static(join(paths.rootDir, "public")));
 
 function parseCookies(cookieHeader = "") {
   return Object.fromEntries(
@@ -93,6 +92,97 @@ function requireAdmin(request, response, next) {
 
 function normalizeText(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
+}
+
+function normalizeToken(value) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function detectPlatform(userAgent = "") {
+  const value = normalizeToken(userAgent);
+  if (value.includes("macintosh") || value.includes("macos") || value.includes("macosx")) {
+    return "macos";
+  }
+  if (value.includes("windows")) {
+    return "windows";
+  }
+  if (value.includes("linux")) {
+    return "linux";
+  }
+  return "unknown";
+}
+
+function architectureHints(userAgent = "") {
+  const value = normalizeToken(userAgent);
+  const hints = [];
+  if (value.includes("arm64") || value.includes("aarch64")) {
+    hints.push("arm64", "aarch64", "apple", "silicon");
+  }
+  if (value.includes("x8664") || value.includes("x64") || value.includes("amd64") || value.includes("win64")) {
+    hints.push("x64", "amd64", "x8664", "intel");
+  }
+  return hints;
+}
+
+function packageMatchesPlatform(pkg, platform) {
+  const value = normalizeToken(`${pkg.platform} ${pkg.label} ${pkg.originalName}`);
+  if (platform === "macos") {
+    return value.includes("mac") || value.includes("darwin") || value.includes("dmg");
+  }
+  if (platform === "windows") {
+    return value.includes("windows") || value.includes("win") || value.includes("exe") || value.includes("msi");
+  }
+  if (platform === "linux") {
+    return value.includes("linux") || value.includes("deb") || value.includes("rpm") || value.includes("appimage");
+  }
+  return false;
+}
+
+function scorePackage(pkg, platform, hints = []) {
+  if (!packageMatchesPlatform(pkg, platform)) {
+    return -1;
+  }
+
+  const value = normalizeToken(`${pkg.arch} ${pkg.label} ${pkg.originalName}`);
+  let score = 10;
+  hints.forEach((hint, index) => {
+    if (value.includes(hint)) {
+      score += 20 - index;
+    }
+  });
+  if (value.includes("universal")) {
+    score += 5;
+  }
+  return score;
+}
+
+function sortedVisibleVersions(request) {
+  const user = getSessionUser(request);
+  return readDb().versions
+    .filter((version) => version.published || user?.role === "admin")
+    .sort((left, right) => {
+      const leftTime = new Date(left.updatedAt ?? left.releaseDate ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.updatedAt ?? right.releaseDate ?? right.createdAt ?? 0).getTime();
+      return rightTime - leftTime;
+    });
+}
+
+function findLatestPackage(request, requestedPlatform) {
+  const platform = requestedPlatform === "auto" ? detectPlatform(request.headers["user-agent"]) : requestedPlatform;
+  const hints = architectureHints(request.headers["user-agent"]);
+
+  for (const version of sortedVisibleVersions(request)) {
+    const candidates = version.packages
+      .map((pkg) => ({ pkg, score: scorePackage(pkg, platform, hints) }))
+      .filter((candidate) => candidate.score >= 0)
+      .sort((left, right) => right.score - left.score);
+
+    if (candidates.length > 0) {
+      return candidates[0].pkg;
+    }
+  }
+
+  return null;
 }
 
 function getClientIp(request) {
@@ -205,6 +295,17 @@ app.get("/api/me", (request, response) => {
   response.json({ user: publicUser(getSessionUser(request)) });
 });
 
+app.get("/api/download/latest", (request, response) => {
+  const requestedPlatform = normalizeToken(request.query.platform || "auto");
+  const allowedPlatform = ["auto", "macos", "windows", "linux"].includes(requestedPlatform) ? requestedPlatform : "auto";
+  const pkg = findLatestPackage(request, allowedPlatform);
+  if (!pkg) {
+    response.redirect(302, "/#versions");
+    return;
+  }
+  response.redirect(302, pkg.url);
+});
+
 app.post("/api/auth/register", (request, response) => {
   const username = normalizeText(request.body.username);
   const password = normalizeText(request.body.password);
@@ -299,15 +400,7 @@ app.post("/api/auth/change-password", requireUser, (request, response) => {
 });
 
 app.get("/api/versions", (request, response) => {
-  const user = getSessionUser(request);
-  const versions = readDb().versions
-    .filter((version) => version.published || user?.role === "admin")
-    .sort((left, right) => {
-      const leftTime = new Date(left.updatedAt ?? left.releaseDate ?? left.createdAt ?? 0).getTime();
-      const rightTime = new Date(right.updatedAt ?? right.releaseDate ?? right.createdAt ?? 0).getTime();
-      return rightTime - leftTime;
-    });
-  response.json({ versions });
+  response.json({ versions: sortedVisibleVersions(request) });
 });
 
 app.get("/api/comments", (_request, response) => {
@@ -453,6 +546,8 @@ app.delete("/api/admin/versions/:versionId/packages/:packageId", requireAdmin, (
   writeDb(db);
   response.json({ ok: true });
 });
+
+app.use(express.static(join(paths.rootDir, "public")));
 
 app.listen(port, () => {
   console.log(`Mavicat Open is running at http://localhost:${port}`);
