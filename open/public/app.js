@@ -722,7 +722,58 @@ function initHeroMotion() {
   });
 }
 
+function initGlyphTrail() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  const glyphs = ["SELECT", "JOIN", "AI", "SQL", "DB", ">>", "--", "_", "{}", "[]", "↗", "⟶"];
+  const layer = document.createElement("div");
+  let lastSpawn = 0;
+  let ambientTimer = 0;
+
+  layer.className = "glyph-trail";
+  layer.setAttribute("aria-hidden", "true");
+  document.body.append(layer);
+  document.body.classList.add("glyph-trail-ready");
+
+  function spawnGlyph(x, y, ambient = false) {
+    const glyph = document.createElement("span");
+    const driftX = (Math.random() - 0.5) * (ambient ? 180 : 110);
+    const driftY = -45 - Math.random() * (ambient ? 130 : 82);
+    const duration = ambient ? 5.8 + Math.random() * 2.4 : 3.8 + Math.random() * 2.2;
+
+    glyph.className = "trail-glyph";
+    glyph.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    glyph.style.setProperty("--glyph-x", `${x}px`);
+    glyph.style.setProperty("--glyph-y", `${y}px`);
+    glyph.style.setProperty("--glyph-dx", `${driftX.toFixed(1)}px`);
+    glyph.style.setProperty("--glyph-dy", `${driftY.toFixed(1)}px`);
+    glyph.style.setProperty("--glyph-size", `${ambient ? 12 + Math.random() * 8 : 13 + Math.random() * 12}px`);
+    glyph.style.setProperty("--glyph-duration", `${duration.toFixed(2)}s`);
+    glyph.style.setProperty("--glyph-opacity", `${ambient ? 0.24 + Math.random() * 0.22 : 0.52 + Math.random() * 0.28}`);
+    layer.append(glyph);
+    window.setTimeout(() => glyph.remove(), duration * 1000 + 120);
+  }
+
+  window.addEventListener("pointermove", (event) => {
+    const now = performance.now();
+    if (now - lastSpawn < 90) {
+      return;
+    }
+    lastSpawn = now;
+    spawnGlyph(event.clientX + (Math.random() - 0.5) * 18, event.clientY + (Math.random() - 0.5) * 18);
+  }, { passive: true });
+
+  ambientTimer = window.setInterval(() => {
+    spawnGlyph(Math.random() * window.innerWidth, window.innerHeight * (0.18 + Math.random() * 0.66), true);
+  }, 950);
+
+  window.addEventListener("beforeunload", () => window.clearInterval(ambientTimer));
+}
+
 initHeroMotion();
+initGlyphTrail();
 
 refresh().catch((error) => {
   nodes.versionsList.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
