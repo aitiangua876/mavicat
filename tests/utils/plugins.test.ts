@@ -71,7 +71,7 @@ describe('plugins', () => {
       expect(versionGte('1', '1.0.0')).toBe(true);
     });
 
-    it('should handle real-world Tabularis version scenarios', () => {
+    it('should handle real-world Mavicat version scenarios', () => {
       // Current app 0.9.1, plugin requires >= 0.8.15 → compatible
       expect(versionGte('0.9.1', '0.8.15')).toBe(true);
       // Current app 0.9.1, plugin requires >= 0.9.2 → incompatible

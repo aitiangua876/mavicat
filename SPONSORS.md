@@ -1,17 +1,17 @@
 # Sponsors
 
-Tabularis is made possible thanks to the support of our sponsors.
-Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)
+Mavicat is made possible thanks to the support of our sponsors.
+Interested in sponsoring? [Get in touch →](https://mavicat.kailingteck.com/sponsors)
 
 ---
 
 ## turboSMTP
 
-<a href="https://www.serversmtp.com/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://tabularis.dev/img/sponsors/turbosmtp.png" height="40" alt="turboSMTP" style="background:#ffffff;padding:6px;" /></a>
+<a href="https://www.serversmtp.com/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://mavicat.kailingteck.com/img/sponsors/turbosmtp.png" height="40" alt="turboSMTP" style="background:#ffffff;padding:6px;" /></a>
 
 **Professional SMTP relay — your emails delivered straight to the inbox, never to spam**
 
-🔗 [https://www.serversmtp.com](https://www.serversmtp.com/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor)
+🔗 [https://www.serversmtp.com](https://www.serversmtp.com/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor)
 
 - 📬 Industry-leading deliverability vs. standard providers
 - 🌍 Global infrastructure — EU, USA, Middle East, Asia
@@ -19,18 +19,18 @@ Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)
 - 📊 Real-time tracking, reporting & webhooks
 - 💬 24/7 support via chat, ticket & phone
 
-> **Free account for Tabularis developers**
-> Every developer who joins Tabularis gets a free turboSMTP account to send emails from their own platform — reliably and without ending up in spam.
+> **Free account for Mavicat developers**
+> Every developer who joins Mavicat gets a free turboSMTP account to send emails from their own platform — reliably and without ending up in spam.
 
 ---
 
 ## Kilo Code
 
-<a href="https://www.kilo.ai/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://tabularis.dev/img/sponsors/kilocode.png" height="40" alt="Kilo Code" /></a>
+<a href="https://www.kilo.ai/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://mavicat.kailingteck.com/img/sponsors/kilocode.png" height="40" alt="Kilo Code" /></a>
 
 **Open source AI coding agent — build, ship, and iterate faster with 500+ models**
 
-🔗 [https://www.kilo.ai](https://www.kilo.ai/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor)
+🔗 [https://www.kilo.ai](https://www.kilo.ai/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor)
 
 - 🔓 100% open source — Apache 2.0, fully inspectable
 - 🤖 500+ models — OpenAI, Anthropic, Gemini, Ollama and more
@@ -39,17 +39,17 @@ Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)
 - ⚡ Works in VS Code & JetBrains with no forks required
 
 > **Free & open source for every developer**
-> Kilo Code is free to use for all Tabularis developers. Install it in your IDE, bring your own API keys at zero markup, and start shipping faster today.
+> Kilo Code is free to use for all Mavicat developers. Install it in your IDE, bring your own API keys at zero markup, and start shipping faster today.
 
 ---
 
 ## DigitalOcean
 
-<a href="https://m.do.co/c/f6ab3d158275?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://tabularis.dev/img/sponsors/digitalocean.png" height="40" alt="DigitalOcean" /></a>
+<a href="https://m.do.co/c/f6ab3d158275?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://mavicat.kailingteck.com/img/sponsors/digitalocean.png" height="40" alt="DigitalOcean" /></a>
 
 **Simple, predictable cloud infrastructure for developers and growing teams.**
 
-🔗 [https://m.do.co/c/f6ab3d158275](https://m.do.co/c/f6ab3d158275?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor)
+🔗 [https://m.do.co/c/f6ab3d158275](https://m.do.co/c/f6ab3d158275?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor)
 
 - 💧 Droplets, App Platform, Kubernetes — the full developer cloud
 - 🗄️ Managed PostgreSQL, MySQL, Redis and MongoDB
@@ -64,11 +64,11 @@ Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)
 
 ## Usero
 
-<a href="https://usero.io/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://tabularis.dev/img/sponsors/usero.png" height="40" alt="Usero" /></a>
+<a href="https://usero.io/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://mavicat.kailingteck.com/img/sponsors/usero.png" height="40" alt="Usero" /></a>
 
 **Feedback becomes code. Automatically.**
 
-🔗 [https://usero.io](https://usero.io/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor)
+🔗 [https://usero.io](https://usero.io/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor)
 
 - 🧩 Multiple inputs — embed widget (7.6KB), GitHub Issues, or API
 - 🧠 AI clustering & prioritization — surfaces what matters from the noise
@@ -76,18 +76,18 @@ Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)
 - ✅ 96% success rate on targeted bugs (typos, broken links, UI glitches)
 - 🎁 Free tier — 5 PRs/month, 1,000 feedback items
 
-> **Free for all Tabularis developers**
+> **Free for all Mavicat developers**
 > Connect your repo and let AI handle the bug fixes your users report. Free tier included — no credit card required.
 
 ---
 
 ## DevGlobe
 
-<a href="https://devglobe.xyz/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://tabularis.dev/img/sponsors/devglobe.png" height="40" alt="DevGlobe" /></a>
+<a href="https://devglobe.xyz/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor" target="_blank"><img src="https://mavicat.kailingteck.com/img/sponsors/devglobe.png" height="40" alt="DevGlobe" /></a>
 
 **Connect your IDE, show up on the globe, and showcase your projects to a community of builders.**
 
-🔗 [https://devglobe.xyz](https://devglobe.xyz/?utm_source=tabularis&utm_medium=referral&utm_campaign=sponsor)
+🔗 [https://devglobe.xyz](https://devglobe.xyz/?utm_source=mavicat&utm_medium=referral&utm_campaign=sponsor)
 
 - 🌍 Connect your IDE and appear live on the globe
 - 🚀 Ship your project — get discovered by the community

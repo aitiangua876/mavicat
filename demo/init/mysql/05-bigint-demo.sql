@@ -1,6 +1,6 @@
 -- =============================================================
--- Tabularis Demo — BIGINT precision showcase (MySQL 8)
--- Database: tabularis_demo
+-- Mavicat Demo — BIGINT precision showcase (MySQL 8)
+-- Database: mavicat_demo
 -- Purpose: exercise the JS-safe-integer fix for issue #210.
 --   JavaScript loses precision for integers outside ±(2^53 - 1).
 --   Values above that boundary must arrive in the UI as strings
@@ -10,7 +10,7 @@
 
 SET NAMES utf8mb4;
 
-USE tabularis_demo;
+USE mavicat_demo;
 
 DROP TABLE IF EXISTS bigint_demo;
 CREATE TABLE bigint_demo (

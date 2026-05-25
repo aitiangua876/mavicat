@@ -5,7 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { DISCORD_URL } from "../../../config/links";
 import { DiscordIcon } from "../../icons/DiscordIcon";
 
-export const DISCORD_CALLOUT_STORAGE_KEY = "tabularis:discord-callout-v2-dismissed";
+export const DISCORD_CALLOUT_STORAGE_KEY = "mavicat:discord-callout-v2-dismissed";
 
 type CalloutStorage = Pick<Storage, "getItem" | "setItem">;
 

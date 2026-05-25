@@ -251,8 +251,8 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
         setIsClipboardImportOpen(true);
       }
     };
-    window.addEventListener("tabularis:paste-import", handler);
-    return () => window.removeEventListener("tabularis:paste-import", handler);
+    window.addEventListener("mavicat:paste-import", handler);
+    return () => window.removeEventListener("mavicat:paste-import", handler);
   }, [activeConnectionId, activeCapabilities]);
 
   const handleTableClick = (tableName: string, schema?: string) => {

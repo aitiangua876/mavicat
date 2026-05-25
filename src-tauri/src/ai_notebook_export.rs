@@ -1,4 +1,4 @@
-//! Build a `.tabularis-notebook` document from an audit log session.
+//! Build a `.mavicat-notebook` document from an audit log session.
 //!
 //! Produces the same JSON shape that the frontend's notebook editor reads
 //! and writes (see `src/types/notebook.ts` `NotebookFile`). Results are not

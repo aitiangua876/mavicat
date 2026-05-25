@@ -1,20 +1,20 @@
 {
-  "username": "Tabularis",
-  "avatar_url": "https://raw.githubusercontent.com/debba/tabularis/main/src-tauri/icons/128x128.png",
+  "username": "Mavicat",
+  "avatar_url": "https://raw.githubusercontent.com/aitiangua876/mavicat/main/src-tauri/icons/128x128.png",
   "content": "@everyone **v{{VERSION}}** is out.",
   "embeds": [
     {
-      "title": "Tabularis v{{VERSION}}",
+      "title": "Mavicat v{{VERSION}}",
       "url": "{{BLOG_URL}}?utm_src=discord",
       "description": "{{DESCRIPTION}}\n\n[Read the full release post →]({{BLOG_URL}}?utm_src=discord)",
       "color": 3901686,
       "author": {
-        "name": "Tabularis Release",
-        "url": "https://github.com/debba/tabularis",
-        "icon_url": "https://raw.githubusercontent.com/debba/tabularis/main/src-tauri/icons/128x128.png"
+        "name": "Mavicat Release",
+        "url": "https://github.com/aitiangua876/mavicat",
+        "icon_url": "https://raw.githubusercontent.com/aitiangua876/mavicat/main/src-tauri/icons/128x128.png"
       },
       "thumbnail": {
-        "url": "https://raw.githubusercontent.com/debba/tabularis/main/src-tauri/icons/128x128@2x.png"
+        "url": "https://raw.githubusercontent.com/aitiangua876/mavicat/main/src-tauri/icons/128x128@2x.png"
       },
       "fields": [
         {
@@ -31,8 +31,8 @@
         }
       ],
       "footer": {
-        "text": "Tabularis · v{{VERSION}}",
-        "icon_url": "https://raw.githubusercontent.com/debba/tabularis/main/src-tauri/icons/128x128.png"
+        "text": "Mavicat · v{{VERSION}}",
+        "icon_url": "https://raw.githubusercontent.com/aitiangua876/mavicat/main/src-tauri/icons/128x128.png"
       },
       "timestamp": "{{DATE_ISO}}"
     }
@@ -51,19 +51,19 @@
           "type": 2,
           "style": 5,
           "label": "GitHub Release",
-          "url": "https://github.com/debba/tabularis/releases/tag/v{{VERSION}}"
+          "url": "https://github.com/aitiangua876/mavicat/releases/tag/v{{VERSION}}"
         },
         {
           "type": 2,
           "style": 5,
           "label": "Changelog",
-          "url": "https://github.com/debba/tabularis/blob/main/CHANGELOG.md"
+          "url": "https://github.com/aitiangua876/mavicat/blob/main/CHANGELOG.md"
         },
         {
           "type": 2,
           "style": 5,
           "label": "Website",
-          "url": "https://tabularis.dev/?utm_src=discord"
+          "url": "https://mavicat.kailingteck.com/?utm_src=discord"
         }
       ]
     }

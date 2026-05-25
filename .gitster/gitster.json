@@ -1,15 +1,15 @@
 {
   "description": "A lightweight, developer-focused database management tool",
   "tagline": "MySQL · PostgreSQL · SQLite — hackable with plugins",
-  "website": "https://tabularis.dev",
-  "coverImage": "https://github.com/TabularisDB/website/blob/main/public/img/og.png?raw=true",
-  "logoImage": "https://github.com/TabularisDB/website/blob/main/public/img/logo.png?raw=true",
+  "website": "https://mavicat.kailingteck.com",
+  "coverImage": "https://github.com/MavicatDB/website/blob/main/public/img/og.png?raw=true",
+  "logoImage": "https://github.com/MavicatDB/website/blob/main/public/img/logo.png?raw=true",
   "youtubeUrl": "https://youtu.be/bGAMfRuonKI",
   "screenshots": [
-    "https://github.com/TabularisDB/website/blob/main/public/img/tabularis-sql-editor-data-grid.png?raw=true",
-    "https://github.com/TabularisDB/website/blob/main/public/img/tabularis-theme-management.png?raw=true",
-    "https://github.com/TabularisDB/website/blob/main/public/img/tabularis-ai-assistant.png?raw=true",
-    "https://github.com/TabularisDB/website/blob/main/public/img/tabularis-visual-query-builder.png?raw=true",
-    "https://github.com/TabularisDB/website/blob/main/public/img/tabularis-mcp-server.png?raw=true"
+    "https://github.com/MavicatDB/website/blob/main/public/img/mavicat-sql-editor-data-grid.png?raw=true",
+    "https://github.com/MavicatDB/website/blob/main/public/img/mavicat-theme-management.png?raw=true",
+    "https://github.com/MavicatDB/website/blob/main/public/img/mavicat-ai-assistant.png?raw=true",
+    "https://github.com/MavicatDB/website/blob/main/public/img/mavicat-visual-query-builder.png?raw=true",
+    "https://github.com/MavicatDB/website/blob/main/public/img/mavicat-mcp-server.png?raw=true"
   ]
 }

@@ -155,8 +155,8 @@
   },
   "mcp": {
     "title": "Integrazione Server MCP",
-    "subtitle": "Connetti Tabularis a Claude Desktop, Cursor e altri",
-    "description": "Il Model Context Protocol (MCP) permette agli assistenti AI (come Claude) di connettersi ai tuoi strumenti locali. Tabularis espone un server MCP che permette all'AI di leggere lo schema del database ed eseguire query in sicurezza.",
+    "subtitle": "Connetti Mavicat a Claude Desktop, Cursor e altri",
+    "description": "Il Model Context Protocol (MCP) permette agli assistenti AI (come Claude) di connettersi ai tuoi strumenti locali. Mavicat espone un server MCP che permette all'AI di leggere lo schema del database ed eseguire query in sicurezza.",
     "checking": "Verifica configurazione...",
     "configPath": "File di Configurazione",
     "notFound": "File config non trovato (crealo manualmente)",
@@ -185,7 +185,7 @@
       "allowListDesc": "Tutte le altre connessioni restano in sola lettura. Solo quelle selezionate possono eseguire scritture.",
       "approvalTitle": "Approvazione manuale",
       "approvalMode": "Approvazione richiesta",
-      "approvalModeDesc": "Sospendi le scritture (o ogni query) chiedendo conferma all'utente in Tabularis prima dell'esecuzione.",
+      "approvalModeDesc": "Sospendi le scritture (o ogni query) chiedendo conferma all'utente in Mavicat prima dell'esecuzione.",
       "modeOff": "Disattiva",
       "modeWritesOnly": "Solo scritture",
       "modeAll": "Tutte le query",
@@ -296,7 +296,7 @@
     "projectStatus": "Stato del Progetto",
     "roadmapDesc": "Questo progetto è un Work In Progress (WIP). Le funzioni principali sono stabili, ma abbiamo grandi piani.",
     "support": "Supporta lo Sviluppo",
-    "supportDesc": "Se ti piace tabularis e vuoi vedere nuove funzionalità, considera di supportare il progetto contribuendo al codice, segnalando bug o mettendo una stella su GitHub.",
+    "supportDesc": "Se ti piace mavicat e vuoi vedere nuove funzionalità, considera di supportare il progetto contribuendo al codice, segnalando bug o mettendo una stella su GitHub.",
     "version": "Versione",
     "starOnGithub": "Star su GitHub",
     "ai": {
@@ -447,7 +447,7 @@
       "filterUpdates": "Aggiornamenti",
       "searchNoResults": "Nessun plugin corrisponde alla ricerca.",
       "version": "Versione",
-      "requiresVersion": "Richiede Tabularis ≥ {{version}}",
+      "requiresVersion": "Richiede Mavicat ≥ {{version}}",
       "installedPlugins": "Plugin Installati",
       "installedDesc": "Abilita o disabilita i driver database. I driver integrati non possono essere disabilitati.",
       "remove": "Rimuovi",
@@ -549,7 +549,7 @@
     "error": "Errore Aggiornamento",
     "currentVersion": "Versione attuale",
     "managedByPackageManager": "Aggiornamenti gestiti da {{source}}",
-    "managedByPackageManagerDesc": "Usa il tuo package manager per aggiornare Tabularis."
+    "managedByPackageManagerDesc": "Usa il tuo package manager per aggiornare Mavicat."
   },
   "ai": {
     "assist": "AI Assist",
@@ -1063,8 +1063,8 @@
   },
   "community": {
     "title": "Unisciti alla Community",
-    "subtitle": "Aiuta tabularis a crescere",
-    "description": "Tabularis è un progetto gratuito e open-source. Se lo trovi utile, considera di supportare il progetto e unirti alla community.",
+    "subtitle": "Aiuta mavicat a crescere",
+    "description": "Mavicat è un progetto gratuito e open-source. Se lo trovi utile, considera di supportare il progetto e unirti alla community.",
     "starTitle": "Star su GitHub",
     "starDesc": "Una stella aiuta gli altri a scoprire il progetto",
     "discordTitle": "Unisciti su Discord",
@@ -1198,8 +1198,8 @@
       "processCount_one": "{{count}} processo di sistema in esecuzione",
       "processCount_other": "{{count}} processi di sistema in esecuzione"
     },
-    "tabularisProcess": {
-      "title": "Processo Tabularis",
+    "mavicatProcess": {
+      "title": "Processo Mavicat",
       "cpu": "CPU",
       "ram": "RAM",
       "diskRead": "Lettura Disco/s",
@@ -1385,7 +1385,7 @@
   },
   "discordCallout": {
     "title": "Nuova community Discord!",
-    "body": "Abbiamo una community Discord dedicata a Tabularis: ricevi aiuto, scambia consigli e influenza la roadmap.",
+    "body": "Abbiamo una community Discord dedicata a Mavicat: ricevi aiuto, scambia consigli e influenza la roadmap.",
     "cta": "Entra subito",
     "dismiss": "Chiudi"
   }

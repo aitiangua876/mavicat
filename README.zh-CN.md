@@ -5,14 +5,14 @@
 
 **为每天写 SQL 的人打造的开源桌面数据库工作台。**
 
-[官网](https://mavicat.kailingteck.com/) · [下载](https://github.com/chenlong/Mavicat/releases) · [问题反馈](https://github.com/chenlong/Mavicat/issues) · [贡献指南](./CONTRIBUTING.md)
+[官网](https://mavicat.kailingteck.com/) · [下载](https://github.com/aitiangua876/mavicat/releases) · [问题反馈](https://github.com/aitiangua876/mavicat/issues) · [贡献指南](./CONTRIBUTING.md)
 
 [![Website](https://img.shields.io/badge/官网-mavicat.kailingteck.com-22c55e)](https://mavicat.kailingteck.com/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/)
-[![Stars](https://img.shields.io/github/stars/chenlong/Mavicat?style=social)](https://github.com/chenlong/Mavicat/stargazers)
+[![Stars](https://img.shields.io/github/stars/aitiangua876/mavicat?style=social)](https://github.com/aitiangua876/mavicat/stargazers)
 
 <p>
   <strong>README:</strong>
@@ -115,7 +115,9 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 最新版本请查看：
 
 - [Mavicat 官网](https://mavicat.kailingteck.com/)
-- [GitHub Releases](https://github.com/chenlong/Mavicat/releases)
+- [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
+- [下载 macOS 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
+- [下载 Windows 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
 
 Mavicat 通过 Tauri 打包，目标支持 macOS、Windows 和 Linux。不同里程碑可用安装包可能不同。
 
@@ -168,6 +170,10 @@ cd src-tauri && cargo test
 ## 参与贡献
 
 欢迎提交 Issue、Bug 复现、UI/UE 建议、数据库兼容性问题、翻译和 Pull Request。反馈时最好带上数据库类型、系统版本、操作步骤和期望行为。
+
+## 致谢
+
+感谢开源项目 [Tabularis](https://github.com/TabularisDB/tabularis) 早期工作的启发和贡献。
 
 ## 许可证
 

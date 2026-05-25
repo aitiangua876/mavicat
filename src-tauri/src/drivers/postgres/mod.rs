@@ -512,7 +512,7 @@ fn update_record_error_context(
                 | "float4"
                 | "float8"
         ) {
-        "\nHint: the edited value arrived from the grid as a JSON string. For numeric PostgreSQL columns, Tabularis attempts to parse it before binding; check that the value is valid for the target column type."
+        "\nHint: the edited value arrived from the grid as a JSON string. For numeric PostgreSQL columns, Mavicat attempts to parse it before binding; check that the value is valid for the target column type."
     } else {
         ""
     };

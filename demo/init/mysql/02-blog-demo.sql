@@ -1,5 +1,5 @@
 -- =============================================================
--- Tabularis Demo — Blog CMS (MySQL 8)
+-- Mavicat Demo — Blog CMS (MySQL 8)
 -- Database: blog_demo
 -- Domain: Multi-author blog with posts, comments, tags
 -- =============================================================

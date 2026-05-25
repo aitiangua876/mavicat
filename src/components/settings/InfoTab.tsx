@@ -41,7 +41,7 @@ export function InfoTab() {
 
         <div className="flex justify-center gap-4 flex-wrap">
           <button
-            onClick={() => openUrl("https://github.com/chenlong/Mavicat")}
+            onClick={() => openUrl("https://github.com/aitiangua876/mavicat")}
             className="flex items-center gap-2 bg-surface-secondary hover:bg-surface-tertiary text-primary px-4 py-2 rounded-lg font-medium transition-colors border border-strong"
           >
             <Github size={18} />
@@ -68,7 +68,7 @@ export function InfoTab() {
         icon={<Library size={14} className="text-muted" />}
       >
         <div className="pt-3 text-sm text-secondary">
-          Mavicat is based on the Apache-2.0 licensed Tabularis project and
+          Mavicat is based on the Apache-2.0 licensed Mavicat project and
           keeps its third-party library notices available here.
         </div>
       </SettingSection>

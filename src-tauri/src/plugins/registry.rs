@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 const REGISTRY_URL: &str =
-    "https://raw.githubusercontent.com/TabularisDB/tabularis/main/plugins/registry.json";
+    "https://raw.githubusercontent.com/aitiangua876/mavicat/main/plugins/registry.json";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PluginRegistry {
@@ -25,14 +25,14 @@ pub struct RegistryPlugin {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PluginRelease {
     pub version: String,
-    pub min_tabularis_version: Option<String>,
+    pub min_mavicat_version: Option<String>,
     pub assets: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RegistryReleaseWithStatus {
     pub version: String,
-    pub min_tabularis_version: Option<String>,
+    pub min_mavicat_version: Option<String>,
     pub platform_supported: bool,
 }
 

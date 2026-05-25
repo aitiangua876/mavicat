@@ -66,7 +66,7 @@ pub async fn load_plugins<R: tauri::Runtime>(app: &AppHandle<R>, enabled_ids: Op
         .plugins
         .unwrap_or_default();
 
-    let proj_dirs = match ProjectDirs::from("com", "debba", "tabularis") {
+    let proj_dirs = match ProjectDirs::from("com", "debba", "mavicat") {
         Some(d) => d,
         None => return,
     };

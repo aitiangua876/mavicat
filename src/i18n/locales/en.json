@@ -168,8 +168,8 @@
   },
   "mcp": {
     "title": "MCP Server Integration",
-    "subtitle": "Connect Tabularis to Claude Desktop, Cursor, and more",
-    "description": "The Model Context Protocol (MCP) allows AI assistants (like Claude) to connect to your local tools. Tabularis exposes an MCP server that lets AI read your database schema and execute queries safely.",
+    "subtitle": "Connect Mavicat to Claude Desktop, Cursor, and more",
+    "description": "The Model Context Protocol (MCP) allows AI assistants (like Claude) to connect to your local tools. Mavicat exposes an MCP server that lets AI read your database schema and execute queries safely.",
     "checking": "Checking configuration...",
     "configPath": "Config File",
     "notFound": "Config file not found (create manually)",
@@ -198,7 +198,7 @@
       "allowListDesc": "All other connections stay read-only. Only the connections checked here may execute writes.",
       "approvalTitle": "Approval gate",
       "approvalMode": "Approval required",
-      "approvalModeDesc": "Pause writes (or every query) and ask the user to approve them inside Tabularis before they hit the database.",
+      "approvalModeDesc": "Pause writes (or every query) and ask the user to approve them inside Mavicat before they hit the database.",
       "modeOff": "Off",
       "modeWritesOnly": "Writes only",
       "modeAll": "All queries",
@@ -309,7 +309,7 @@
     "projectStatus": "Project Status",
     "roadmapDesc": "This project is a Work In Progress (WIP). Core features are stable, but we have big plans.",
     "support": "Support the Development",
-    "supportDesc": "If you like tabularis and want to see more features, consider supporting the project by contributing code, reporting bugs, or starring the repo.",
+    "supportDesc": "If you like mavicat and want to see more features, consider supporting the project by contributing code, reporting bugs, or starring the repo.",
     "version": "Version",
     "starOnGithub": "Star on GitHub",
     "ai": {
@@ -460,7 +460,7 @@
       "filterUpdates": "Updates",
       "searchNoResults": "No plugins match your search.",
       "version": "Version",
-      "requiresVersion": "Requires Tabularis ≥ {{version}}",
+      "requiresVersion": "Requires Mavicat ≥ {{version}}",
       "installedPlugins": "Installed Plugins",
       "installedDesc": "Enable or disable database drivers. Built-in drivers cannot be disabled.",
       "remove": "Remove",
@@ -562,7 +562,7 @@
     "error": "Update Error",
     "currentVersion": "Current version",
     "managedByPackageManager": "Updates managed by {{source}}",
-    "managedByPackageManagerDesc": "Use your package manager to update Tabularis."
+    "managedByPackageManagerDesc": "Use your package manager to update Mavicat."
   },
   "ai": {
     "assist": "AI Assist",
@@ -1107,8 +1107,8 @@
   },
   "community": {
     "title": "Join the Community",
-    "subtitle": "Help tabularis grow",
-    "description": "Tabularis is a free, open-source project. If you find it useful, consider supporting the project and connecting with the community.",
+    "subtitle": "Help mavicat grow",
+    "description": "Mavicat is a free, open-source project. If you find it useful, consider supporting the project and connecting with the community.",
     "starTitle": "Star on GitHub",
     "starDesc": "A star helps others discover the project",
     "discordTitle": "Join Discord",
@@ -1254,8 +1254,8 @@
       "processCount_one": "{{count}} system process running",
       "processCount_other": "{{count}} system processes running"
     },
-    "tabularisProcess": {
-      "title": "Tabularis Process",
+    "mavicatProcess": {
+      "title": "Mavicat Process",
       "cpu": "CPU",
       "ram": "RAM",
       "diskRead": "Disk Read/s",
@@ -1460,7 +1460,7 @@
   },
   "discordCallout": {
     "title": "Brand-new Discord community!",
-    "body": "We just launched a dedicated home for Tabularis users. Get help, share tips, shape the roadmap.",
+    "body": "We just launched a dedicated home for Mavicat users. Get help, share tips, shape the roadmap.",
     "cta": "Join now",
     "dismiss": "Dismiss"
   }

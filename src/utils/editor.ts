@@ -17,7 +17,7 @@ export interface TabsStorage {
   activeTabIds: Record<string, string>;
 }
 
-export const STORAGE_KEY = "tabularis_editor_tabs";
+export const STORAGE_KEY = "mavicat_editor_tabs";
 
 export function generateTabId(): string {
   return Math.random().toString(36).substring(2, 9);

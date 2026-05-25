@@ -1,5 +1,5 @@
 name: 🐛 Bug Report
-description: Create a report to help us improve Tabularis
+description: Create a report to help us improve Mavicat
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -38,8 +38,8 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: Tabularis Version
-      description: What version of Tabularis are you running? (e.g., v0.8.9)
+      label: Mavicat Version
+      description: What version of Mavicat are you running? (e.g., v0.8.9)
       placeholder: v0.8.9
     validations:
       required: true
@@ -47,5 +47,5 @@ body:
     id: logs
     attributes:
       label: Relevant Log Output
-      description: Please copy and paste any relevant log output. You can enable debug logs with `tabularis --debug`.
+      description: Please copy and paste any relevant log output. You can enable debug logs with `mavicat --debug`.
       render: shell

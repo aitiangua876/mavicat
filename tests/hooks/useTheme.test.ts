@@ -32,8 +32,8 @@ describe('useTheme', () => {
     const mockSettings: ThemeSettings = {
       activeThemeId: 'test-theme',
       followSystemTheme: false,
-      lightThemeId: 'tabularis-light',
-      darkThemeId: 'tabularis-dark',
+      lightThemeId: 'mavicat-light',
+      darkThemeId: 'mavicat-dark',
       customThemes: [],
     };
 

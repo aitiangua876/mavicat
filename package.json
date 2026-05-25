@@ -4,7 +4,7 @@
   "version": "1.0.2",
   "type": "module",
   "links": {
-    "github": "https://github.com/chenlong/Mavicat"
+    "github": "https://github.com/aitiangua876/mavicat"
   },
   "scripts": {
     "dev": "vite",

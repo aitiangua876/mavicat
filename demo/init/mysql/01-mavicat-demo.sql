@@ -1,62 +1,75 @@
 -- =============================================================
--- Tabularis Demo — Common schema (PostgreSQL 16)
--- Database: tabularis_demo (pre-created via POSTGRES_DB env)
--- Domain: HR + e-commerce
+-- Mavicat Demo — Common schema (MySQL 8)
+-- Database: mavicat_demo
+-- Domain: HR + e-commerce (departments, employees, products,
+--         customers, orders, order_items)
 -- =============================================================
 
+SET NAMES utf8mb4;
+
+CREATE DATABASE IF NOT EXISTS mavicat_demo
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE mavicat_demo;
+
 CREATE TABLE IF NOT EXISTS departments (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    budget NUMERIC(12,2) NOT NULL DEFAULT 0,
+    budget DECIMAL(12,2) NOT NULL DEFAULT 0,
     location VARCHAR(100) NOT NULL
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS employees (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
-    department_id INT NOT NULL REFERENCES departments(id),
+    department_id INT NOT NULL,
     hire_date DATE NOT NULL,
-    salary NUMERIC(10,2) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
-);
+    salary DECIMAL(10,2) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    FOREIGN KEY (department_id) REFERENCES departments(id)
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS products (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     category VARCHAR(50) NOT NULL,
-    price NUMERIC(10,2) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS customers (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     country VARCHAR(50) NOT NULL,
     signup_date DATE NOT NULL,
-    lifetime_value NUMERIC(12,2) NOT NULL DEFAULT 0
-);
+    lifetime_value DECIMAL(12,2) NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL REFERENCES customers(id),
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
     order_date DATE NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
-    total NUMERIC(10,2) NOT NULL DEFAULT 0
-);
+    status ENUM('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+    total DECIMAL(10,2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS order_items (
-    id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL REFERENCES orders(id),
-    product_id INT NOT NULL REFERENCES products(id),
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
     quantity INT NOT NULL,
-    unit_price NUMERIC(10,2) NOT NULL
-);
+    unit_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+) ENGINE=InnoDB;
 
+-- Seed: Departments
 INSERT INTO departments (name, budget, location) VALUES
 ('Engineering',     1500000.00, 'San Francisco'),
 ('Marketing',        800000.00, 'New York'),
@@ -65,26 +78,28 @@ INSERT INTO departments (name, budget, location) VALUES
 ('Finance',          550000.00, 'New York'),
 ('Customer Support', 350000.00, 'Austin');
 
+-- Seed: Employees
 INSERT INTO employees (first_name, last_name, email, department_id, hire_date, salary, is_active) VALUES
-('Alice',   'Johnson',   'alice.johnson@company.com',   1, '2022-03-15', 125000.00, TRUE),
-('Bob',     'Smith',     'bob.smith@company.com',       1, '2021-07-01', 135000.00, TRUE),
-('Carol',   'Williams',  'carol.williams@company.com',  1, '2023-01-10', 115000.00, TRUE),
-('David',   'Brown',     'david.brown@company.com',     2, '2022-06-20',  95000.00, TRUE),
-('Elena',   'Davis',     'elena.davis@company.com',     2, '2023-09-01',  88000.00, TRUE),
-('Frank',   'Miller',    'frank.miller@company.com',    3, '2021-11-15',  82000.00, TRUE),
-('Grace',   'Wilson',    'grace.wilson@company.com',    3, '2022-04-10',  78000.00, TRUE),
-('Henry',   'Moore',     'henry.moore@company.com',     3, '2023-02-28',  76000.00, TRUE),
-('Iris',    'Taylor',    'iris.taylor@company.com',     4, '2022-08-01',  72000.00, TRUE),
-('Jack',    'Anderson',  'jack.anderson@company.com',   4, '2023-05-15',  68000.00, TRUE),
-('Karen',   'Thomas',    'karen.thomas@company.com',    5, '2021-09-01',  98000.00, TRUE),
-('Leo',     'Jackson',   'leo.jackson@company.com',     5, '2022-12-01',  92000.00, TRUE),
-('Maria',   'White',     'maria.white@company.com',     6, '2023-03-20',  65000.00, TRUE),
-('Nathan',  'Harris',    'nathan.harris@company.com',   6, '2022-10-15',  62000.00, TRUE),
-('Olivia',  'Martin',    'olivia.martin@company.com',   1, '2020-05-01', 145000.00, TRUE),
-('Paul',    'Garcia',    'paul.garcia@company.com',     2, '2024-01-15',  85000.00, TRUE),
-('Quinn',   'Martinez',  'quinn.martinez@company.com',  3, '2024-02-01',  74000.00, FALSE),
-('Rachel',  'Robinson',  'rachel.robinson@company.com', 1, '2024-03-01', 110000.00, TRUE);
+('Alice',   'Johnson',   'alice.johnson@company.com',   1, '2022-03-15', 125000.00, 1),
+('Bob',     'Smith',     'bob.smith@company.com',       1, '2021-07-01', 135000.00, 1),
+('Carol',   'Williams',  'carol.williams@company.com',  1, '2023-01-10', 115000.00, 1),
+('David',   'Brown',     'david.brown@company.com',     2, '2022-06-20',  95000.00, 1),
+('Elena',   'Davis',     'elena.davis@company.com',     2, '2023-09-01',  88000.00, 1),
+('Frank',   'Miller',    'frank.miller@company.com',    3, '2021-11-15',  82000.00, 1),
+('Grace',   'Wilson',    'grace.wilson@company.com',    3, '2022-04-10',  78000.00, 1),
+('Henry',   'Moore',     'henry.moore@company.com',     3, '2023-02-28',  76000.00, 1),
+('Iris',    'Taylor',    'iris.taylor@company.com',     4, '2022-08-01',  72000.00, 1),
+('Jack',    'Anderson',  'jack.anderson@company.com',   4, '2023-05-15',  68000.00, 1),
+('Karen',   'Thomas',    'karen.thomas@company.com',    5, '2021-09-01',  98000.00, 1),
+('Leo',     'Jackson',   'leo.jackson@company.com',     5, '2022-12-01',  92000.00, 1),
+('Maria',   'White',     'maria.white@company.com',     6, '2023-03-20',  65000.00, 1),
+('Nathan',  'Harris',    'nathan.harris@company.com',   6, '2022-10-15',  62000.00, 1),
+('Olivia',  'Martin',    'olivia.martin@company.com',   1, '2020-05-01', 145000.00, 1),
+('Paul',    'Garcia',    'paul.garcia@company.com',     2, '2024-01-15',  85000.00, 1),
+('Quinn',   'Martinez',  'quinn.martinez@company.com',  3, '2024-02-01',  74000.00, 0),
+('Rachel',  'Robinson',  'rachel.robinson@company.com', 1, '2024-03-01', 110000.00, 1);
 
+-- Seed: Products
 INSERT INTO products (name, category, price, stock, created_at) VALUES
 ('Laptop Pro 16',               'Electronics', 1499.99, 120, '2024-01-15 10:00:00'),
 ('Wireless Mouse MX',           'Electronics',   34.99, 500, '2024-01-15 10:00:00'),
@@ -102,23 +117,25 @@ INSERT INTO products (name, category, price, stock, created_at) VALUES
 ('Wireless Charger Pad',        'Electronics',   29.99, 350, '2024-07-01 09:00:00'),
 ('Whiteboard 48x36',            'Furniture',     89.99,  40, '2024-08-01 10:00:00');
 
+-- Seed: Customers
 INSERT INTO customers (name, email, country, signup_date, lifetime_value) VALUES
-('TechCorp Inc.',      'orders@techcorp.com',     'USA',         '2024-01-10', 15420.00),
-('Digital Solutions',  'buy@digitalsol.co.uk',    'UK',          '2024-01-25',  8950.00),
-('Innovation Labs',    'sales@innovationlabs.es', 'Spain',       '2024-02-14',  4230.00),
-('Shanghai Tech',      'orders@shanghaitech.cn',  'China',       '2024-03-01', 12800.00),
-('Rome Design Studio', 'info@romedesign.it',      'Italy',       '2024-03-20',  6750.00),
-('Berlin Startup Hub', 'office@berlinstartup.de', 'Germany',     '2024-04-05',  9100.00),
-('Tokyo Innovations',  'sales@tokyoinno.jp',      'Japan',       '2024-04-22', 11200.00),
-('Paris Creative',     'orders@pariscreative.fr', 'France',      '2024-05-10',  5600.00),
-('Nordic Systems',     'order@nordicsys.se',      'Sweden',      '2024-06-01',  7300.00),
-('Sao Paulo Digital',  'sales@spdigital.br',      'Brazil',      '2024-06-18',  3800.00),
-('Sydney Tech Group',  'orders@sydneytech.au',    'Australia',   '2024-07-05',  6200.00),
-('Mumbai Solutions',   'buy@mumbaisol.in',        'India',       '2024-07-20',  4100.00),
-('Toronto Software',   'orders@torontosw.ca',     'Canada',      '2024-08-01',  8400.00),
-('Amsterdam AI Lab',   'info@amsterdamai.nl',     'Netherlands', '2024-08-15',  9800.00),
-('Seoul Electronics',  'orders@seoulelec.kr',     'South Korea', '2024-09-01',  7600.00);
+('TechCorp Inc.',      'orders@techcorp.com',       'USA',         '2024-01-10', 15420.00),
+('Digital Solutions',  'buy@digitalsol.co.uk',      'UK',          '2024-01-25',  8950.00),
+('Innovation Labs',    'sales@innovationlabs.es',   'Spain',       '2024-02-14',  4230.00),
+('Shanghai Tech',      'orders@shanghaitech.cn',    'China',       '2024-03-01', 12800.00),
+('Rome Design Studio', 'info@romedesign.it',        'Italy',       '2024-03-20',  6750.00),
+('Berlin Startup Hub', 'office@berlinstartup.de',   'Germany',     '2024-04-05',  9100.00),
+('Tokyo Innovations',  'sales@tokyoinno.jp',        'Japan',       '2024-04-22', 11200.00),
+('Paris Creative',     'orders@pariscreative.fr',   'France',      '2024-05-10',  5600.00),
+('Nordic Systems',     'order@nordicsys.se',        'Sweden',      '2024-06-01',  7300.00),
+('Sao Paulo Digital',  'sales@spdigital.br',        'Brazil',      '2024-06-18',  3800.00),
+('Sydney Tech Group',  'orders@sydneytech.au',      'Australia',   '2024-07-05',  6200.00),
+('Mumbai Solutions',   'buy@mumbaisol.in',          'India',       '2024-07-20',  4100.00),
+('Toronto Software',   'orders@torontosw.ca',       'Canada',      '2024-08-01',  8400.00),
+('Amsterdam AI Lab',   'info@amsterdamai.nl',       'Netherlands', '2024-08-15',  9800.00),
+('Seoul Electronics',  'orders@seoulelec.kr',       'South Korea', '2024-09-01',  7600.00);
 
+-- Seed: Orders
 INSERT INTO orders (customer_id, order_date, status, total) VALUES
 (1,  '2024-06-15', 'delivered', 1634.97),
 (1,  '2024-08-20', 'delivered', 2099.97),
@@ -141,6 +158,7 @@ INSERT INTO orders (customer_id, order_date, status, total) VALUES
 (14, '2024-12-01', 'pending',   1619.97),
 (15, '2024-12-10', 'pending',    839.97);
 
+-- Seed: Order items
 INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
 (1,  1, 1, 1499.99), (1,  2, 1,   34.99), (1, 10, 2,   14.99),
 (2,  6, 2,  389.99), (2,  1, 1, 1499.99),

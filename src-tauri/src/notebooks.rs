@@ -13,7 +13,7 @@ fn get_notebooks_dir() -> PathBuf {
 /// Get the notebook file path for a specific notebook ID
 fn get_notebook_path(notebook_id: &str) -> PathBuf {
     let mut dir = get_notebooks_dir();
-    dir.push(format!("{}.tabularis-notebook", notebook_id));
+    dir.push(format!("{}.mavicat-notebook", notebook_id));
     dir
 }
 

@@ -1,17 +1,17 @@
 ---
-name: tabularis-discord-release
-description: Generate a Discohook-ready JSON embed for a Tabularis release given its version. Reads CHANGELOG.md for the changes and src/data/changelog.ts for the blog post URL, then fills in template.json (which the user can customize) and writes the result. Use when the user asks for a Discord release announcement, a Discohook embed, or "il json per discohook" for a specific version.
+name: mavicat-discord-release
+description: Generate a Discohook-ready JSON embed for a Mavicat release given its version. Reads CHANGELOG.md for the changes and src/data/changelog.ts for the blog post URL, then fills in template.json (which the user can customize) and writes the result. Use when the user asks for a Discord release announcement, a Discohook embed, or "il json per discohook" for a specific version.
 ---
 
-# Tabularis Discord release embed
+# Mavicat Discord release embed
 
 ## When to use
-- The user asks for a Discohook JSON, Discord embed, or Discord announcement for a Tabularis version.
+- The user asks for a Discohook JSON, Discord embed, or Discord announcement for a Mavicat version.
 - Phrases: "fai il json discohook per vX.Y.Z", "embed discord per la release", "annuncio discord vX.Y.Z".
 
 ## Inputs to gather
 1. **Version** — required. Format `0.10.3` (no `v` prefix). If the user gives `v0.10.3`, strip the `v`.
-2. **Repo working dir** — `~/Progetti/tabularis`. Don't `cd`; pass paths to commands.
+2. **Repo working dir** — `~/Progetti/mavicat`. Don't `cd`; pass paths to commands.
 
 If the user did not specify a version, default to the most recent one in `CHANGELOG.md` and confirm in one line before writing.
 
@@ -69,7 +69,7 @@ The raw CHANGELOG lines are commit-message-shaped. Rewrite each one for a human 
 4. Draft `{{DESCRIPTION}}` and the two bullet lists per the tone/bullet rules.
 5. Substitute all `{{...}}` placeholders.
 6. Parse the resulting JSON, apply the `_omit_if_value_empty` logic, strip the marker keys, re-serialize.
-7. Write to `~/Progetti/tabularis/discohook-v<X.Y.Z>.json` (overwrite if exists).
+7. Write to `~/Progetti/mavicat/discohook-v<X.Y.Z>.json` (overwrite if exists).
 8. In your final message: confirm the path, show the `content` line plus the first 2 bullets so the user can sanity-check the tone, and remind them to paste into the JSON Data Editor at https://discohook.app/.
 
 ## What NOT to do
@@ -77,7 +77,7 @@ The raw CHANGELOG lines are commit-message-shaped. Rewrite each one for a human 
 - Don't add an `image` field unless the user provides a screenshot URL — edit `template.json` to add it permanently if they want it on every release.
 - Don't add reactions or polls. (Link-button components in the template are fine and must be preserved through substitution — they only need `{{VERSION}}` and `{{BLOG_URL}}` substituted like the rest.)
 - Don't include `:::contributors:::` or other blog-specific markdown — that syntax breaks Discord rendering.
-- Don't translate to Italian unless the user explicitly asks; default is English (Tabularis Discord is international).
+- Don't translate to Italian unless the user explicitly asks; default is English (Mavicat Discord is international).
 
 ## Reference example
-`~/Progetti/tabularis/discohook-v0.10.3.json` is the canonical output. Compare against it if you're unsure about tone or shape.
+`~/Progetti/mavicat/discohook-v0.10.3.json` is the canonical output. Compare against it if you're unsure about tone or shape.

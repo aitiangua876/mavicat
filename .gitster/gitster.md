@@ -1,8 +1,8 @@
-# Tabularis
+# Mavicat
 
-## What is Tabularis?
+## What is Mavicat?
 
-Tabularis is a lightweight, developer-focused database client built with Tauri, Rust, and React. It delivers a fast, native desktop experience for connecting, exploring, querying, and managing databases — with no cloud, no sign-up, and no telemetry. Hackable through a plugin system, with notebooks, AI, and MCP built in.
+Mavicat is a lightweight, developer-focused database client built with Tauri, Rust, and React. It delivers a fast, native desktop experience for connecting, exploring, querying, and managing databases — with no cloud, no sign-up, and no telemetry. Hackable through a plugin system, with notebooks, AI, and MCP built in.
 
 ## Key Features
 
@@ -32,7 +32,7 @@ Tabularis is a lightweight, developer-focused database client built with Tauri, 
 - Mixed SQL + Markdown cells, inline results, and bar/line/pie charts
 - Cross-cell variables via `{{cellName.columnName}}` and global `{{$paramName}}` notebook parameters
 - Run All with stop-on-error, drag-and-drop reorder, AI-generated cell names
-- Auto-save as `.tabularis-notebook`; export to HTML, CSV, or JSON
+- Auto-save as `.mavicat-notebook`; export to HTML, CSV, or JSON
 
 ### 🎨 Visual Query Builder
 
@@ -72,7 +72,7 @@ Tabularis is a lightweight, developer-focused database client built with Tauri, 
 ### 🧠 MCP Server
 
 - Built-in **Model Context Protocol** server — expose schemas and run queries from Claude Desktop, Cursor, Windsurf, or any MCP agent
-- One-click setup wizard writes a ready-to-use config; also launchable via `tabularis --mcp`
+- One-click setup wizard writes a ready-to-use config; also launchable via `mavicat --mcp`
 
 ### 📦 SQL Dump, Import & Clipboard
 
@@ -87,7 +87,7 @@ Tabularis is a lightweight, developer-focused database client built with Tauri, 
 
 ### 📈 Task Manager
 
-- Real-time CPU, RAM, and disk usage for Tabularis and plugin processes
+- Real-time CPU, RAM, and disk usage for Mavicat and plugin processes
 - Child process tree inspection; force-kill or restart any plugin
 
 ### 🎨 Themes
@@ -127,14 +127,14 @@ Tabularis is a lightweight, developer-focused database client built with Tauri, 
 
 ## Available On
 
-- **macOS** — Universal Binary (Intel + Apple Silicon); Homebrew cask (`brew install --cask tabularis` after tapping `TabularisDB/tabularis`)
-- **Windows** — 64-bit installer; WinGet (`winget install Debba.Tabularis`)
-- **Linux** — AppImage, `.deb`, `.rpm`, Snap, AUR (`tabularis-bin`)
+- **macOS** — Universal Binary (Intel + Apple Silicon); Homebrew cask (`brew install --cask mavicat` after tapping `aitiangua876/mavicat`)
+- **Windows** — 64-bit installer; WinGet (`winget install Debba.Mavicat`)
+- **Linux** — AppImage, `.deb`, `.rpm`, Snap, AUR (`mavicat-bin`)
 
 ## Links
 
-- **Website:** [tabularis.dev](https://tabularis.dev)
-- **Download:** [GitHub Releases](https://github.com/TabularisDB/tabularis/releases)
-- **Wiki:** [tabularis.dev/wiki](https://tabularis.dev/wiki)
+- **Website:** [mavicat.kailingteck.com](https://mavicat.kailingteck.com)
+- **Download:** [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
+- **Wiki:** [mavicat.kailingteck.com/wiki](https://mavicat.kailingteck.com/wiki)
 - **Community:** [Discord Server](https://discord.com/invite/K2hmhfHRSt)
-- **Source Code:** [GitHub Repository](https://github.com/TabularisDB/tabularis)
+- **Source Code:** [GitHub Repository](https://github.com/aitiangua876/mavicat)

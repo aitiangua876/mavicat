@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 Questions / Help
-    url: https://github.com/TabularisDB/tabularis/discussions
+    url: https://github.com/aitiangua876/mavicat/discussions
     about: Ask a question or get help in our Discussions
   - name: 🚨 Security Issue
-    url: https://github.com/TabularisDB/tabularis/security/policy
+    url: https://github.com/aitiangua876/mavicat/security/policy
     about: Report a security vulnerability
   - name: 🌐 Website
-    url: https://tabularis.dev
+    url: https://mavicat.kailingteck.com
     about: Visit our website for more information

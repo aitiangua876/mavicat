@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "title": "Tabularis Notebook — Full Feature Showcase",
+  "title": "Mavicat Notebook — Full Feature Showcase",
   "createdAt": "2026-04-02T12:00:00.000Z",
   "cells": [
     {
       "type": "markdown",
-      "content": "# Tabularis Notebook — Full Feature Showcase\n\nWelcome! This notebook demonstrates **every major feature** of Tabularis Notebooks using a sample e-commerce analytics database.\n\n> **Setup:** From the `demo/` folder run `docker compose up -d` to spin up MySQL, PostgreSQL, and SQL Server pre-loaded with the `tabularis_demo` schema. Then import `demo/connections.json` into Tabularis and pick **Demo · MySQL** → `tabularis_demo`.\n>\n> **Quick Start:** Press `Ctrl+Shift+Enter` (or `Cmd+Shift+Enter` on Mac) to run all SQL cells at once."
+      "content": "# Mavicat Notebook — Full Feature Showcase\n\nWelcome! This notebook demonstrates **every major feature** of Mavicat Notebooks using a sample e-commerce analytics database.\n\n> **Setup:** From the `demo/` folder run `docker compose up -d` to spin up MySQL, PostgreSQL, and SQL Server pre-loaded with the `mavicat_demo` schema. Then import `demo/connections.json` into Mavicat and pick **Demo · MySQL** → `mavicat_demo`.\n>\n> **Quick Start:** Press `Ctrl+Shift+Enter` (or `Cmd+Shift+Enter` on Mac) to run all SQL cells at once."
     },
     {
       "type": "markdown",
@@ -106,7 +106,7 @@
     },
     {
       "type": "markdown",
-      "content": "---\n\n## 10. HTML Export\n\nClick the **\"HTML\"** button in the toolbar to export this entire notebook (with results!) as a self-contained HTML file.\n\nThe exported file includes:\n- Dark-themed styling\n- Rendered markdown\n- SQL code blocks\n- Result tables with all data\n- Error messages\n\nPerfect for sharing analysis with colleagues who don't have Tabularis!"
+      "content": "---\n\n## 10. HTML Export\n\nClick the **\"HTML\"** button in the toolbar to export this entire notebook (with results!) as a self-contained HTML file.\n\nThe exported file includes:\n- Dark-themed styling\n- Rendered markdown\n- SQL code blocks\n- Result tables with all data\n- Error messages\n\nPerfect for sharing analysis with colleagues who don't have Mavicat!"
     },
     {
       "type": "markdown",
@@ -132,7 +132,7 @@
     },
     {
       "type": "markdown",
-      "content": "---\n\n*This notebook was generated to showcase all Tabularis Notebook features. Edit the queries, try the parameters, toggle charts, drag cells around, and explore!*\n\n**Feature Summary:**\n- Resizable result panels with CSV/JSON export\n- Bar, Line, Pie charts with multi-column support\n- Cell variable references (`{{cell_N}}`)\n- Notebook parameters (`@param_name`)\n- Stop on Error with execution summary\n- Drag & Drop cell reordering\n- Parallel cell execution\n- Execution history with restore\n- Collapsible sections\n- HTML export"
+      "content": "---\n\n*This notebook was generated to showcase all Mavicat Notebook features. Edit the queries, try the parameters, toggle charts, drag cells around, and explore!*\n\n**Feature Summary:**\n- Resizable result panels with CSV/JSON export\n- Bar, Line, Pie charts with multi-column support\n- Cell variable references (`{{cell_N}}`)\n- Notebook parameters (`@param_name`)\n- Stop on Error with execution summary\n- Drag & Drop cell reordering\n- Parallel cell execution\n- Execution history with restore\n- Collapsible sections\n- HTML export"
     }
   ]
 }

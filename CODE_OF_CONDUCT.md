@@ -1,4 +1,4 @@
-# Code of Conduct - tabularis
+# Code of Conduct - mavicat
 
 ## Our Pledge
 

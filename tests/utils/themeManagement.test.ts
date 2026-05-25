@@ -75,10 +75,10 @@ describe('themeManagement', () => {
 
   describe('DEFAULT_THEME_SETTINGS', () => {
     it('should have correct default values', () => {
-      expect(DEFAULT_THEME_SETTINGS.activeThemeId).toBe('tabularis-dark');
+      expect(DEFAULT_THEME_SETTINGS.activeThemeId).toBe('mavicat-dark');
       expect(DEFAULT_THEME_SETTINGS.followSystemTheme).toBe(false);
-      expect(DEFAULT_THEME_SETTINGS.lightThemeId).toBe('tabularis-light');
-      expect(DEFAULT_THEME_SETTINGS.darkThemeId).toBe('tabularis-dark');
+      expect(DEFAULT_THEME_SETTINGS.lightThemeId).toBe('mavicat-light');
+      expect(DEFAULT_THEME_SETTINGS.darkThemeId).toBe('mavicat-dark');
       expect(DEFAULT_THEME_SETTINGS.customThemes).toEqual([]);
     });
   });
@@ -231,10 +231,10 @@ describe('themeManagement', () => {
 
   describe('migrateThemeFromLocalStorage', () => {
     it('should not migrate when backend has theme', () => {
-      const result: ThemeMigrationResult = migrateThemeFromLocalStorage('tabularis-dark');
+      const result: ThemeMigrationResult = migrateThemeFromLocalStorage('mavicat-dark');
       
       expect(result.migrated).toBe(false);
-      expect(result.themeId).toBe('tabularis-dark');
+      expect(result.themeId).toBe('mavicat-dark');
     });
 
     it('should migrate from localStorage when backend is empty', () => {
@@ -297,24 +297,24 @@ describe('themeManagement', () => {
   });
 
   describe('getDefaultThemeIdForSystem', () => {
-    it('should return tabularis-dark for dark mode', () => {
+    it('should return mavicat-dark for dark mode', () => {
       vi.stubGlobal('window', {
         matchMedia: vi.fn().mockReturnValue({ matches: true }),
       });
       
       const result = getDefaultThemeIdForSystem();
       
-      expect(result).toBe('tabularis-dark');
+      expect(result).toBe('mavicat-dark');
     });
 
-    it('should return tabularis-light for light mode', () => {
+    it('should return mavicat-light for light mode', () => {
       vi.stubGlobal('window', {
         matchMedia: vi.fn().mockReturnValue({ matches: false }),
       });
       
       const result = getDefaultThemeIdForSystem();
       
-      expect(result).toBe('tabularis-light');
+      expect(result).toBe('mavicat-light');
     });
   });
 
@@ -445,11 +445,11 @@ describe('themeManagement', () => {
 
   describe('isActiveTheme', () => {
     it('should return true when theme is active', () => {
-      expect(isActiveTheme('tabularis-dark', 'tabularis-dark')).toBe(true);
+      expect(isActiveTheme('mavicat-dark', 'mavicat-dark')).toBe(true);
     });
 
     it('should return false when theme is not active', () => {
-      expect(isActiveTheme('tabularis-dark', 'tabularis-light')).toBe(false);
+      expect(isActiveTheme('mavicat-dark', 'mavicat-light')).toBe(false);
     });
   });
 

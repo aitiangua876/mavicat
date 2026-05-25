@@ -1,13 +1,13 @@
 -- =============================================================
--- Tabularis Demo — JSON / JSONB showcase (PostgreSQL 16)
--- Database: tabularis_demo
+-- Mavicat Demo — JSON / JSONB showcase (PostgreSQL 16)
+-- Database: mavicat_demo
 -- Purpose: exercise the JSON cell viewer & editor:
 --   * payload   → native JSONB column (always shows JSON UI)
 --   * notes_text → TEXT column with JSON-shaped strings, for
 --                 testing the "detect JSON in text columns" opt-in
 -- =============================================================
 
-\c tabularis_demo
+\c mavicat_demo
 
 DROP TABLE IF EXISTS json_demo;
 CREATE TABLE json_demo (

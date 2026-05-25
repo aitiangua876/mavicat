@@ -22,7 +22,7 @@ struct InstalledPluginManifest {
 }
 
 pub fn get_plugins_dir() -> Result<PathBuf, String> {
-    let proj_dirs = ProjectDirs::from("com", "debba", "tabularis")
+    let proj_dirs = ProjectDirs::from("com", "debba", "mavicat")
         .ok_or_else(|| "Could not determine project directories".to_string())?;
     let plugins_dir = proj_dirs.data_dir().join("plugins");
     if !plugins_dir.exists() {

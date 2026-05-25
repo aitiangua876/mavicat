@@ -1,14 +1,14 @@
-name: tabularis
+name: mavicat
 base: core24
 version: "0.0.0"
 summary: Open-source database client with AI, notebooks, and plugins
-website: https://tabularis.dev
-issues: https://github.com/TabularisDB/tabularis/issues
-source-code: https://github.com/TabularisDB/tabularis
-title: Tabularis
+website: https://mavicat.kailingteck.com
+issues: https://github.com/aitiangua876/mavicat/issues
+source-code: https://github.com/aitiangua876/mavicat
+title: Mavicat
 contact: andrea@debbaweb.it
 description: |
-  Tabularis is a free, open-source desktop database client for PostgreSQL,
+  Mavicat is a free, open-source desktop database client for PostgreSQL,
   MySQL/MariaDB, and SQLite. Built with Rust (Tauri v2) and React, it is
   fast, lightweight, and designed for everyday SQL work.
 
@@ -34,8 +34,8 @@ description: |
   10+ themes, customizable keyboard shortcuts, and multi-language support
   (EN, IT, ES, ZH, FR, DE).
 
-  Website: https://tabularis.dev
-  Source: https://github.com/TabularisDB/tabularis
+  Website: https://mavicat.kailingteck.com
+  Source: https://github.com/aitiangua876/mavicat
 
 grade: stable
 confinement: strict
@@ -46,17 +46,17 @@ platforms:
     build-for: [amd64]
 
 parts:
-  tabularis:
+  mavicat:
     plugin: dump
-    source: tabularis.deb
+    source: mavicat.deb
     source-type: deb
     stage-packages:
       - libwebkit2gtk-4.1-0
       - libayatana-appindicator3-1
 
 apps:
-  tabularis:
-    command: usr/bin/tabularis
+  mavicat:
+    command: usr/bin/mavicat
     extensions: [gnome]
     environment:
       WEBKIT_DISABLE_DMABUF_RENDERER: "1" # disable DMABuf in WebKit

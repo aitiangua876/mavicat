@@ -99,7 +99,7 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          $src = "src-tauri\target\release\tabularis.exe"
-          $portable = "tabularis_${version}_x64-portable.exe"
+          $src = "src-tauri\target\release\mavicat.exe"
+          $portable = "mavicat_${version}_x64-portable.exe"
           Copy-Item $src $portable
           gh release upload "${{ github.ref_name }}" $portable --clobber

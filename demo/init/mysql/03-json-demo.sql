@@ -1,6 +1,6 @@
 -- =============================================================
--- Tabularis Demo — JSON showcase (MySQL 8)
--- Database: tabularis_demo
+-- Mavicat Demo — JSON showcase (MySQL 8)
+-- Database: mavicat_demo
 -- Purpose: exercise the JSON cell viewer & editor:
 --   * payload    → native JSON column (always shows JSON UI)
 --   * notes_text → TEXT column with JSON-shaped strings, for
@@ -9,7 +9,7 @@
 
 SET NAMES utf8mb4;
 
-USE tabularis_demo;
+USE mavicat_demo;
 
 DROP TABLE IF EXISTS json_demo;
 CREATE TABLE json_demo (

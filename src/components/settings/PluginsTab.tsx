@@ -1102,7 +1102,7 @@ export function PluginsTab({
                   const isSelectedInstalled =
                     plugin.installed_version === selectedVer;
                   const minVersion =
-                    selectedRelease?.min_tabularis_version ?? null;
+                    selectedRelease?.min_mavicat_version ?? null;
                   const isCompatible =
                     !minVersion || versionGte(APP_VERSION, minVersion);
                   const isUpdate =

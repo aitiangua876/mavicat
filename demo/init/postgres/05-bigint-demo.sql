@@ -1,6 +1,6 @@
 -- =============================================================
--- Tabularis Demo — BIGINT precision showcase (PostgreSQL 16)
--- Database: tabularis_demo
+-- Mavicat Demo — BIGINT precision showcase (PostgreSQL 16)
+-- Database: mavicat_demo
 -- Purpose: exercise the JS-safe-integer fix for issue #210.
 --   JavaScript loses precision for integers outside ±(2^53 - 1).
 --   Values above that boundary must arrive in the UI as strings
@@ -10,7 +10,7 @@
 --   backed by 64-bit integers and share the same precision risk.
 -- =============================================================
 
-\c tabularis_demo
+\c mavicat_demo
 
 DROP TABLE IF EXISTS bigint_demo;
 CREATE TABLE bigint_demo (

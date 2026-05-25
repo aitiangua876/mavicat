@@ -54,8 +54,8 @@ readme = readme.replace(
 );
 
 readme = readme.replace(
-  /tabularis_\d+\.\d+\.\d+_/g,
-  `tabularis_${packageVersion}_`,
+  /mavicat_\d+\.\d+\.\d+_/g,
+  `mavicat_${packageVersion}_`,
 );
 
 writeFileSync(paths.readme, readme);

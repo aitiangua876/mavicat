@@ -174,7 +174,7 @@ describe("defaultExportFilename", () => {
       cells: [],
     };
     expect(defaultExportFilename("abcdef1234567890", exp)).toBe(
-      "ai-session-2026-04-24-abcdef12.tabularis-notebook",
+      "ai-session-2026-04-24-abcdef12.mavicat-notebook",
     );
   });
 });

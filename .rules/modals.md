@@ -1,6 +1,6 @@
 # Modal Styling Rules
 
-This document defines the standard styling and structural patterns for all modal components in Tabularis.
+This document defines the standard styling and structural patterns for all modal components in Mavicat.
 
 ## File Location
 

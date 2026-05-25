@@ -18,14 +18,14 @@ export interface ProcessInfo {
   children: ChildProcessInfo[];
 }
 
-export interface TabularisChildProcess {
+export interface MavicatChildProcess {
   pid: number;
   name: string;
   cpu_percent: number;
   memory_bytes: number;
 }
 
-export interface TabularisSelfStats {
+export interface MavicatSelfStats {
   pid: number;
   cpu_percent: number;
   self_memory_bytes: number;
@@ -33,7 +33,7 @@ export interface TabularisSelfStats {
   disk_read_bytes: number;
   disk_write_bytes: number;
   child_count: number;
-  // children are fetched on-demand via get_tabularis_children
+  // children are fetched on-demand via get_mavicat_children
 }
 
 export interface SystemStats {
@@ -43,7 +43,7 @@ export interface SystemStats {
   disk_read_bytes: number;
   disk_write_bytes: number;
   process_count: number;
-  tabularis: TabularisSelfStats | null;
+  mavicat: MavicatSelfStats | null;
 }
 
 export type ProcessSortKey = keyof Pick<

@@ -1,5 +1,5 @@
 -- =============================================================
--- Tabularis Demo — Web analytics (PostgreSQL 16)
+-- Mavicat Demo — Web analytics (PostgreSQL 16)
 -- Database: analytics_demo
 -- Domain: Sessions, page views, custom events (JSONB properties)
 -- =============================================================

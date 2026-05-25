@@ -1,6 +1,6 @@
 # Testing Conventions
 
-This document defines the testing conventions and directory structure for the Tabularis project.
+This document defines the testing conventions and directory structure for the Mavicat project.
 
 ## Directory Structure
 

@@ -76,7 +76,7 @@ export interface UIExtensionManifestEntry {
 
 export interface RegistryReleaseWithStatus {
   version: string;
-  min_tabularis_version: string | null;
+  min_mavicat_version: string | null;
   platform_supported: boolean;
 }
 

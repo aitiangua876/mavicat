@@ -1,0 +1,7 @@
+interface:
+  display_name: "Mavicat Plugin Driver"
+  short_description: "Create Rust database plugins for Mavicat."
+  default_prompt: "Use $mavicat-plugin-driver to create or update a Rust Mavicat database plugin with a modern manifest, modular handlers, tests, and validation."
+
+policy:
+  allow_implicit_invocation: true

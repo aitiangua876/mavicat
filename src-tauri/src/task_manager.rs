@@ -53,7 +53,7 @@ pub struct ProcessInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TabularisChildProcess {
+pub struct MavicatChildProcess {
     pub pid: u32,
     pub name: String,
     pub cpu_percent: f32,
@@ -61,9 +61,9 @@ pub struct TabularisChildProcess {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TabularisSelfStats {
+pub struct MavicatSelfStats {
     pub pid: u32,
-    /// RSS of the main tabularis process only (bytes).
+    /// RSS of the main mavicat process only (bytes).
     pub self_memory_bytes: u64,
     /// RSS sum across the whole process tree (main + all children, bytes).
     pub total_memory_bytes: u64,
@@ -71,7 +71,7 @@ pub struct TabularisSelfStats {
     pub disk_read_bytes: u64,
     pub disk_write_bytes: u64,
     pub child_count: usize,
-    // children are fetched on-demand via get_tabularis_children, not on every poll
+    // children are fetched on-demand via get_mavicat_children, not on every poll
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -82,7 +82,7 @@ pub struct SystemStats {
     pub disk_read_bytes: u64,
     pub disk_write_bytes: u64,
     pub process_count: usize,
-    pub tabularis: Option<TabularisSelfStats>,
+    pub mavicat: Option<MavicatSelfStats>,
 }
 
 // ---------------------------------------------------------------------------
@@ -192,8 +192,8 @@ fn refresh_and_collect_system_stats() -> SystemStats {
         (read, write)
     };
 
-    // Tabularis self stats.
-    let tabularis = get_current_pid().ok().map(|self_pid| {
+    // Mavicat self stats.
+    let mavicat = get_current_pid().ok().map(|self_pid| {
         // Collect descendants recursively.
         let mut descendants: HashSet<Pid> = HashSet::new();
         let mut queue = vec![self_pid];
@@ -230,7 +230,7 @@ fn refresh_and_collect_system_stats() -> SystemStats {
             }
         }
 
-        TabularisSelfStats {
+        MavicatSelfStats {
             pid: self_pid.as_u32(),
             self_memory_bytes,
             total_memory_bytes: total_mem,
@@ -248,11 +248,11 @@ fn refresh_and_collect_system_stats() -> SystemStats {
         disk_read_bytes,
         disk_write_bytes,
         process_count,
-        tabularis,
+        mavicat,
     }
 }
 
-fn collect_tabularis_children() -> Vec<TabularisChildProcess> {
+fn collect_mavicat_children() -> Vec<MavicatChildProcess> {
     let mut sys = SYSTEM.lock().expect("system mutex poisoned");
     sys.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -276,10 +276,10 @@ fn collect_tabularis_children() -> Vec<TabularisChildProcess> {
         }
     }
 
-    let mut children: Vec<TabularisChildProcess> = descendants
+    let mut children: Vec<MavicatChildProcess> = descendants
         .iter()
         .filter_map(|pid| {
-            sys.process(*pid).map(|proc| TabularisChildProcess {
+            sys.process(*pid).map(|proc| MavicatChildProcess {
                 pid: pid.as_u32(),
                 name: proc.name().to_string_lossy().to_string(),
                 cpu_percent: proc.cpu_usage(),
@@ -322,10 +322,10 @@ pub async fn get_system_stats() -> Result<SystemStats, String> {
 }
 
 #[tauri::command]
-pub async fn get_tabularis_children() -> Result<Vec<TabularisChildProcess>, String> {
-    tokio::task::spawn_blocking(collect_tabularis_children)
+pub async fn get_mavicat_children() -> Result<Vec<MavicatChildProcess>, String> {
+    tokio::task::spawn_blocking(collect_mavicat_children)
         .await
-        .map_err(|e| format!("Failed to collect tabularis children: {}", e))
+        .map_err(|e| format!("Failed to collect mavicat children: {}", e))
 }
 
 #[tauri::command]

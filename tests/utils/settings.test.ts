@@ -565,7 +565,7 @@ describe('settings', () => {
         editorWordWrap: false,
         editorShowLineNumbers: false,
         editorLineHeight: 1.8,
-        editorTheme: 'tabularis-light',
+        editorTheme: 'mavicat-light',
       };
 
       const result = mergeSettings(defaults, backendConfig, {}, false);
@@ -576,7 +576,7 @@ describe('settings', () => {
       expect(result.editorWordWrap).toBe(false);
       expect(result.editorShowLineNumbers).toBe(false);
       expect(result.editorLineHeight).toBe(1.8);
-      expect(result.editorTheme).toBe('tabularis-light');
+      expect(result.editorTheme).toBe('mavicat-light');
     });
 
     it('should fall back to defaults when editor fields are absent from backend', () => {

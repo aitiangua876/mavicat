@@ -1,14 +1,14 @@
 import type { Theme, ThemeSettings } from '../types/theme';
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  activeThemeId: 'tabularis-dark',
+  activeThemeId: 'mavicat-dark',
   followSystemTheme: false,
-  lightThemeId: 'tabularis-light',
-  darkThemeId: 'tabularis-dark',
+  lightThemeId: 'mavicat-light',
+  darkThemeId: 'mavicat-dark',
   customThemes: [],
 };
 
-export const OLD_THEME_SETTINGS_KEY = 'tabularis_theme_settings';
+export const OLD_THEME_SETTINGS_KEY = 'mavicat_theme_settings';
 
 export interface ThemeMigrationResult {
   themeId: string | null;
@@ -126,7 +126,7 @@ export function detectSystemTheme(): 'dark' | 'light' {
 }
 
 export function getDefaultThemeIdForSystem(): string {
-  return detectSystemTheme() === 'dark' ? 'tabularis-dark' : 'tabularis-light';
+  return detectSystemTheme() === 'dark' ? 'mavicat-dark' : 'mavicat-light';
 }
 
 export function findThemeById(

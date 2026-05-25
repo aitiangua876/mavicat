@@ -121,7 +121,7 @@ pub const DEFAULT_MCP_PREFLIGHT_EXPLAIN: bool = true;
 
 /// Load `config.json` directly from disk without an `AppHandle`.
 ///
-/// Used by the standalone MCP subprocess (`tabularis --mcp`) which has no
+/// Used by the standalone MCP subprocess (`mavicat --mcp`) which has no
 /// Tauri runtime. Falls back to `AppConfig::default()` when missing or
 /// unreadable.
 pub fn load_config_from_disk() -> AppConfig {
@@ -746,7 +746,7 @@ mod tests {
         config.editor_tab_size = Some(4);
         config.editor_word_wrap = Some(false);
         config.editor_show_line_numbers = Some(true);
-        config.editor_theme = Some("tabularis-light".to_string());
+        config.editor_theme = Some("mavicat-light".to_string());
         config.editor_accept_suggestion_on_enter = Some(true);
 
         let json = serde_json::to_string(&config).unwrap();
@@ -772,7 +772,7 @@ mod tests {
             "editorTabSize": 2,
             "editorWordWrap": true,
             "editorShowLineNumbers": true,
-            "editorTheme": "tabularis-dark",
+            "editorTheme": "mavicat-dark",
             "editorAcceptSuggestionOnEnter": true
         }"#;
 
@@ -782,7 +782,7 @@ mod tests {
         assert_eq!(config.editor_tab_size, Some(2));
         assert_eq!(config.editor_word_wrap, Some(true));
         assert_eq!(config.editor_show_line_numbers, Some(true));
-        assert_eq!(config.editor_theme.as_deref(), Some("tabularis-dark"));
+        assert_eq!(config.editor_theme.as_deref(), Some("mavicat-dark"));
         assert_eq!(config.editor_accept_suggestion_on_enter, Some(true));
     }
 

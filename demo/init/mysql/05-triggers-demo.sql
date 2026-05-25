@@ -1,6 +1,6 @@
 -- =============================================================
--- Tabularis Demo — Trigger showcase (MySQL 8)
--- Database: tabularis_demo
+-- Mavicat Demo — Trigger showcase (MySQL 8)
+-- Database: mavicat_demo
 -- Purpose: exercise the v0.11.0 trigger manager:
 --   * sidebar Triggers accordion with all event/timing badges
 --     (BEFORE/AFTER × INSERT/UPDATE/DELETE)
@@ -8,12 +8,12 @@
 --   * View Definition / Edit / Drop context-menu flow
 --
 -- Triggers are dropped before recreate so the script is idempotent
--- and safe to re-run against an existing tabularis_demo database.
+-- and safe to re-run against an existing mavicat_demo database.
 -- =============================================================
 
 SET NAMES utf8mb4;
 
-USE tabularis_demo;
+USE mavicat_demo;
 
 -- -------------------------------------------------------------
 -- Audit log: target table for the AFTER UPDATE / AFTER INSERT

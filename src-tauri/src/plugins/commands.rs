@@ -39,7 +39,7 @@ pub async fn fetch_plugin_registry(
                         r.assets.contains_key(&platform) || r.assets.contains_key("universal");
                     RegistryReleaseWithStatus {
                         version: r.version.clone(),
-                        min_tabularis_version: r.min_tabularis_version.clone(),
+                        min_mavicat_version: r.min_mavicat_version.clone(),
                         platform_supported,
                     }
                 })

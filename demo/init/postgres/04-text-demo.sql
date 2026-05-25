@@ -1,13 +1,13 @@
 -- =============================================================
--- Tabularis Demo — Long text showcase (PostgreSQL 16)
--- Database: tabularis_demo
+-- Mavicat Demo — Long text showcase (PostgreSQL 16)
+-- Database: mavicat_demo
 -- Purpose: exercise the long-text chevron + Monaco diff editor
 --   (see issue #207). Each row targets a specific edge case:
 --   short, long single-line, multi-line, markdown, code,
 --   varchar-over-threshold, NULLs, unicode.
 -- =============================================================
 
-\c tabularis_demo
+\c mavicat_demo
 
 DROP TABLE IF EXISTS text_demo;
 CREATE TABLE text_demo (

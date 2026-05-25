@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, type RefObject } from 'react';
 
-const STORAGE_KEY = 'tabularis_split_pane_ratio';
+const STORAGE_KEY = 'mavicat_split_pane_ratio';
 const DEFAULT_RATIO = 50;
 const MIN_RATIO = 15;
 const MAX_RATIO = 85;

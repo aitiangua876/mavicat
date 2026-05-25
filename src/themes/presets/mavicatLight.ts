@@ -1,8 +1,8 @@
 import type { Theme } from '../../types/theme';
 
-export const tabularisLight: Theme = {
-  id: 'tabularis-light',
-  name: 'Tabularis Light',
+export const mavicatLight: Theme = {
+  id: 'mavicat-light',
+  name: 'Mavicat Light',
   isPreset: true,
   isReadOnly: true,
   colors: {

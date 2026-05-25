@@ -90,7 +90,7 @@ export function LogsTab() {
     try {
       const filePath = await save({
         filters: [{ name: "Log Files", extensions: ["log"] }],
-        defaultPath: `tabularis_logs_${new Date().toISOString().split("T")[0]}.log`,
+        defaultPath: `mavicat_logs_${new Date().toISOString().split("T")[0]}.log`,
       });
       if (!filePath) return;
       await invoke("export_logs", { filePath });

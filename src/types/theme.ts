@@ -128,9 +128,9 @@ export interface ThemeSettings {
 }
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  activeThemeId: 'tabularis-dark',
+  activeThemeId: 'mavicat-dark',
   followSystemTheme: false,
-  lightThemeId: 'tabularis-light',
-  darkThemeId: 'tabularis-dark',
+  lightThemeId: 'mavicat-light',
+  darkThemeId: 'mavicat-dark',
   customThemes: [],
 };

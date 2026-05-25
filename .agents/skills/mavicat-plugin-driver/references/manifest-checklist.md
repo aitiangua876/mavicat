@@ -1,6 +1,6 @@
 # Manifest Checklist
 
-Use this checklist when authoring `manifest.json` for a Tabularis database plugin.
+Use this checklist when authoring `manifest.json` for a Mavicat database plugin.
 
 ## Required Core Fields
 
@@ -28,7 +28,7 @@ For driver plugins, also include:
 
 Set these deliberately:
 
-- `schemas`: true only if the database exposes multiple named schemas/namespaces in Tabularis terms
+- `schemas`: true only if the database exposes multiple named schemas/namespaces in Mavicat terms
 - `views`: true only if view listing and definition retrieval are implemented
 - `routines`: true only if routines can be listed and inspected
 - `file_based`: true only for file-backed databases

@@ -26,13 +26,13 @@ export function useGlobalShortcuts() {
 
       if (matchesShortcut(e, "toggle_sidebar")) {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent("tabularis:toggle-sidebar"));
+        window.dispatchEvent(new CustomEvent("mavicat:toggle-sidebar"));
         return;
       }
 
       if (matchesShortcut(e, "paste_import_clipboard")) {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent("tabularis:paste-import"));
+        window.dispatchEvent(new CustomEvent("mavicat:paste-import"));
         return;
       }
 

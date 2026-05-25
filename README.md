@@ -5,14 +5,14 @@
 
 **A fast, open-source desktop database workspace for people who live in SQL.**
 
-[Website](https://mavicat.kailingteck.com/) · [Releases](https://github.com/chenlong/Mavicat/releases) · [Issues](https://github.com/chenlong/Mavicat/issues) · [Contributing](./CONTRIBUTING.md)
+[Website](https://mavicat.kailingteck.com/) · [Releases](https://github.com/aitiangua876/mavicat/releases) · [Issues](https://github.com/aitiangua876/mavicat/issues) · [Contributing](./CONTRIBUTING.md)
 
 [![Website](https://img.shields.io/badge/Website-mavicat.kailingteck.com-22c55e)](https://mavicat.kailingteck.com/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/)
-[![Stars](https://img.shields.io/github/stars/chenlong/Mavicat?style=social)](https://github.com/chenlong/Mavicat/stargazers)
+[![Stars](https://img.shields.io/github/stars/aitiangua876/mavicat?style=social)](https://github.com/aitiangua876/mavicat/stargazers)
 
 <p>
   <strong>README:</strong>
@@ -115,7 +115,9 @@ The main workspace keeps the connection tree, SQL editor, result grid, toolbar a
 Get the latest builds from:
 
 - [Official website](https://mavicat.kailingteck.com/)
-- [GitHub Releases](https://github.com/chenlong/Mavicat/releases)
+- [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
+- [Download for macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
+- [Download for Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
 
 Mavicat targets macOS, Windows, and Linux through the Tauri bundler. Release artifacts may vary by milestone.
 
@@ -180,6 +182,10 @@ Core stack:
 ## Contributing
 
 Issues, bug reports, UI feedback, database-specific edge cases, translations, and pull requests are welcome. If you are not sure where to start, open an issue with your database type, operating system, and the workflow you want Mavicat to improve.
+
+## Acknowledgements
+
+Thanks to the open-source [Tabularis](https://github.com/TabularisDB/tabularis) project for its earlier work and inspiration.
 
 ## License
 

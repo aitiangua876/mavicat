@@ -20,7 +20,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         const config = await invoke<Partial<Settings>>("get_config");
 
         // Migration logic: Check localStorage if backend is empty/default
-        const savedLocal = localStorage.getItem("tabularis_settings");
+        const savedLocal = localStorage.getItem("mavicat_settings");
         let finalSettings = { ...DEFAULT_SETTINGS };
 
         if (savedLocal && !config.resultPageSize && !config.language) {
@@ -153,7 +153,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     // Cache for next startup
     try {
       localStorage.setItem(
-        "tabularis_font_cache",
+        "mavicat_font_cache",
         JSON.stringify({
           fontFamily: settings.fontFamily,
           fontSize: settings.fontSize,
@@ -193,7 +193,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       if (key === "fontFamily" || key === "fontSize") {
         try {
           localStorage.setItem(
-            "tabularis_font_cache",
+            "mavicat_font_cache",
             JSON.stringify({
               fontFamily: newSettings.fontFamily,
               fontSize: newSettings.fontSize,

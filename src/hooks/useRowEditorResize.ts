@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const MIN_WIDTH = 320;
 const DEFAULT_WIDTH = 384;
-const STORAGE_KEY = "tabularis_row_editor_sidebar_width";
+const STORAGE_KEY = "mavicat_row_editor_sidebar_width";
 
 const computeMaxWidth = () =>
   typeof window === "undefined"

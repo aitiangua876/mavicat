@@ -4,7 +4,7 @@ const MIN_WIDTH = 150;
 const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 256;
 const COLLAPSE_THRESHOLD = 100;
-const STORAGE_KEY = "tabularis_sidebar_width";
+const STORAGE_KEY = "mavicat_sidebar_width";
 
 export const useSidebarResize = (onCollapse?: () => void) => {
   const [sidebarWidth, setSidebarWidth] = useState(() => {

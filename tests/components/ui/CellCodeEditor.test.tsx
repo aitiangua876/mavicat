@@ -107,11 +107,11 @@ describe("CellCodeEditor", () => {
 
   it("uses currentTheme.id when ThemeContext provides one", () => {
     render(<CellCodeEditor value="" onChange={vi.fn()} />, {
-      wrapper: withTheme(makeTheme("tabularis-dark")),
+      wrapper: withTheme(makeTheme("mavicat-dark")),
     });
 
     expect(screen.getByTestId("monaco-editor").getAttribute("data-theme")).toBe(
-      "tabularis-dark",
+      "mavicat-dark",
     );
   });
 

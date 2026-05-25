@@ -28,8 +28,8 @@ jobs:
 
       - name: Download .deb Artifact
         run: |
-          wget "https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/tabularis_${{ steps.version.outputs.version }}_amd64.deb" \
-            -O tabularis.deb
+          wget "https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/mavicat_${{ steps.version.outputs.version }}_amd64.deb" \
+            -O mavicat.deb
 
       - name: Set version in snapcraft.yaml
         run: |

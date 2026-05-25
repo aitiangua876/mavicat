@@ -106,8 +106,8 @@ const createMockTheme = (id: string, name: string): Theme => ({
   },
 });
 
-const mockDarkTheme = createMockTheme("tabularis-dark", "Tabularis Dark");
-const mockLightTheme = createMockTheme("tabularis-light", "Tabularis Light");
+const mockDarkTheme = createMockTheme("mavicat-dark", "Mavicat Desktop Dark");
+const mockLightTheme = createMockTheme("mavicat-light", "Mavicat Light");
 
 vi.mock("../../src/themes/themeRegistry", () => ({
   themeRegistry: {
@@ -172,14 +172,14 @@ describe("ThemeProvider", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.currentTheme.id).toMatch(/tabularis-(dark|light)/);
+    expect(result.current.currentTheme.id).toMatch(/mavicat-(dark|light)/);
     expect(result.current.currentTheme.isPreset).toBe(true);
   });
 
   it("should load theme from backend config", async () => {
     vi.mocked(invoke).mockImplementation((cmd: string) => {
       if (cmd === "get_config") {
-        return Promise.resolve({ theme: "tabularis-dark" });
+        return Promise.resolve({ theme: "mavicat-dark" });
       }
       if (cmd === "save_config") {
         return Promise.resolve(undefined);
@@ -199,16 +199,16 @@ describe("ThemeProvider", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.currentTheme.id).toBe("tabularis-dark");
+    expect(result.current.currentTheme.id).toBe("mavicat-dark");
   });
 
   it("should migrate theme from localStorage to backend", async () => {
     const oldLocalSettings = {
-      activeThemeId: "tabularis-dark",
+      activeThemeId: "mavicat-dark",
     };
 
     localStorage.setItem(
-      "tabularis_theme_settings",
+      "mavicat_theme_settings",
       JSON.stringify(oldLocalSettings),
     );
 
@@ -241,13 +241,13 @@ describe("ThemeProvider", () => {
       expect(invoke).toHaveBeenCalledWith(
         "save_config",
         expect.objectContaining({
-          config: expect.objectContaining({ theme: "tabularis-dark" }),
+          config: expect.objectContaining({ theme: "mavicat-dark" }),
         }),
       );
     });
 
     // Check that old localStorage was removed
-    expect(localStorage.getItem("tabularis_theme_settings")).toBeNull();
+    expect(localStorage.getItem("mavicat_theme_settings")).toBeNull();
   });
 
   it("should detect theme from system preferences if not set", async () => {
@@ -267,7 +267,7 @@ describe("ThemeProvider", () => {
         return Promise.resolve({});
       }
       if (cmd === "save_config") {
-        expect(args?.config).toHaveProperty("theme", "tabularis-dark");
+        expect(args?.config).toHaveProperty("theme", "mavicat-dark");
         return Promise.resolve(undefined);
       }
       if (cmd === "get_all_themes") {
@@ -285,7 +285,7 @@ describe("ThemeProvider", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.currentTheme.id).toBe("tabularis-dark");
+    expect(result.current.currentTheme.id).toBe("mavicat-dark");
   });
 
   it("should load custom themes from backend", async () => {
@@ -342,11 +342,11 @@ describe("ThemeProvider", () => {
     });
 
     await act(async () => {
-      await result.current.setTheme("tabularis-dark");
+      await result.current.setTheme("mavicat-dark");
     });
 
-    expect(result.current.currentTheme.id).toBe("tabularis-dark");
-    expect(result.current.settings.activeThemeId).toBe("tabularis-dark");
+    expect(result.current.currentTheme.id).toBe("mavicat-dark");
+    expect(result.current.settings.activeThemeId).toBe("mavicat-dark");
   });
 
   it("should create custom theme", async () => {
@@ -363,7 +363,7 @@ describe("ThemeProvider", () => {
 
     await act(async () => {
       createdTheme = await result.current.createCustomTheme(
-        "tabularis-dark",
+        "mavicat-dark",
         "My New Theme",
       );
     });
@@ -509,7 +509,7 @@ describe("ThemeProvider", () => {
     });
 
     await expect(
-      result.current.deleteCustomTheme("tabularis-dark"),
+      result.current.deleteCustomTheme("mavicat-dark"),
     ).rejects.toThrow("Cannot delete preset themes");
   });
 
@@ -527,7 +527,7 @@ describe("ThemeProvider", () => {
 
     await act(async () => {
       duplicatedTheme = await result.current.duplicateTheme(
-        "tabularis-dark",
+        "mavicat-dark",
         "Duplicated Theme",
       );
     });
@@ -586,20 +586,20 @@ describe("ThemeProvider", () => {
     let exportedJson = "";
 
     await act(async () => {
-      exportedJson = await result.current.exportTheme("tabularis-dark");
+      exportedJson = await result.current.exportTheme("mavicat-dark");
     });
 
     expect(exportedJson).toBeTruthy();
     const parsed = JSON.parse(exportedJson);
-    expect(parsed.id).toBe("tabularis-dark");
-    expect(parsed.name).toBe("Tabularis Dark");
+    expect(parsed.id).toBe("mavicat-dark");
+    expect(parsed.name).toBe("Mavicat Desktop Dark");
   });
 
   it("should save theme to config when changed", async () => {
     // Start with a specific theme
     vi.mocked(invoke).mockImplementation((cmd: string) => {
       if (cmd === "get_config") {
-        return Promise.resolve({ theme: "tabularis-light" });
+        return Promise.resolve({ theme: "mavicat-light" });
       }
       if (cmd === "save_config") {
         return Promise.resolve(undefined);
@@ -636,14 +636,14 @@ describe("ThemeProvider", () => {
     });
 
     await act(async () => {
-      await result.current.setTheme("tabularis-dark");
+      await result.current.setTheme("mavicat-dark");
     });
 
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith(
         "save_config",
         expect.objectContaining({
-          config: { theme: "tabularis-dark" },
+          config: { theme: "mavicat-dark" },
         }),
       );
     });

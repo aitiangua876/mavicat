@@ -1,6 +1,6 @@
 -- =============================================================
--- Tabularis Demo — Long text showcase (MySQL 8)
--- Database: tabularis_demo
+-- Mavicat Demo — Long text showcase (MySQL 8)
+-- Database: mavicat_demo
 -- Purpose: exercise the long-text chevron + Monaco diff editor
 --   (see issue #207). Each row targets a specific edge case:
 --   short, long single-line, multi-line, markdown, code,
@@ -9,7 +9,7 @@
 
 SET NAMES utf8mb4;
 
-USE tabularis_demo;
+USE mavicat_demo;
 
 DROP TABLE IF EXISTS text_demo;
 CREATE TABLE text_demo (

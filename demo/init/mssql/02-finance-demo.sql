@@ -1,5 +1,5 @@
 -- =============================================================
--- Tabularis Demo - Finance (SQL Server 2022)
+-- Mavicat Demo - Finance (SQL Server 2022)
 -- Database: finance_demo
 -- Domain: Accounts, transactions, invoices
 -- Idempotent: safe to re-run.
@@ -155,14 +155,14 @@ IF NOT EXISTS (SELECT 1 FROM dbo.invoice_lines)
 BEGIN
     INSERT INTO dbo.invoice_lines (invoice_id, description, quantity, unit_price) VALUES
     (1,  'Consulting - architecture review',           40.00, 210.00),
-    (2,  'Tabularis Team plan - 14 seats annual',      14.00, 300.00),
+    (2,  'Mavicat Team plan - 14 seats annual',      14.00, 300.00),
     (3,  'Consulting - data pipeline build',           60.00, 210.00),
     (4,  'Consulting - architecture review extension', 60.00, 210.00),
-    (5,  'Tabularis Team plan - 12 seats annual',      12.00, 300.00),
+    (5,  'Mavicat Team plan - 12 seats annual',      12.00, 300.00),
     (6,  'Consulting - dashboard implementation',      30.00, 260.00),
     (7,  'Consulting - production readiness audit',    40.00, 232.50),
-    (8,  'Tabularis Team plan - 14 seats annual',      14.00, 300.00),
-    (10, 'Tabularis Team plan - 18 seats annual',      18.00, 300.00);
+    (8,  'Mavicat Team plan - 14 seats annual',      14.00, 300.00),
+    (10, 'Mavicat Team plan - 18 seats annual',      18.00, 300.00);
 END
 GO
 

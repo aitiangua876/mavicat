@@ -3,19 +3,19 @@ import { themeRegistry } from '../../src/themes/themeRegistry';
 
 describe('themeRegistry', () => {
   describe('getPreset', () => {
-    it('should return tabularis-dark theme', () => {
-      const theme = themeRegistry.getPreset('tabularis-dark');
+    it('should return mavicat-dark theme', () => {
+      const theme = themeRegistry.getPreset('mavicat-dark');
       expect(theme).toBeDefined();
-      expect(theme?.id).toBe('tabularis-dark');
-      expect(theme?.name).toBe('Tabularis Dark');
+      expect(theme?.id).toBe('mavicat-dark');
+      expect(theme?.name).toBe('Mavicat Desktop Dark');
       expect(theme?.isPreset).toBe(true);
     });
 
-    it('should return tabularis-light theme', () => {
-      const theme = themeRegistry.getPreset('tabularis-light');
+    it('should return mavicat-light theme', () => {
+      const theme = themeRegistry.getPreset('mavicat-light');
       expect(theme).toBeDefined();
-      expect(theme?.id).toBe('tabularis-light');
-      expect(theme?.name).toBe('Tabularis Light');
+      expect(theme?.id).toBe('mavicat-light');
+      expect(theme?.name).toBe('Mavicat Light');
     });
 
     it('should return monokai theme', () => {
@@ -105,18 +105,18 @@ describe('themeRegistry', () => {
       });
     });
 
-    it('should include tabularis-dark as first theme', () => {
+    it('should include mavicat-dark as first theme', () => {
       const themes = themeRegistry.getAllPresets();
-      const darkTheme = themes.find(t => t.id === 'tabularis-dark');
+      const darkTheme = themes.find(t => t.id === 'mavicat-dark');
       expect(darkTheme).toBeDefined();
     });
   });
 
   describe('getDefault', () => {
-    it('should return tabularis-dark as default', () => {
+    it('should return mavicat-dark as default', () => {
       const defaultTheme = themeRegistry.getDefault();
-      expect(defaultTheme.id).toBe('tabularis-dark');
-      expect(defaultTheme.name).toBe('Tabularis Dark');
+      expect(defaultTheme.id).toBe('mavicat-dark');
+      expect(defaultTheme.name).toBe('Mavicat Desktop Dark');
     });
 
     it('should return a valid theme object', () => {
@@ -130,7 +130,7 @@ describe('themeRegistry', () => {
 
   describe('isDarkTheme', () => {
     it('should return true for vs-dark base', () => {
-      const darkTheme = themeRegistry.getPreset('tabularis-dark');
+      const darkTheme = themeRegistry.getPreset('mavicat-dark');
       expect(themeRegistry.isDarkTheme(darkTheme!)).toBe(true);
     });
 
@@ -140,7 +140,7 @@ describe('themeRegistry', () => {
     });
 
     it('should return false for vs base (light themes)', () => {
-      const lightTheme = themeRegistry.getPreset('tabularis-light');
+      const lightTheme = themeRegistry.getPreset('mavicat-light');
       expect(themeRegistry.isDarkTheme(lightTheme!)).toBe(false);
     });
 
@@ -152,7 +152,7 @@ describe('themeRegistry', () => {
 
   describe('isLightTheme', () => {
     it('should return true for vs base', () => {
-      const lightTheme = themeRegistry.getPreset('tabularis-light');
+      const lightTheme = themeRegistry.getPreset('mavicat-light');
       expect(themeRegistry.isLightTheme(lightTheme!)).toBe(true);
     });
 
@@ -162,7 +162,7 @@ describe('themeRegistry', () => {
     });
 
     it('should return false for vs-dark base', () => {
-      const darkTheme = themeRegistry.getPreset('tabularis-dark');
+      const darkTheme = themeRegistry.getPreset('mavicat-dark');
       expect(themeRegistry.isLightTheme(darkTheme!)).toBe(false);
     });
 

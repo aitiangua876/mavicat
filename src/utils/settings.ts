@@ -17,8 +17,8 @@ export const FONT_MAP: Record<string, string> = {
 
 export const DEFAULT_FONT_SIZE = 14;
 export const DEFAULT_FONT_FAMILY = "System";
-export const FONT_CACHE_KEY = "tabularis_font_cache";
-export const OLD_SETTINGS_KEY = "tabularis_settings";
+export const FONT_CACHE_KEY = "mavicat_font_cache";
+export const OLD_SETTINGS_KEY = "mavicat_settings";
 
 export interface FontCache {
   fontFamily: string;

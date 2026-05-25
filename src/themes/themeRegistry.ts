@@ -1,6 +1,6 @@
 import type { Theme } from '../types/theme';
-import { tabularisDark } from './presets/tabularisDark';
-import { tabularisLight } from './presets/tabularisLight';
+import { mavicatDark } from './presets/mavicatDark';
+import { mavicatLight } from './presets/mavicatLight';
 import { monokai } from './presets/monokai';
 import { oneDarkPro } from './presets/oneDarkPro';
 import { nord } from './presets/nord';
@@ -14,8 +14,8 @@ class ThemeRegistry {
   private presets: Map<string, Theme> = new Map();
 
   constructor() {
-    this.registerPreset(tabularisDark);
-    this.registerPreset(tabularisLight);
+    this.registerPreset(mavicatDark);
+    this.registerPreset(mavicatLight);
     this.registerPreset(monokai);
     this.registerPreset(oneDarkPro);
     this.registerPreset(nord);
@@ -39,7 +39,7 @@ class ThemeRegistry {
   }
 
   getDefault(): Theme {
-    return this.presets.get('tabularis-dark') ?? tabularisDark;
+    return this.presets.get('mavicat-dark') ?? mavicatDark;
   }
 
   isDarkTheme(theme: Theme): boolean {

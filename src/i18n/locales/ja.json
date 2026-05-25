@@ -168,8 +168,8 @@
   },
   "mcp": {
     "title": "MCP サーバー連携",
-    "subtitle": "Tabularis を Claude Desktop、Cursor などに接続",
-    "description": "Model Context Protocol (MCP) を使うと、AI アシスタント (Claude など) がローカルツールに接続できます。Tabularis は MCP サーバーを公開しており、AI がデータベーススキーマを読み取り、クエリを安全に実行できるようにします。",
+    "subtitle": "Mavicat を Claude Desktop、Cursor などに接続",
+    "description": "Model Context Protocol (MCP) を使うと、AI アシスタント (Claude など) がローカルツールに接続できます。Mavicat は MCP サーバーを公開しており、AI がデータベーススキーマを読み取り、クエリを安全に実行できるようにします。",
     "checking": "設定を確認中...",
     "configPath": "設定ファイル",
     "notFound": "設定ファイルが見つかりません (手動で作成してください)",
@@ -198,7 +198,7 @@
       "allowListDesc": "他のすべての接続は読み取り専用のままです。ここでチェックされた接続のみ書き込みを実行できます。",
       "approvalTitle": "承認ゲート",
       "approvalMode": "承認が必要",
-      "approvalModeDesc": "書き込み（またはすべてのクエリ）を一時停止し、データベースに到達する前に Tabularis 内でユーザーに承認を求めます。",
+      "approvalModeDesc": "書き込み（またはすべてのクエリ）を一時停止し、データベースに到達する前に Mavicat 内でユーザーに承認を求めます。",
       "modeOff": "オフ",
       "modeWritesOnly": "書き込みのみ",
       "modeAll": "すべてのクエリ",
@@ -307,7 +307,7 @@
     "projectStatus": "プロジェクトの状態",
     "roadmapDesc": "このプロジェクトは現在開発中 (WIP) です。主要機能は安定していますが、より大きな構想も進めています。",
     "support": "開発をサポート",
-    "supportDesc": "Tabularis を気に入っていただけたら、コードへの貢献、バグ報告、リポジトリへのスターなどでプロジェクトのサポートをご検討ください。",
+    "supportDesc": "Mavicat を気に入っていただけたら、コードへの貢献、バグ報告、リポジトリへのスターなどでプロジェクトのサポートをご検討ください。",
     "version": "バージョン",
     "starOnGithub": "GitHub でスター",
     "ai": {
@@ -458,7 +458,7 @@
       "filterUpdates": "アップデート",
       "searchNoResults": "検索に一致するプラグインがありません。",
       "version": "バージョン",
-      "requiresVersion": "Tabularis ≥ {{version}} が必要です",
+      "requiresVersion": "Mavicat ≥ {{version}} が必要です",
       "installedPlugins": "インストール済みプラグイン",
       "installedDesc": "データベースドライバを有効化・無効化します。組み込みドライバは無効化できません。",
       "remove": "削除",
@@ -560,7 +560,7 @@
     "error": "アップデートエラー",
     "currentVersion": "現在のバージョン",
     "managedByPackageManager": "アップデートは {{source}} によって管理されています",
-    "managedByPackageManagerDesc": "Tabularis のアップデートにはパッケージマネージャを使用してください。"
+    "managedByPackageManagerDesc": "Mavicat のアップデートにはパッケージマネージャを使用してください。"
   },
   "ai": {
     "assist": "AI Assist",
@@ -1102,8 +1102,8 @@
   },
   "community": {
     "title": "コミュニティに参加",
-    "subtitle": "Tabularis の成長をサポート",
-    "description": "Tabularis は無料のオープンソースプロジェクトです。便利だと感じたら、プロジェクトのサポートやコミュニティへの参加をご検討ください。",
+    "subtitle": "Mavicat の成長をサポート",
+    "description": "Mavicat は無料のオープンソースプロジェクトです。便利だと感じたら、プロジェクトのサポートやコミュニティへの参加をご検討ください。",
     "starTitle": "GitHub でスター",
     "starDesc": "スターはプロジェクトを他の人に見つけてもらう助けになります",
     "discordTitle": "Discord に参加",
@@ -1216,8 +1216,8 @@
       "processCount_one": "{{count}} 個のシステムプロセスが実行中",
       "processCount_other": "{{count}} 個のシステムプロセスが実行中"
     },
-    "tabularisProcess": {
-      "title": "Tabularis プロセス",
+    "mavicatProcess": {
+      "title": "Mavicat プロセス",
       "cpu": "CPU",
       "ram": "RAM",
       "diskRead": "ディスク読み取り/秒",
@@ -1422,7 +1422,7 @@
   },
   "discordCallout": {
     "title": "Discord コミュニティが新登場！",
-    "body": "Tabularis ユーザー専用のコミュニティを立ち上げました。質問・情報交換・ロードマップへのフィードバックをお寄せください。",
+    "body": "Mavicat ユーザー専用のコミュニティを立ち上げました。質問・情報交換・ロードマップへのフィードバックをお寄せください。",
     "cta": "今すぐ参加",
     "dismiss": "閉じる"
   }

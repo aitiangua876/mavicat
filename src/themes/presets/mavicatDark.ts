@@ -1,7 +1,7 @@
 import type { Theme } from "../../types/theme";
 
-export const tabularisDark: Theme = {
-  id: "tabularis-dark",
+export const mavicatDark: Theme = {
+  id: "mavicat-dark",
   name: "Mavicat Desktop Dark",
   isPreset: true,
   isReadOnly: true,

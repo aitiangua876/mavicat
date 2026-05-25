@@ -5,14 +5,14 @@
 
 **Un workspace de base de données desktop, open source, pour celles et ceux qui vivent dans SQL.**
 
-[Site web](https://mavicat.kailingteck.com/) · [Releases](https://github.com/chenlong/Mavicat/releases) · [Issues](https://github.com/chenlong/Mavicat/issues) · [Contribuer](./CONTRIBUTING.md)
+[Site web](https://mavicat.kailingteck.com/) · [Releases](https://github.com/aitiangua876/mavicat/releases) · [Issues](https://github.com/aitiangua876/mavicat/issues) · [Contribuer](./CONTRIBUTING.md)
 
 [![Website](https://img.shields.io/badge/Site-mavicat.kailingteck.com-22c55e)](https://mavicat.kailingteck.com/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/)
-[![Stars](https://img.shields.io/github/stars/chenlong/Mavicat?style=social)](https://github.com/chenlong/Mavicat/stargazers)
+[![Stars](https://img.shields.io/github/stars/aitiangua876/mavicat?style=social)](https://github.com/aitiangua876/mavicat/stargazers)
 
 <p>
   <strong>README:</strong>
@@ -113,7 +113,9 @@ L'écran principal rassemble arbre de connexions, éditeur SQL, grille de résul
 ## Télécharger
 
 - [Site officiel](https://mavicat.kailingteck.com/)
-- [GitHub Releases](https://github.com/chenlong/Mavicat/releases)
+- [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
+- [Télécharger pour macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
+- [Télécharger pour Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
 
 Mavicat vise macOS, Windows et Linux. Les artefacts disponibles peuvent varier selon les jalons.
 
@@ -157,6 +159,10 @@ cd src-tauri && cargo test
 ## Contribuer
 
 Issues, reproductions, feedback UI, cas spécifiques de bases, traductions et pull requests sont les bienvenus.
+
+## Remerciements
+
+Merci au projet open source [Tabularis](https://github.com/TabularisDB/tabularis) pour son travail initial et son inspiration.
 
 ## Licence et notes
 

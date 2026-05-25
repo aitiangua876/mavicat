@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useRowEditorResize } from "../../src/hooks/useRowEditorResize";
 
-const STORAGE_KEY = "tabularis_row_editor_sidebar_width";
+const STORAGE_KEY = "mavicat_row_editor_sidebar_width";
 
 const createLocalStorageStub = () => {
   const store = new Map<string, string>();

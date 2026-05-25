@@ -155,8 +155,8 @@
   },
   "mcp": {
     "title": "MCP-Server-Integration",
-    "subtitle": "Verbinde Tabularis mit Claude Desktop, Cursor und mehr",
-    "description": "Das Model Context Protocol (MCP) ermöglicht KI-Assistenten (wie Claude), sich mit deinen lokalen Tools zu verbinden. Tabularis stellt einen MCP-Server bereit, über den KI dein Datenbankschema lesen und Abfragen sicher ausführen kann.",
+    "subtitle": "Verbinde Mavicat mit Claude Desktop, Cursor und mehr",
+    "description": "Das Model Context Protocol (MCP) ermöglicht KI-Assistenten (wie Claude), sich mit deinen lokalen Tools zu verbinden. Mavicat stellt einen MCP-Server bereit, über den KI dein Datenbankschema lesen und Abfragen sicher ausführen kann.",
     "checking": "Konfiguration wird geprüft...",
     "configPath": "Konfigurationsdatei",
     "notFound": "Konfigurationsdatei nicht gefunden (manuell erstellen)",
@@ -296,7 +296,7 @@
     "projectStatus": "Projektstatus",
     "roadmapDesc": "Dieses Projekt ist Work in Progress (WIP). Die Kernfunktionen sind stabil, aber wir haben große Pläne.",
     "support": "Entwicklung unterstützen",
-    "supportDesc": "Wenn dir tabularis gefällt und du mehr Funktionen sehen möchtest, unterstütze das Projekt durch Code-Beiträge, Bug-Reports oder einen Stern auf GitHub.",
+    "supportDesc": "Wenn dir mavicat gefällt und du mehr Funktionen sehen möchtest, unterstütze das Projekt durch Code-Beiträge, Bug-Reports oder einen Stern auf GitHub.",
     "version": "Version",
     "starOnGithub": "Auf GitHub mit Stern markieren",
     "ai": {
@@ -447,7 +447,7 @@
       "filterUpdates": "Updates",
       "searchNoResults": "Keine Plugins entsprechen der Suche.",
       "version": "Version",
-      "requiresVersion": "Erfordert Tabularis ≥ {{version}}",
+      "requiresVersion": "Erfordert Mavicat ≥ {{version}}",
       "installedPlugins": "Installierte Plugins",
       "installedDesc": "Datenbanktreiber aktivieren oder deaktivieren. Integrierte Treiber können nicht deaktiviert werden.",
       "remove": "Entfernen",
@@ -549,7 +549,7 @@
     "error": "Update-Fehler",
     "currentVersion": "Aktuelle Version",
     "managedByPackageManager": "Updates werden von {{source}} verwaltet",
-    "managedByPackageManagerDesc": "Verwende deinen Paketmanager, um Tabularis zu aktualisieren."
+    "managedByPackageManagerDesc": "Verwende deinen Paketmanager, um Mavicat zu aktualisieren."
   },
   "ai": {
     "assist": "AI Assist",
@@ -1066,8 +1066,8 @@
   },
   "community": {
     "title": "Der Community beitreten",
-    "subtitle": "Hilf tabularis zu wachsen",
-    "description": "Tabularis ist ein freies Open-Source-Projekt. Wenn du es nützlich findest, unterstütze das Projekt und vernetze dich mit der Community.",
+    "subtitle": "Hilf mavicat zu wachsen",
+    "description": "Mavicat ist ein freies Open-Source-Projekt. Wenn du es nützlich findest, unterstütze das Projekt und vernetze dich mit der Community.",
     "starTitle": "Auf GitHub mit Stern markieren",
     "starDesc": "Ein Stern hilft anderen, das Projekt zu entdecken",
     "discordTitle": "Discord beitreten",
@@ -1201,8 +1201,8 @@
       "processCount_one": "{{count}} Systemprozess läuft",
       "processCount_other": "{{count}} Systemprozesse laufen"
     },
-    "tabularisProcess": {
-      "title": "Tabularis-Prozess",
+    "mavicatProcess": {
+      "title": "Mavicat-Prozess",
       "cpu": "CPU",
       "ram": "RAM",
       "diskRead": "Datenträger lesen/s",
@@ -1407,7 +1407,7 @@
   },
   "discordCallout": {
     "title": "Neue Discord-Community!",
-    "body": "Wir haben einen eigenen Treffpunkt für Tabularis-Nutzer eröffnet: Hilfe, Tipps und Mitgestaltung der Roadmap.",
+    "body": "Wir haben einen eigenen Treffpunkt für Mavicat-Nutzer eröffnet: Hilfe, Tipps und Mitgestaltung der Roadmap.",
     "cta": "Jetzt beitreten",
     "dismiss": "Schließen"
   }

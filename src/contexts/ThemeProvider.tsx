@@ -12,10 +12,10 @@ import { applyThemeToCSS } from "../themes/themeUtils";
 import type { Theme, ThemeSettings } from "../types/theme";
 
 const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  activeThemeId: "tabularis-dark",
+  activeThemeId: "mavicat-dark",
   followSystemTheme: false,
-  lightThemeId: "tabularis-light",
-  darkThemeId: "tabularis-dark",
+  lightThemeId: "mavicat-light",
+  darkThemeId: "mavicat-dark",
   customThemes: [],
 };
 
@@ -56,7 +56,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
         // Migration: check localStorage for old theme settings
         const oldLocalSettings = localStorage.getItem(
-          "tabularis_theme_settings",
+          "mavicat_theme_settings",
         );
         let activeThemeId = config.theme;
 
@@ -72,7 +72,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             });
 
             // Clean up old localStorage
-            localStorage.removeItem("tabularis_theme_settings");
+            localStorage.removeItem("mavicat_theme_settings");
           } catch (e) {
             console.error("Failed to migrate theme settings:", e);
           }
@@ -83,7 +83,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           const prefersDark = window.matchMedia(
             "(prefers-color-scheme: dark)",
           ).matches;
-          activeThemeId = prefersDark ? "tabularis-dark" : "tabularis-light";
+          activeThemeId = prefersDark ? "mavicat-dark" : "mavicat-light";
 
           // Save the detected theme
           await invoke("save_config", {
@@ -145,7 +145,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
-      const newThemeId = e.matches ? "tabularis-dark" : "tabularis-light";
+      const newThemeId = e.matches ? "mavicat-dark" : "mavicat-light";
       const newTheme = allThemes.find((t) => t.id === newThemeId);
       if (newTheme) {
         setCurrentTheme(newTheme);

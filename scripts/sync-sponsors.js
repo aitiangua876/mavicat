@@ -1,15 +1,15 @@
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
-const SPONSORS_URL = "https://tabularis.dev/sponsors.json";
-const ASSETS_BASE = "https://tabularis.dev";
+const SPONSORS_URL = "https://mavicat.kailingteck.com/sponsors.json";
+const ASSETS_BASE = "https://mavicat.kailingteck.com";
 
 const paths = {
   sponsorsMd: resolve("SPONSORS.md"),
   readme: resolve("README.md"),
 };
 
-// --- Fetch sponsors from tabularis.dev ---
+// --- Fetch sponsors from mavicat.kailingteck.com ---
 console.log(`🌐 Fetching sponsors from ${SPONSORS_URL}...`);
 
 const res = await fetch(SPONSORS_URL);
@@ -23,7 +23,7 @@ console.log(`🔄 Syncing ${sponsors.length} sponsors...`);
 
 function withUtm(url) {
   const u = new URL(url);
-  u.searchParams.set("utm_source", "tabularis");
+  u.searchParams.set("utm_source", "mavicat");
   u.searchParams.set("utm_medium", "referral");
   u.searchParams.set("utm_campaign", "sponsor");
   return u.toString();
@@ -37,8 +37,8 @@ function assetUrl(path) {
 const lines = [
   "# Sponsors",
   "",
-  "Tabularis is made possible thanks to the support of our sponsors.",
-  "Interested in sponsoring? [Get in touch →](https://tabularis.dev/sponsors)",
+  "Mavicat is made possible thanks to the support of our sponsors.",
+  "Interested in sponsoring? [Get in touch →](https://mavicat.kailingteck.com/sponsors)",
   "",
   "---",
   "",
@@ -103,7 +103,7 @@ const readmeBlock = [
     return `- ${imgTag}**[${s.name}](${withUtm(s.url)})** — ${s.tagline}`;
   }),
   "",
-  "_[Become a sponsor →](https://tabularis.dev/sponsors)_",
+  "_[Become a sponsor →](https://mavicat.kailingteck.com/sponsors)_",
   "",
   END,
 ].join("\n");

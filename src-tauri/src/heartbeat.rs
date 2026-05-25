@@ -1,7 +1,7 @@
-//! GUI heartbeat used by the MCP subprocess to detect whether the Tabularis
+//! GUI heartbeat used by the MCP subprocess to detect whether the Mavicat
 //! desktop app is currently running.
 //!
-//! The GUI refreshes `<config_dir>/tabularis.alive` every `TICK_INTERVAL`.
+//! The GUI refreshes `<config_dir>/mavicat.alive` every `TICK_INTERVAL`.
 //! The MCP subprocess calls `is_alive()` before queueing approval requests
 //! so that — when the GUI is closed — write/DDL queries fail fast with a
 //! clear error instead of hanging until `mcp_approval_timeout_seconds`
@@ -17,7 +17,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::paths::get_app_config_dir;
 
-const FILE_NAME: &str = "tabularis.alive";
+const FILE_NAME: &str = "mavicat.alive";
 
 /// How often the GUI refreshes the heartbeat file.
 pub const TICK_INTERVAL: Duration = Duration::from_secs(5);

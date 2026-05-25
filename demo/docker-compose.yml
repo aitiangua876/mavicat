@@ -1,4 +1,4 @@
-name: tabularis-demo
+name: mavicat-demo
 
 services:
   # ---------------------------------------------------------------------------
@@ -6,17 +6,17 @@ services:
   # ---------------------------------------------------------------------------
   mysql:
     image: mysql:8.4
-    container_name: tabularis-mysql
+    container_name: mavicat-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: Tabularis_Demo_2026!
+      MYSQL_ROOT_PASSWORD: Mavicat_Demo_2026!
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init/mysql:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pTabularis_Demo_2026!"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pMavicat_Demo_2026!"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,19 +26,19 @@ services:
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16
-    container_name: tabularis-postgres
+    container_name: mavicat-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Tabularis_Demo_2026!
-      POSTGRES_DB: tabularis_demo
+      POSTGRES_PASSWORD: Mavicat_Demo_2026!
+      POSTGRES_DB: mavicat_demo
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init/postgres:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d tabularis_demo"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mavicat_demo"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -51,12 +51,12 @@ services:
   # ---------------------------------------------------------------------------
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: tabularis-mssql
+    container_name: mavicat-mssql
     platform: linux/amd64
     restart: unless-stopped
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: Tabularis_Demo_2026!
+      MSSQL_SA_PASSWORD: Mavicat_Demo_2026!
       MSSQL_PID: Developer
     ports:
       - "1433:1433"
@@ -65,14 +65,14 @@ services:
 
   mssql-init:
     image: mcr.microsoft.com/mssql-tools
-    container_name: tabularis-mssql-init
+    container_name: mavicat-mssql-init
     platform: linux/amd64
     depends_on:
       - mssql
     environment:
       MSSQL_HOST: mssql
       MSSQL_USER: sa
-      MSSQL_PASSWORD: Tabularis_Demo_2026!
+      MSSQL_PASSWORD: Mavicat_Demo_2026!
     volumes:
       - ./init/mssql:/init:ro
     entrypoint: ["/bin/bash", "/init/run-init.sh"]

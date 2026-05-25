@@ -117,7 +117,7 @@ describe("SettingsProvider", () => {
       language: "en",
     };
 
-    localStorage.setItem("tabularis_settings", JSON.stringify(oldLocalSettings));
+    localStorage.setItem("mavicat_settings", JSON.stringify(oldLocalSettings));
 
     vi.mocked(invoke).mockImplementation((cmd: string, args?: any) => {
       if (cmd === "get_config") {
@@ -308,7 +308,7 @@ describe("SettingsProvider", () => {
     });
 
     await waitFor(() => {
-      const cached = localStorage.getItem("tabularis_font_cache");
+      const cached = localStorage.getItem("mavicat_font_cache");
       expect(cached).toBeTruthy();
       const parsedCache = JSON.parse(cached!);
       expect(parsedCache.fontFamily).toBe("Hack");

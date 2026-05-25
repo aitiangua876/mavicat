@@ -172,7 +172,7 @@ export const Connections = () => {
         try {
           const payload = await invoke("export_connections_payload");
           const path = await save({
-            defaultPath: "tabularis-connections.json",
+            defaultPath: "mavicat-connections.json",
             filters: [{ name: "JSON", extensions: ["json"] }],
           });
           if (path) {

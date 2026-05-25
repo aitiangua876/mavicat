@@ -5,14 +5,14 @@
 
 **SQL を日常的に扱う人のための、オープンソースのデスクトップデータベースワークスペース。**
 
-[公式サイト](https://mavicat.kailingteck.com/) · [Releases](https://github.com/chenlong/Mavicat/releases) · [Issues](https://github.com/chenlong/Mavicat/issues) · [Contributing](./CONTRIBUTING.md)
+[公式サイト](https://mavicat.kailingteck.com/) · [Releases](https://github.com/aitiangua876/mavicat/releases) · [Issues](https://github.com/aitiangua876/mavicat/issues) · [Contributing](./CONTRIBUTING.md)
 
 [![Website](https://img.shields.io/badge/Website-mavicat.kailingteck.com-22c55e)](https://mavicat.kailingteck.com/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?logo=tauri)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev/)
-[![Stars](https://img.shields.io/github/stars/chenlong/Mavicat?style=social)](https://github.com/chenlong/Mavicat/stargazers)
+[![Stars](https://img.shields.io/github/stars/aitiangua876/mavicat?style=social)](https://github.com/aitiangua876/mavicat/stargazers)
 
 <p>
   <strong>README:</strong>
@@ -113,7 +113,9 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 ## ダウンロード
 
 - [公式サイト](https://mavicat.kailingteck.com/)
-- [GitHub Releases](https://github.com/chenlong/Mavicat/releases)
+- [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
+- [macOS 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_macOS.dmg)
+- [Windows 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.2/Mavicat_1.0.2_Windows_Setup.exe)
 
 Mavicat は macOS、Windows、Linux を対象にしています。利用可能なビルドはマイルストーンにより異なります。
 
@@ -157,6 +159,10 @@ cd src-tauri && cargo test
 ## コントリビュート
 
 Issue、再現可能なバグ、UI フィードバック、DB 固有ケース、翻訳、Pull Request を歓迎します。
+
+## 謝辞
+
+初期の取り組みとインスピレーションを与えてくれた open-source プロジェクト [Tabularis](https://github.com/TabularisDB/tabularis) に感謝します。
 
 ## ライセンスと注記
 

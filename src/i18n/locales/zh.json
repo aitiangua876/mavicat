@@ -154,8 +154,8 @@
   },
   "mcp": {
     "title": "MCP 服务器集成",
-    "subtitle": "将 Tabularis 连接到 Claude Desktop、Cursor 等",
-    "description": "模型上下文协议 (MCP) 允许 AI 助手（如 Claude）连接到您的本地工具。Tabularis 暴露了一个 MCP 服务器，让 AI 可以安全地读取数据库模式并执行查询。",
+    "subtitle": "将 Mavicat 连接到 Claude Desktop、Cursor 等",
+    "description": "模型上下文协议 (MCP) 允许 AI 助手（如 Claude）连接到您的本地工具。Mavicat 暴露了一个 MCP 服务器，让 AI 可以安全地读取数据库模式并执行查询。",
     "checking": "检查配置中...",
     "configPath": "配置文件",
     "notFound": "未找到配置文件（请手动创建）",
@@ -184,7 +184,7 @@
       "allowListDesc": "其余连接保持只读。仅勾选的连接可以执行写入。",
       "approvalTitle": "审批门",
       "approvalMode": "需要审批",
-      "approvalModeDesc": "在执行前暂停写入(或所有查询)并要求用户在 Tabularis 中批准。",
+      "approvalModeDesc": "在执行前暂停写入(或所有查询)并要求用户在 Mavicat 中批准。",
       "modeOff": "关闭",
       "modeWritesOnly": "仅写入",
       "modeAll": "所有查询",
@@ -269,7 +269,7 @@
     "projectStatus": "项目状态",
     "roadmapDesc": "此项目是正在进行的工作 (WIP)。核心功能已稳定，但我们有更大的计划。",
     "support": "支持开发",
-    "supportDesc": "如果您喜欢 Tabularis 并希望看到更多功能，请考虑通过贡献代码、报告错误或 Star 项目来支持该项目。",
+    "supportDesc": "如果您喜欢 Mavicat 并希望看到更多功能，请考虑通过贡献代码、报告错误或 Star 项目来支持该项目。",
     "version": "版本",
     "starOnGithub": "在 GitHub 上 Star",
     "ai": {
@@ -416,7 +416,7 @@
       "filterUpdates": "更新",
       "searchNoResults": "没有匹配的插件。",
       "version": "版本",
-      "requiresVersion": "需要 Tabularis ≥ {{version}}",
+      "requiresVersion": "需要 Mavicat ≥ {{version}}",
       "installedPlugins": "已安装插件",
       "installedDesc": "启用或禁用数据库驱动程序。内置驱动程序无法禁用。",
       "remove": "移除",
@@ -517,7 +517,7 @@
     "error": "更新错误",
     "currentVersion": "当前版本",
     "managedByPackageManager": "更新由 {{source}} 管理",
-    "managedByPackageManagerDesc": "使用您的包管理器更新 Tabularis。"
+    "managedByPackageManagerDesc": "使用您的包管理器更新 Mavicat。"
   },
   "ai": {
     "assist": "AI 辅助",
@@ -1011,8 +1011,8 @@
   },
   "community": {
     "title": "加入社区",
-    "subtitle": "帮助 Tabularis 成长",
-    "description": "Tabularis 是一个免费的开源项目。如果您觉得有用，请考虑支持该项目并与社区联系。",
+    "subtitle": "帮助 Mavicat 成长",
+    "description": "Mavicat 是一个免费的开源项目。如果您觉得有用，请考虑支持该项目并与社区联系。",
     "starTitle": "在 GitHub 上 Star",
     "starDesc": "一个 Star 可以帮助其他人发现这个项目",
     "discordTitle": "加入 Discord",
@@ -1146,8 +1146,8 @@
       "processCount_one": "{{count}} 个系统进程正在运行",
       "processCount_other": "{{count}} 个系统进程正在运行"
     },
-    "tabularisProcess": {
-      "title": "Tabularis 进程",
+    "mavicatProcess": {
+      "title": "Mavicat 进程",
       "cpu": "CPU",
       "ram": "内存",
       "diskRead": "磁盘读取/s",
@@ -1348,7 +1348,7 @@
   },
   "discordCallout": {
     "title": "全新的 Discord 社区！",
-    "body": "我们为 Tabularis 用户开设了专属社区：获取帮助、分享技巧、共建路线图。",
+    "body": "我们为 Mavicat 用户开设了专属社区：获取帮助、分享技巧、共建路线图。",
     "cta": "立即加入",
     "dismiss": "关闭"
   }

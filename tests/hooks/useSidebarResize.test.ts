@@ -14,7 +14,7 @@ describe("useSidebarResize", () => {
   });
 
   it("should initialize with saved width from localStorage", () => {
-    localStorage.setItem("tabularis_sidebar_width", "300");
+    localStorage.setItem("mavicat_sidebar_width", "300");
     const { result } = renderHook(() => useSidebarResize());
     expect(result.current.sidebarWidth).toBe(300);
   });
@@ -81,6 +81,6 @@ describe("useSidebarResize", () => {
     });
 
     expect(document.body.style.cursor).toBe("default");
-    expect(localStorage.getItem("tabularis_sidebar_width")).toBe("300");
+    expect(localStorage.getItem("mavicat_sidebar_width")).toBe("300");
   });
 });

@@ -1,15 +1,15 @@
 -- =============================================================
--- Tabularis Demo - Common schema (SQL Server 2022)
--- Database: tabularis_demo
+-- Mavicat Demo - Common schema (SQL Server 2022)
+-- Database: mavicat_demo
 -- Domain: HR + e-commerce
 -- Idempotent: safe to re-run.
 -- =============================================================
 
-IF DB_ID('tabularis_demo') IS NULL
-    CREATE DATABASE tabularis_demo;
+IF DB_ID('mavicat_demo') IS NULL
+    CREATE DATABASE mavicat_demo;
 GO
 
-USE tabularis_demo;
+USE mavicat_demo;
 GO
 
 IF OBJECT_ID('dbo.departments', 'U') IS NULL

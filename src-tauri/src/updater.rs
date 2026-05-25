@@ -53,7 +53,7 @@ struct GitHubAsset {
 }
 
 // Constants
-const GITHUB_REPO: &str = "chenlong/Mavicat";
+const GITHUB_REPO: &str = "aitiangua876/mavicat";
 const CACHE_DURATION_SECS: u64 = 43200; // 12 hours
 /// Returns the installation source: "snap", "aur", or None for direct installs.
 /// Only meaningful on Linux; always returns None on other platforms.
@@ -350,15 +350,15 @@ mod tests {
     // Asset categorization tests
     #[test]
     fn test_categorize_asset_macos() {
-        assert_eq!(categorize_asset("Tabularis_0.8.8_x64.dmg"), "macos");
-        assert_eq!(categorize_asset("Tabularis_0.8.8_aarch64.dmg"), "macos");
+        assert_eq!(categorize_asset("Mavicat_0.8.8_x64.dmg"), "macos");
+        assert_eq!(categorize_asset("Mavicat_0.8.8_aarch64.dmg"), "macos");
         assert_eq!(categorize_asset("mavicat-darwin.zip"), "macos");
         assert_eq!(categorize_asset("app-macos-universal.tar.gz"), "macos");
     }
 
     #[test]
     fn test_categorize_asset_windows() {
-        assert_eq!(categorize_asset("Tabularis_0.8.8_x64_setup.exe"), "windows");
+        assert_eq!(categorize_asset("Mavicat_0.8.8_x64_setup.exe"), "windows");
         assert_eq!(categorize_asset("mavicat.msi"), "windows");
         assert_eq!(categorize_asset("app-windows-x86_64.zip"), "windows");
     }
@@ -388,7 +388,7 @@ mod tests {
     // GitHub repo constant test
     #[test]
     fn test_github_repo_constant() {
-        assert_eq!(GITHUB_REPO, "chenlong/Mavicat");
+        assert_eq!(GITHUB_REPO, "aitiangua876/mavicat");
     }
 
     // Cache duration test

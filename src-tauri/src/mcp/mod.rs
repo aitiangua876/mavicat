@@ -208,7 +208,7 @@ async fn resolve_db_params(
 }
 
 pub async fn run_mcp_server() {
-    eprintln!("[MCP] Starting Tabularis MCP Server...");
+    eprintln!("[MCP] Starting Mavicat MCP Server...");
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -306,7 +306,7 @@ fn handle_initialize(params: Option<Value>) -> Result<Value, JsonRpcError> {
             prompts: None,
         },
         server_info: ServerInfo {
-            name: "tabularis-mcp".to_string(),
+            name: "mavicat-mcp".to_string(),
             version: "0.1.0".to_string(),
         },
     };
@@ -325,7 +325,7 @@ async fn handle_list_resources() -> Result<Value, JsonRpcError> {
 
     // Add connection list resource
     resources.push(Resource {
-        uri: "tabularis://connections".to_string(),
+        uri: "mavicat://connections".to_string(),
         name: "Connections List".to_string(),
         description: Some("List of all configured database connections".to_string()),
         mime_type: Some("application/json".to_string()),
@@ -334,7 +334,7 @@ async fn handle_list_resources() -> Result<Value, JsonRpcError> {
     // Add schema resources for each connection
     for conn in connections {
         resources.push(Resource {
-            uri: format!("tabularis://{}/schema", conn.id),
+            uri: format!("mavicat://{}/schema", conn.id),
             name: format!("Schema: {}", conn.name),
             description: Some(format!("Database schema for {}", conn.name)),
             mime_type: Some("application/json".to_string()),
@@ -359,7 +359,7 @@ async fn handle_read_resource(params: Option<Value>) -> Result<Value, JsonRpcErr
         data: None,
     })?;
 
-    if uri == "tabularis://connections" {
+    if uri == "mavicat://connections" {
         let config_path = paths::get_app_config_dir().join("connections.json");
         let connections =
             persistence::load_connections(&config_path).map_err(|e| JsonRpcError {
@@ -390,9 +390,9 @@ async fn handle_read_resource(params: Option<Value>) -> Result<Value, JsonRpcErr
         }));
     }
 
-    if uri.starts_with("tabularis://") && uri.ends_with("/schema") {
+    if uri.starts_with("mavicat://") && uri.ends_with("/schema") {
         let parts: Vec<&str> = uri.split('/').collect();
-        // uri format: tabularis://{id}/schema -> ["tabularis:", "", "{id}", "schema"]
+        // uri format: mavicat://{id}/schema -> ["mavicat:", "", "{id}", "schema"]
         if parts.len() < 4 {
             return Err(JsonRpcError {
                 code: -32602,
@@ -838,7 +838,7 @@ async fn tool_run_query(
     // Read-only enforcement (fail-closed: unknown counts as write).
     if config::is_connection_readonly(config, &conn.id) && kind != "select" {
         audit.status = "blocked_readonly".to_string();
-        let msg = "Query blocked by Tabularis read-only mode. Enable writes for this connection in Settings → MCP → Read-only mode.".to_string();
+        let msg = "Query blocked by Mavicat read-only mode. Enable writes for this connection in Settings → MCP → Read-only mode.".to_string();
         audit.error = Some(msg.clone());
         return Err(JsonRpcError {
             code: -32000,
@@ -867,7 +867,7 @@ async fn tool_run_query(
         // `mcp_approval_timeout_seconds` (default 120s) for nothing.
         if !heartbeat::is_alive() {
             audit.status = "host_unavailable".to_string();
-            let msg = "Tabularis app is not running — open it to approve writes".to_string();
+            let msg = "Mavicat app is not running — open it to approve writes".to_string();
             audit.error = Some(msg.clone());
             return Err(JsonRpcError {
                 code: -32000,
@@ -958,7 +958,7 @@ async fn tool_run_query(
             Ok(PollOutcome::TimedOut) => {
                 audit.status = "timeout".to_string();
                 let msg = format!(
-                    "Approval timed out after {}s — open Tabularis to approve writes",
+                    "Approval timed out after {}s — open Mavicat to approve writes",
                     timeout_secs
                 );
                 audit.error = Some(msg.clone());
@@ -971,7 +971,7 @@ async fn tool_run_query(
             Ok(PollOutcome::HostUnavailable) => {
                 audit.status = "host_unavailable".to_string();
                 let msg =
-                    "Tabularis app closed during approval — open it to approve writes".to_string();
+                    "Mavicat app closed during approval — open it to approve writes".to_string();
                 audit.error = Some(msg.clone());
                 return Err(JsonRpcError {
                     code: -32000,

@@ -1,17 +1,17 @@
 ---
-name: tabularis-plugin-driver
-description: "Use when creating or updating a Tabularis database driver plugin in Rust. Covers modern manifest fields, JSON-RPC over stdio, modular plugin layout, MySQL-level feature coverage targets, optional UI extensions, and validation against Tabularis repo rules."
+name: mavicat-plugin-driver
+description: "Use when creating or updating a Mavicat database driver plugin in Rust. Covers modern manifest fields, JSON-RPC over stdio, modular plugin layout, MySQL-level feature coverage targets, optional UI extensions, and validation against Mavicat repo rules."
 ---
 
-# Tabularis Plugin Driver
+# Mavicat Plugin Driver
 
-Use this skill when building or updating a database plugin for Tabularis.
+Use this skill when building or updating a database plugin for Mavicat.
 
 The skill is optimized for this repository. Follow `AGENTS.md`, the files in `.rules/`, and the current plugin-system behavior in `src-tauri/src/plugins/` and `src/types/plugins.ts`.
 
 ## Goals
 
-- Build a Rust plugin that speaks Tabularis JSON-RPC over stdin/stdout
+- Build a Rust plugin that speaks Mavicat JSON-RPC over stdin/stdout
 - Use the modern plugin manifest, not the old minimal format
 - Aim for broad feature coverage comparable to the built-in MySQL driver where the target database supports it
 - Keep the plugin modular instead of concentrating logic in a single `main.rs`
@@ -203,7 +203,7 @@ Always add unit tests for pure logic:
 
 Prefer pure utility modules so tests stay fast and deterministic.
 
-If the plugin includes a JSON-RPC smoke binary like `src/bin/test_plugin.rs`, use it to simulate Tabularis requests over stdio.
+If the plugin includes a JSON-RPC smoke binary like `src/bin/test_plugin.rs`, use it to simulate Mavicat requests over stdio.
 
 ## Validation Checklist
 
@@ -212,11 +212,11 @@ Before finishing:
 - `cargo test`
 - `cargo build --release`
 - smoke test at least one JSON-RPC request through stdin/stdout
-- verify `manifest.json` matches current Tabularis schema and capabilities
+- verify `manifest.json` matches current Mavicat schema and capabilities
 - verify any advertised capability has corresponding handler behavior
 - verify unsupported operations return clear errors
 
-## Tabularis-Specific Rules
+## Mavicat-Specific Rules
 
 - Comments and docs must be in English
 - Keep code split by responsibility; avoid a monolithic `main.rs`

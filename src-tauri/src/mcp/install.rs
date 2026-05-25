@@ -97,7 +97,7 @@ fn get_all_clients() -> Vec<McpClient> {
     ]
 }
 
-fn is_tabularis_in_mcp_servers(path: &PathBuf) -> bool {
+fn is_mavicat_in_mcp_servers(path: &PathBuf) -> bool {
     if !path.exists() {
         return false;
     }
@@ -105,18 +105,18 @@ fn is_tabularis_in_mcp_servers(path: &PathBuf) -> bool {
         .ok()
         .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
         .and_then(|j| j.get("mcpServers").cloned())
-        .map(|s| s.get("tabularis").is_some())
+        .map(|s| s.get("mavicat").is_some())
         .unwrap_or(false)
 }
 
-/// For Claude Code: tabularis is installed if ~/.claude.json contains "tabularis"
+/// For Claude Code: mavicat is installed if ~/.claude.json contains "mavicat"
 /// anywhere in its mcpServers hierarchy (user or project scope).
 fn is_claude_code_installed(path: &PathBuf) -> bool {
     if !path.exists() {
         return false;
     }
     fs::read_to_string(path)
-        .map(|c| c.contains("\"tabularis\""))
+        .map(|c| c.contains("\"mavicat\""))
         .unwrap_or(false)
 }
 
@@ -142,7 +142,7 @@ pub async fn get_mcp_status<R: Runtime>(
                 _ => c
                     .config_path
                     .as_ref()
-                    .map(|p| is_tabularis_in_mcp_servers(p))
+                    .map(|p| is_mavicat_in_mcp_servers(p))
                     .unwrap_or(false),
             };
             McpClientStatus {
@@ -177,11 +177,11 @@ pub async fn install_mcp_config<R: Runtime>(
     if client.client_type == "command" {
         // Claude Code: use `claude mcp add --scope user`
         let output = std::process::Command::new("claude")
-            .args(["mcp", "add", "--scope", "user", "tabularis", &exe_str, "--", "--mcp"])
+            .args(["mcp", "add", "--scope", "user", "mavicat", &exe_str, "--", "--mcp"])
             .output()
             .map_err(|e| {
                 format!(
-                    "claude CLI not found. Run manually:\nclaude mcp add --scope user tabularis {} -- --mcp\n(Error: {})",
+                    "claude CLI not found. Run manually:\nclaude mcp add --scope user mavicat {} -- --mcp\n(Error: {})",
                     exe_str, e
                 )
             })?;
@@ -215,7 +215,7 @@ pub async fn install_mcp_config<R: Runtime>(
         config["mcpServers"] = json!({});
     }
 
-    config["mcpServers"]["tabularis"] = json!({
+    config["mcpServers"]["mavicat"] = json!({
         "command": exe_str,
         "args": ["--mcp"]
     });

@@ -752,8 +752,8 @@ async fn generate_openrouter(
     let res = client
         .post("https://openrouter.ai/api/v1/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
-        .header("HTTP-Referer", "https://github.com/TabularisDB/tabularis")
-        .header("X-Title", "Tabularis")
+        .header("HTTP-Referer", "https://github.com/aitiangua876/mavicat")
+        .header("X-Title", "Mavicat")
         .json(&body)
         .send()
         .await

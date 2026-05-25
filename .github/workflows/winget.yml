@@ -11,6 +11,6 @@ jobs:
       - name: Submit to Winget
         uses: vedantmgoyal9/winget-releaser@v2
         with:
-          identifier: Debba.Tabularis
+          identifier: Debba.Mavicat
           installers-regex: '_x64-setup\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}

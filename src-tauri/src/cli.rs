@@ -1,4 +1,4 @@
-//! Command-line argument parsing for the Tabularis binary.
+//! Command-line argument parsing for the Mavicat binary.
 //!
 //! Keeping this in its own module means `lib.rs` does not have to know about
 //! clap, and the flag surface (`--mcp`, `--debug`, `--explain`, `--help`,

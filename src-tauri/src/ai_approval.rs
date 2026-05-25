@@ -175,7 +175,7 @@ pub async fn poll_decision_in(
 
 /// Same as `poll_decision_in`, but also bails out with
 /// `PollOutcome::HostUnavailable` as soon as `is_alive()` returns false.
-/// Used by the MCP subprocess to detect that the Tabularis GUI exited
+/// Used by the MCP subprocess to detect that the Mavicat GUI exited
 /// mid-approval and fail without waiting for the full timeout.
 pub async fn poll_decision_with_liveness_in<F>(
     base: &Path,
