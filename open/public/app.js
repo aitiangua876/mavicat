@@ -13,6 +13,7 @@ const nodes = {
   adminNav: document.querySelector("#admin-nav"),
   adminBand: document.querySelector("#admin"),
   smartDownloadButton: document.querySelector("#smart-download-button"),
+  alternateDownloadButton: document.querySelector("#alternate-download-button"),
   platformDownloadLinks: document.querySelectorAll("[data-platform-download]"),
   versionsList: document.querySelector("#versions-list"),
   adminList: document.querySelector("#admin-list"),
@@ -203,7 +204,10 @@ function applyDownloadTarget(link, match, fallbackText) {
 function renderSmartDownload() {
   const platform = getClientPlatform();
   const platformLabel = getPlatformLabel(platform);
+  const alternatePlatform = platform === "windows" ? "macos" : "windows";
+  const alternateLabel = getPlatformLabel(alternatePlatform);
   const match = platform === "unknown" ? null : findDownloadForPlatform(platform);
+  const alternateMatch = findDownloadForPlatform(alternatePlatform);
 
   applyDownloadTarget(nodes.smartDownloadButton, match, `下载 ${platformLabel} 版`);
   if (match) {
@@ -213,6 +217,13 @@ function renderSmartDownload() {
     nodes.smartDownloadButton.textContent = `下载 ${platformLabel} 版`;
     nodes.smartDownloadButton.setAttribute("title", "当前设备暂未匹配到直链安装包，可在下载中心查看全部版本。");
   }
+
+  applyDownloadTarget(nodes.alternateDownloadButton, alternateMatch, `下载 ${alternateLabel} 版`);
+  nodes.alternateDownloadButton.textContent = `下载 ${alternateLabel} 版`;
+  nodes.alternateDownloadButton.setAttribute(
+    "title",
+    alternateMatch ? `${alternateMatch.version.version} · ${alternateMatch.pkg.label}` : `查看 ${alternateLabel} 下载列表`
+  );
 
   nodes.platformDownloadLinks.forEach((link) => {
     const targetPlatform = link.dataset.platformDownload;
