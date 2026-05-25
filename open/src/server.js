@@ -439,6 +439,18 @@ app.post("/api/comments", async (request, response) => {
   response.status(201).json({ comment: publicComment(comment) });
 });
 
+app.delete("/api/admin/comments/:id", requireAdmin, (request, response) => {
+  const db = readDb();
+  const before = db.comments.length;
+  db.comments = db.comments.filter((comment) => comment.id !== request.params.id);
+  if (db.comments.length === before) {
+    response.status(404).json({ message: "Comment not found." });
+    return;
+  }
+  writeDb(db);
+  response.json({ ok: true });
+});
+
 app.post("/api/admin/versions", requireAdmin, (request, response) => {
   const input = normalizeVersionInput(request.body);
   const error = validateVersionInput(input);

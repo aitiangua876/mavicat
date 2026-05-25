@@ -445,6 +445,7 @@ function renderComments() {
     return;
   }
 
+  const canManageComments = state.user?.role === "admin";
   nodes.commentsList.innerHTML = state.comments
     .map(
       (comment) => `
@@ -457,6 +458,7 @@ function renderComments() {
               </div>
               <p class="package-meta">${escapeHtml(comment.location)} · ${escapeHtml(comment.device)} · ${formatDateTime(comment.createdAt)}</p>
             </div>
+            ${canManageComments ? `<button class="danger delete-comment" data-comment-id="${escapeHtml(comment.id)}" type="button">删除</button>` : ""}
           </div>
           <p class="comment-body">${escapeHtml(comment.body)}</p>
         </article>
@@ -645,6 +647,26 @@ nodes.passwordSubmit.addEventListener("click", submitPassword);
 nodes.newVersionButton.addEventListener("click", () => openVersionDialog());
 nodes.versionSubmit.addEventListener("click", submitVersion);
 nodes.commentForm.addEventListener("submit", submitComment);
+
+nodes.commentsList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains("delete-comment")) {
+    return;
+  }
+
+  const commentId = target.dataset.commentId;
+  if (!commentId || !window.confirm("确定删除这条评论吗？")) {
+    return;
+  }
+
+  try {
+    await api(`/api/admin/comments/${commentId}`, { method: "DELETE" });
+    state.comments = state.comments.filter((comment) => comment.id !== commentId);
+    renderComments();
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
 
 document.querySelectorAll(".close-dialog").forEach((button) => {
   button.addEventListener("click", () => {
