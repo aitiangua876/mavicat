@@ -65,7 +65,7 @@ body.glyph-trail-ready {
   opacity: 0;
   text-shadow: 0 0 18px rgb(70 145 255 / 44%);
   transform: translate3d(var(--glyph-x), var(--glyph-y), 0);
-  animation: glyph-drift var(--glyph-duration, 4.8s) ease-out forwards;
+  animation: glyph-drift var(--glyph-duration, 5.2s) cubic-bezier(.16, .86, .24, 1) forwards;
 }
 
 @keyframes glyph-drift {
@@ -74,8 +74,8 @@ body.glyph-trail-ready {
     transform: translate3d(var(--glyph-x), var(--glyph-y), 0) scale(.86);
   }
 
-  14%,
-  62% {
+  12%,
+  68% {
     opacity: var(--glyph-opacity, .72);
   }
 

@@ -727,7 +727,12 @@ function initGlyphTrail() {
     return;
   }
 
-  const glyphs = ["SELECT", "JOIN", "AI", "SQL", "DB", ">>", "--", "_", "{}", "[]", "↗", "⟶"];
+  const glyphs = [
+    "SELECT", "WHERE", "JOIN", "INDEX", "INSERT", "UPDATE", "DELETE", "LIMIT", "ORDER", "GROUP",
+    "SQL", "DDL", "DML", "JSON", "BLOB", "UUID", "VIEW", "TRX", "LOCK", "CACHE",
+    "MySQL", "Redis", "PG", "DB", "AI", "PK", "FK", "ER", "EXPLAIN", "SYNC",
+    ">>", "--", "/*", "*/", "::", "()", "{}", "[]", "<>", "↗", "⟶", "⟲", "⧉"
+  ];
   const layer = document.createElement("div");
   let lastSpawn = 0;
   let ambientTimer = 0;
@@ -737,37 +742,45 @@ function initGlyphTrail() {
   document.body.append(layer);
   document.body.classList.add("glyph-trail-ready");
 
-  function spawnGlyph(x, y, ambient = false) {
+  function spawnGlyph(x, y, ambient = false, burstIndex = 0) {
     const glyph = document.createElement("span");
-    const driftX = (Math.random() - 0.5) * (ambient ? 180 : 110);
-    const driftY = -45 - Math.random() * (ambient ? 130 : 82);
-    const duration = ambient ? 5.8 + Math.random() * 2.4 : 3.8 + Math.random() * 2.2;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = ambient ? 80 + Math.random() * 210 : 48 + Math.random() * 150;
+    const driftX = Math.cos(angle) * distance;
+    const driftY = Math.sin(angle) * distance - (ambient ? 20 : 8);
+    const duration = ambient ? 6.2 + Math.random() * 2.8 : 4.2 + Math.random() * 2.4;
 
     glyph.className = "trail-glyph";
     glyph.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
-    glyph.style.setProperty("--glyph-x", `${x}px`);
-    glyph.style.setProperty("--glyph-y", `${y}px`);
+    glyph.style.setProperty("--glyph-x", `${x + (Math.random() - 0.5) * (ambient ? 80 : 30)}px`);
+    glyph.style.setProperty("--glyph-y", `${y + (Math.random() - 0.5) * (ambient ? 64 : 30)}px`);
     glyph.style.setProperty("--glyph-dx", `${driftX.toFixed(1)}px`);
     glyph.style.setProperty("--glyph-dy", `${driftY.toFixed(1)}px`);
-    glyph.style.setProperty("--glyph-size", `${ambient ? 12 + Math.random() * 8 : 13 + Math.random() * 12}px`);
+    glyph.style.setProperty("--glyph-size", `${ambient ? 11 + Math.random() * 9 : 12 + Math.random() * 14}px`);
     glyph.style.setProperty("--glyph-duration", `${duration.toFixed(2)}s`);
-    glyph.style.setProperty("--glyph-opacity", `${ambient ? 0.24 + Math.random() * 0.22 : 0.52 + Math.random() * 0.28}`);
+    glyph.style.setProperty("--glyph-opacity", `${ambient ? 0.20 + Math.random() * 0.24 : Math.max(0.34, 0.70 - burstIndex * 0.055 + Math.random() * 0.16)}`);
     layer.append(glyph);
     window.setTimeout(() => glyph.remove(), duration * 1000 + 120);
   }
 
+  function spawnCluster(x, y, count, ambient = false) {
+    for (let index = 0; index < count; index += 1) {
+      spawnGlyph(x, y, ambient, index);
+    }
+  }
+
   window.addEventListener("pointermove", (event) => {
     const now = performance.now();
-    if (now - lastSpawn < 90) {
+    if (now - lastSpawn < 62) {
       return;
     }
     lastSpawn = now;
-    spawnGlyph(event.clientX + (Math.random() - 0.5) * 18, event.clientY + (Math.random() - 0.5) * 18);
+    spawnCluster(event.clientX, event.clientY, 4 + Math.floor(Math.random() * 3));
   }, { passive: true });
 
   ambientTimer = window.setInterval(() => {
-    spawnGlyph(Math.random() * window.innerWidth, window.innerHeight * (0.18 + Math.random() * 0.66), true);
-  }, 950);
+    spawnCluster(Math.random() * window.innerWidth, window.innerHeight * (0.18 + Math.random() * 0.66), 2 + Math.floor(Math.random() * 3), true);
+  }, 720);
 
   window.addEventListener("beforeunload", () => window.clearInterval(ambientTimer));
 }
