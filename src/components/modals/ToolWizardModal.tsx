@@ -6,7 +6,6 @@ import {
   Download,
   FileInput,
   FileSpreadsheet,
-  FileCode2,
   Upload,
   X,
 } from "lucide-react";
@@ -24,6 +23,12 @@ type ToolWizardKind =
 
 type ExportFormat = "csv" | "json" | "excel" | "sql";
 type TransferWriteMode = "append" | "delete_then_insert" | "create_then_insert";
+
+interface ExportSource {
+  connectionId: string;
+  databaseName?: string;
+  tableName: string;
+}
 
 interface DataTransferWizardRequest {
   sourceConnectionId: string;
@@ -56,7 +61,7 @@ interface ToolWizardModalProps {
   canExport: boolean;
   onClipboardImport: () => void;
   onFileImport: () => void;
-  onExport: (format: ExportFormat) => void;
+  onExport: (format: ExportFormat, source?: ExportSource) => void;
   onBackup: () => void;
   onSqlImport: () => void;
   onDataTransfer?: (request: DataTransferWizardRequest) => Promise<string>;
@@ -89,7 +94,7 @@ const toolContent: Record<
     icon: Download,
     steps: ["选择来源", "选择格式", "配置字段", "导出文件", "完成"],
     status: "可从当前活动表或查询标签导出 CSV、JSON、Excel 或 SQL 文件。",
-    primaryLabel: "导出 CSV",
+    primaryLabel: "导出 SQL",
   },
   backup: {
     title: "数据库备份",
@@ -155,6 +160,7 @@ export const ToolWizardModal = ({
   const [batchSize, setBatchSize] = useState(500);
   const [transferStatus, setTransferStatus] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
+  const [exportTable, setExportTable] = useState("");
 
   useEffect(() => {
     if (kind !== "data_transfer") return;
@@ -163,10 +169,24 @@ export const ToolWizardModal = ({
     setTransferStatus("");
   }, [kind, tableOptions]);
 
+  useEffect(() => {
+    if (kind !== "export") return;
+    setExportTable((current) => (current && tableOptions.includes(current) ? current : tableOptions[0] ?? ""));
+  }, [kind, tableOptions]);
+
   if (!kind) return null;
 
   const content = toolContent[kind];
   const Icon = content.icon;
+  const exportSource =
+    exportTable && !canExport
+      ? {
+          connectionId: selectedConnectionId,
+          databaseName: selectedDatabaseName || undefined,
+          tableName: exportTable,
+        }
+      : undefined;
+  const hasExportSource = canExport || !!exportSource;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -260,9 +280,9 @@ export const ToolWizardModal = ({
               </div>
               <div className="p-4 text-sm text-secondary leading-6">
                 {content.status}
-                {kind === "export" && !canExport && (
+                {kind === "export" && !hasExportSource && (
                   <div className="mt-3 text-amber-300">
-                    当前没有可导出的活动表或查询，请先打开表数据或查询标签。
+                    当前没有可导出的活动表、查询或可选表，请先打开表数据/查询标签，或选择一个已加载表。
                   </div>
                 )}
                 {!hasConnection && (
@@ -272,6 +292,38 @@ export const ToolWizardModal = ({
                 )}
               </div>
             </div>
+
+            {kind === "export" && !canExport && (
+              <div className="mt-4 border border-default rounded-md p-4 bg-base space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-primary">导出来源</div>
+                    <div className="text-xs text-muted mt-1">
+                      从当前数据库选择一个表导出。
+                    </div>
+                  </div>
+                </div>
+                <label className="block">
+                  <span className="text-xs text-muted mb-1 block">源表</span>
+                  <select
+                    value={exportTable}
+                    onChange={(event) => setExportTable(event.target.value)}
+                    disabled={tableOptions.length === 0}
+                    className="w-full h-9 bg-surface-secondary border border-default rounded px-2 text-sm text-primary outline-none disabled:text-muted"
+                  >
+                    {tableOptions.length === 0 ? (
+                      <option value="">未加载表</option>
+                    ) : (
+                      tableOptions.map((table) => (
+                        <option key={table} value={table}>
+                          {table}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              </div>
+            )}
 
             {kind === "data_transfer" && (
               <div className="mt-4 border border-default rounded-md p-4 bg-base space-y-3">
@@ -401,16 +453,16 @@ export const ToolWizardModal = ({
           {kind === "export" && (
             <div className="mr-auto flex items-center gap-2">
               {[
+                { format: "csv" as const, label: "CSV", icon: Download },
                 { format: "json" as const, label: "JSON", icon: FileInput },
                 { format: "excel" as const, label: "Excel", icon: FileSpreadsheet },
-                { format: "sql" as const, label: "SQL", icon: FileCode2 },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
                     key={item.format}
-                    onClick={() => onExport(item.format)}
-                    disabled={!hasConnection || !canExport}
+                    onClick={() => onExport(item.format, exportSource)}
+                    disabled={!hasConnection || !hasExportSource}
                     className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-surface-tertiary hover:bg-surface-secondary disabled:bg-surface-tertiary disabled:text-muted disabled:cursor-not-allowed text-primary"
                   >
                     <Icon size={15} />
@@ -424,7 +476,7 @@ export const ToolWizardModal = ({
             <button
               onClick={() => {
                 if (kind === "import") onFileImport();
-                if (kind === "export") onExport("csv");
+                if (kind === "export") onExport("sql", exportSource);
                 if (kind === "backup") onBackup();
                 if (kind === "sql_import") onSqlImport();
                 if (kind === "data_transfer" && onDataTransfer) {
@@ -450,7 +502,7 @@ export const ToolWizardModal = ({
               }}
               disabled={
                 !hasConnection ||
-                (kind === "export" && !canExport) ||
+                (kind === "export" && !hasExportSource) ||
                 kind === "schema_sync" ||
                 (kind === "data_transfer" &&
                   (!sourceTable || !(selectedTargetConnectionId || selectedConnectionId) || isTransferring))

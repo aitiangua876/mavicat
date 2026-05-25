@@ -122,7 +122,12 @@ fn row_bool(row: &Row, index: usize) -> bool {
     row.try_get::<bool, _>(index)
         .ok()
         .flatten()
-        .or_else(|| row.try_get::<i32, _>(index).ok().flatten().map(|value| value != 0))
+        .or_else(|| {
+            row.try_get::<i32, _>(index)
+                .ok()
+                .flatten()
+                .map(|value| value != 0)
+        })
         .unwrap_or(false)
 }
 
@@ -171,7 +176,10 @@ fn cell_to_json(row: &Row, index: usize) -> Value {
         return Value::String(value.to_string());
     }
     if let Ok(Some(value)) = row.try_get::<&[u8], _>(index) {
-        return Value::String(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, value));
+        return Value::String(base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            value,
+        ));
     }
     Value::Null
 }
@@ -195,22 +203,33 @@ impl DatabaseDriver for SqlServerDriver {
     }
 
     fn get_data_types(&self) -> Vec<DataTypeInfo> {
-        ["bigint", "int", "bit", "decimal", "float", "nvarchar", "varchar", "datetime2", "date", "varbinary"]
-            .into_iter()
-            .map(|name| DataTypeInfo {
-                name: name.to_string(),
-                category: "SQL Server".to_string(),
-                requires_length: matches!(name, "nvarchar" | "varchar" | "varbinary"),
-                requires_precision: name == "decimal",
-                default_length: if matches!(name, "nvarchar" | "varchar") {
-                    Some("255".to_string())
-                } else {
-                    None
-                },
-                supports_auto_increment: name == "bigint" || name == "int",
-                requires_extension: None,
-            })
-            .collect()
+        [
+            "bigint",
+            "int",
+            "bit",
+            "decimal",
+            "float",
+            "nvarchar",
+            "varchar",
+            "datetime2",
+            "date",
+            "varbinary",
+        ]
+        .into_iter()
+        .map(|name| DataTypeInfo {
+            name: name.to_string(),
+            category: "SQL Server".to_string(),
+            requires_length: matches!(name, "nvarchar" | "varchar" | "varbinary"),
+            requires_precision: name == "decimal",
+            default_length: if matches!(name, "nvarchar" | "varchar") {
+                Some("255".to_string())
+            } else {
+                None
+            },
+            supports_auto_increment: name == "bigint" || name == "int",
+            requires_extension: None,
+        })
+        .collect()
     }
 
     fn map_inferred_type(&self, kind: &str) -> String {
@@ -533,7 +552,12 @@ impl DatabaseDriver for SqlServerDriver {
         let rows = query_rows(params, query).await?;
         let columns = rows
             .first()
-            .map(|row| row.columns().iter().map(|column| column.name().to_string()).collect())
+            .map(|row| {
+                row.columns()
+                    .iter()
+                    .map(|column| column.name().to_string())
+                    .collect()
+            })
             .unwrap_or_default();
         let total_rows = rows.len() as u64;
         let page_size = limit.unwrap_or(total_rows.max(1) as u32);
@@ -542,7 +566,11 @@ impl DatabaseDriver for SqlServerDriver {
             .iter()
             .skip(start)
             .take(page_size as usize)
-            .map(|row| (0..row.len()).map(|index| cell_to_json(row, index)).collect())
+            .map(|row| {
+                (0..row.len())
+                    .map(|index| cell_to_json(row, index))
+                    .collect()
+            })
             .collect::<Vec<Vec<Value>>>();
 
         Ok(QueryResult {
@@ -629,7 +657,10 @@ impl DatabaseDriver for SqlServerDriver {
         let tables = self.get_tables(params, schema).await?;
         let mut result = HashMap::new();
         for table in tables {
-            result.insert(table.name.clone(), self.get_columns(params, &table.name, schema).await?);
+            result.insert(
+                table.name.clone(),
+                self.get_columns(params, &table.name, schema).await?,
+            );
         }
         Ok(result)
     }
@@ -642,7 +673,10 @@ impl DatabaseDriver for SqlServerDriver {
         let tables = self.get_tables(params, schema).await?;
         let mut result = HashMap::new();
         for table in tables {
-            result.insert(table.name.clone(), self.get_foreign_keys(params, &table.name, schema).await?);
+            result.insert(
+                table.name.clone(),
+                self.get_foreign_keys(params, &table.name, schema).await?,
+            );
         }
         Ok(result)
     }

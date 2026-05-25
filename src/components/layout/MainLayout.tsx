@@ -45,6 +45,12 @@ interface ExportProgress {
 
 type ExportFormat = 'csv' | 'json' | 'excel' | 'sql';
 
+interface ExportSource {
+  connectionId: string;
+  databaseName?: string;
+  tableName: string;
+}
+
 const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string }> = {
   csv: { label: 'CSV', extension: 'csv' },
   json: { label: 'JSON', extension: 'json' },
@@ -98,6 +104,7 @@ function WorkbenchToolbar() {
     isOpen: boolean;
     status: ExportStatus;
     rowsProcessed: number;
+    progressPercent?: number;
     fileName: string;
     errorMessage?: string;
   }>({
@@ -223,7 +230,11 @@ function WorkbenchToolbar() {
   }, [wizardKind]);
 
   useEffect(() => {
-    if (wizardKind !== 'data_transfer' || !selectedWizardConnectionId || !selectedWizardDatabaseName) {
+    if (
+      (wizardKind !== 'data_transfer' && wizardKind !== 'export') ||
+      !selectedWizardConnectionId ||
+      !selectedWizardDatabaseName
+    ) {
       return;
     }
 
@@ -390,15 +401,41 @@ function WorkbenchToolbar() {
   }, [activateWizardConnection]);
 
   const exportQuery = useCallback(
-    (format: ExportFormat) => {
-      if (!activeTab || !activeConnectionId) return;
+    (format: ExportFormat, source?: ExportSource) => {
+      const sourceConnectionId = source?.connectionId || activeConnectionId;
+      if (!sourceConnectionId) return;
 
-      const effectiveSchema = activeCapabilities?.schemas === true ? activeTab.schema : undefined;
-      const tabForQuery = { ...activeTab, schema: effectiveSchema };
-      const query =
-        activeTab.type === 'table' && activeTab.activeTable
-          ? reconstructTableQuery(tabForQuery, activeDriver ?? undefined)
-          : activeTab.query;
+      const sourceConnectionData = connectionDataMap[sourceConnectionId];
+      const sourceDriver = sourceConnectionData?.driver ?? activeDriver ?? undefined;
+      const sourceCapabilities = sourceConnectionData?.capabilities ?? activeCapabilities;
+      const sourceSchema =
+        source?.databaseName &&
+        (sourceCapabilities?.schemas === true || isMultiDatabaseCapable(sourceCapabilities))
+          ? source.databaseName
+          : undefined;
+      const effectiveSchema = activeCapabilities?.schemas === true ? activeTab?.schema : undefined;
+      const query = source
+        ? reconstructTableQuery(
+            {
+              id: 'wizard-export-source',
+              title: source.tableName,
+              type: 'table',
+              query: '',
+              result: null,
+              error: '',
+              executionTime: null,
+              page: 1,
+              activeTable: source.tableName,
+              pkColumn: null,
+              connectionId: sourceConnectionId,
+              schema: sourceSchema,
+            },
+            sourceDriver,
+            { limitOverride: null },
+          )
+        : activeTab?.type === 'table' && activeTab.activeTable
+          ? reconstructTableQuery({ ...activeTab, schema: effectiveSchema }, activeDriver ?? undefined)
+          : activeTab?.query;
 
       if (!query?.trim()) return;
 
@@ -406,12 +443,14 @@ function WorkbenchToolbar() {
         try {
           const meta = EXPORT_FILE_META[format];
           const exportTableName =
-            activeTab.type === 'table' && activeTab.activeTable
+            source?.tableName ??
+            (activeTab?.type === 'table' && activeTab.activeTable
               ? activeTab.activeTable
-              : undefined;
+              : undefined);
+          const exportSchema = source?.databaseName ?? effectiveSchema;
           const filePath = await save({
             filters: [{ name: meta.label, extensions: [meta.extension] }],
-            defaultPath: `result_${Date.now()}.${meta.extension}`,
+            defaultPath: `${exportTableName || 'result'}_${Date.now()}.${meta.extension}`,
           });
 
           if (!filePath) return;
@@ -420,20 +459,21 @@ function WorkbenchToolbar() {
             isOpen: true,
             status: 'exporting',
             rowsProcessed: 0,
+            progressPercent: 0,
             fileName: filePath.split(/[/\\]/).pop() || filePath,
           });
 
           await invoke('export_query_to_file', {
-            connectionId: activeConnectionId,
+            connectionId: sourceConnectionId,
             query,
             filePath,
             format,
             csvDelimiter: format === 'csv' ? ',' : undefined,
             exportTableName,
-            exportSchema: effectiveSchema,
+            exportSchema,
           });
 
-          setExportState((prev) => ({ ...prev, status: 'completed' }));
+          setExportState((prev) => ({ ...prev, status: 'completed', progressPercent: 100 }));
         } catch (e) {
           setExportState((prev) => ({
             ...prev,
@@ -443,7 +483,7 @@ function WorkbenchToolbar() {
         }
       })();
     },
-    [activeCapabilities, activeConnectionId, activeDriver, activeTab],
+    [activeCapabilities, activeConnectionId, activeDriver, activeTab, connectionDataMap],
   );
 
   const cancelExport = useCallback(() => {
@@ -568,6 +608,7 @@ function WorkbenchToolbar() {
         isOpen={exportState.isOpen}
         status={exportState.status}
         rowsProcessed={exportState.rowsProcessed}
+        progressPercent={exportState.progressPercent}
         fileName={exportState.fileName}
         errorMessage={exportState.errorMessage}
         onCancel={cancelExport}

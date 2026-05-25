@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useAlert } from "../../hooks/useAlert";
-import { useDatabase } from "../../hooks/useDatabase";
 import { Modal } from "../ui/Modal";
 import { Loader2, Download, Database, Square, CheckSquare } from "lucide-react";
 import {
@@ -21,6 +21,15 @@ interface DumpDatabaseModalProps {
   tables: string[];
 }
 
+interface DumpProgress {
+  connection_id: string;
+  tables_processed: number;
+  total_tables: number;
+  percentage: number;
+  current_table?: string | null;
+  current_operation: string;
+}
+
 export const DumpDatabaseModal = ({
   isOpen,
   onClose,
@@ -29,7 +38,6 @@ export const DumpDatabaseModal = ({
   tables,
 }: DumpDatabaseModalProps) => {
   const { t } = useTranslation();
-  const { activeSchema } = useDatabase();
   const { showAlert } = useAlert();
   const [includeStructure, setIncludeStructure] = useState(true);
   const [includeData, setIncludeData] = useState(true);
@@ -39,14 +47,32 @@ export const DumpDatabaseModal = ({
   const [isExporting, setIsExporting] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0); // in seconds
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [progress, setProgress] = useState<DumpProgress | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedTables(new Set(tables));
       setElapsedTime(0);
       setStartTime(null);
+      setProgress(null);
     }
   }, [isOpen, tables]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let unlisten: (() => void) | undefined;
+    void listen<DumpProgress>("dump_progress", (event) => {
+      if (event.payload.connection_id !== connectionId) return;
+      setProgress(event.payload);
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [connectionId, isOpen]);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -96,6 +122,14 @@ export const DumpDatabaseModal = ({
       setIsExporting(true);
       setStartTime(Date.now());
       setElapsedTime(0);
+      setProgress({
+        connection_id: connectionId,
+        tables_processed: 0,
+        total_tables: selectedTables.size,
+        percentage: 0,
+        current_table: null,
+        current_operation: "准备导出",
+      });
 
       // Rust command expects `options` struct
       await invoke("dump_database", {
@@ -106,7 +140,7 @@ export const DumpDatabaseModal = ({
           data: includeData,
           tables: Array.from(selectedTables),
         },
-        ...(activeSchema ? { schema: activeSchema } : {}),
+        schema: databaseName,
       });
 
       showAlert(t("dump.success"), { kind: "info" });
@@ -193,10 +227,32 @@ export const DumpDatabaseModal = ({
                 </div>
             </div>
 
-            {/* Elapsed Time */}
-            {isExporting && elapsedTime > 0 && (
-              <div className="text-center text-sm text-muted">
-                {t("dump.elapsedTime")}: <span className="font-mono font-semibold text-primary">{formatElapsedTime(elapsedTime)}</span>
+            {/* Progress */}
+            {isExporting && (
+              <div className="rounded border border-default bg-surface-secondary/60 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <span className="truncate">
+                    {progress?.current_operation || "正在导出"}
+                    {progress?.current_table ? `：${progress.current_table}` : ""}
+                  </span>
+                  <span className="font-mono font-semibold text-primary">
+                    {(progress?.percentage ?? 0).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-base rounded-full h-3 overflow-hidden border border-default">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 ease-out"
+                    style={{ width: `${Math.min(100, Math.max(0, progress?.percentage ?? 0))}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted">
+                  <span>
+                    表：{progress?.tables_processed ?? 0}/{progress?.total_tables ?? selectedTables.size}
+                  </span>
+                  <span>
+                    {t("dump.elapsedTime")}: <span className="font-mono text-primary">{formatElapsedTime(elapsedTime)}</span>
+                  </span>
+                </div>
               </div>
             )}
           </div>

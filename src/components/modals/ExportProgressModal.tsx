@@ -8,6 +8,7 @@ interface ExportProgressModalProps {
   isOpen: boolean;
   status: ExportStatus;
   rowsProcessed: number;
+  progressPercent?: number;
   fileName: string;
   errorMessage?: string;
   onCancel: () => void;
@@ -18,12 +19,18 @@ export const ExportProgressModal = ({
   isOpen,
   status,
   rowsProcessed,
+  progressPercent,
   onCancel,
   onClose,
   fileName,
   errorMessage,
 }: ExportProgressModalProps) => {
   const { t } = useTranslation();
+  const displayPercent =
+    status === "completed"
+      ? 100
+      : Math.min(100, Math.max(0, progressPercent ?? 0));
+  const barWidth = status === "exporting" && progressPercent === undefined ? 100 : displayPercent;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -62,12 +69,27 @@ export const ExportProgressModal = ({
                 {errorMessage}
               </p>
             ) : (
-              <p className="text-secondary text-sm">
-                {t("editor.rowsProcessed")}:{" "}
-                <span className="text-white font-mono font-bold">
-                  {rowsProcessed.toLocaleString()}
-                </span>
-              </p>
+              <div className="space-y-3">
+                <div className="w-full bg-surface-secondary rounded-full h-3 overflow-hidden border border-default">
+                  <div
+                    className={`h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 ease-out ${
+                      status === "exporting" && progressPercent === undefined ? "animate-pulse" : ""
+                    }`}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4 text-secondary text-sm">
+                  <span>
+                    {t("editor.rowsProcessed")}:{" "}
+                    <span className="text-white font-mono font-bold">
+                      {rowsProcessed.toLocaleString()}
+                    </span>
+                  </span>
+                  <span className="text-white font-mono font-bold">
+                    {displayPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -94,4 +116,3 @@ export const ExportProgressModal = ({
     </Modal>
   );
 };
-

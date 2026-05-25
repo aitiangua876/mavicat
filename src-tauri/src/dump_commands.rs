@@ -22,16 +22,89 @@ pub struct DumpOptions {
     pub tables: Option<Vec<String>>, // None = All
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct DumpProgress {
+    pub connection_id: String,
+    pub tables_processed: usize,
+    pub total_tables: usize,
+    pub percentage: f32,
+    pub current_table: Option<String>,
+    pub current_operation: String,
+}
+
 #[derive(Default)]
 pub struct DumpCancellationState {
     pub handles: Arc<Mutex<AbortHandleMap>>,
 }
+
+const DUMP_PROGRESS_EVENT: &str = "dump_progress";
 
 /// Slot key for the cancellation registry. Imports share the dump state
 /// but need a distinct slot so `cancel_dump` and `cancel_import` don't
 /// alias each other.
 fn import_slot_key(connection_id: &str) -> String {
     format!("{}_import", connection_id)
+}
+
+fn normalized_dump_schema(
+    driver: &str,
+    params: &ConnectionParams,
+    schema: Option<String>,
+) -> String {
+    let requested = schema
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+
+    requested.unwrap_or_else(|| match driver {
+        "postgres" => "public".to_string(),
+        "mysql" => params.database.primary().to_string(),
+        _ => String::new(),
+    })
+}
+
+fn emit_dump_progress<R: Runtime>(
+    app: &AppHandle<R>,
+    connection_id: &str,
+    tables_processed: usize,
+    total_tables: usize,
+    current_table: Option<&str>,
+    current_operation: impl Into<String>,
+) {
+    let percentage = if total_tables == 0 {
+        100.0
+    } else {
+        ((tables_processed as f32 / total_tables as f32) * 100.0).clamp(0.0, 100.0)
+    };
+
+    let _ = app.emit(
+        DUMP_PROGRESS_EVENT,
+        DumpProgress {
+            connection_id: connection_id.to_string(),
+            tables_processed,
+            total_tables,
+            percentage,
+            current_table: current_table.map(ToOwned::to_owned),
+            current_operation: current_operation.into(),
+        },
+    );
+}
+
+fn mysql_qualified_ref(schema: &str, table: &str) -> String {
+    let table = table.replace('`', "``");
+    if schema.trim().is_empty() {
+        format!("`{}`", table)
+    } else {
+        format!("`{}`.`{}`", schema.replace('`', "``"), table)
+    }
+}
+
+fn dump_driver_label(driver: &str) -> &str {
+    match driver {
+        "mysql" => "MySQL",
+        "postgres" => "PostgreSQL",
+        "sqlite" => "SQLite",
+        other => other,
+    }
 }
 
 #[tauri::command]
@@ -65,7 +138,15 @@ pub async fn dump_database<R: Runtime>(
     let expanded_params = expand_ssh_connection_params(&app, &saved_conn.params).await?;
     let params = resolve_connection_params_with_id(&expanded_params, &connection_id)?;
     let driver = saved_conn.params.driver.clone();
-    let schema = schema.unwrap_or_else(|| "public".to_string());
+    let schema = normalized_dump_schema(&driver, &params, schema);
+    let connection_name = saved_conn.name.clone();
+    let source_host = match (&params.host, params.port) {
+        (Some(host), Some(port)) => format!("{}:{}", host, port),
+        (Some(host), None) => host.clone(),
+        _ => params.database.primary().to_string(),
+    };
+    let task_connection_id = connection_id.clone();
+    let app_for_task = app.clone();
 
     // Spawn the dump process
     let task = tokio::spawn(async move {
@@ -73,14 +154,50 @@ pub async fn dump_database<R: Runtime>(
         let mut writer = BufWriter::new(file);
 
         // Write header
-        writeln!(writer, "-- Tabularis Dump").map_err(|e| e.to_string())?;
-        writeln!(writer, "-- Database: {}", params.database).map_err(|e| e.to_string())?;
-        writeln!(writer, "-- Date: {}\n", chrono::Local::now().to_rfc3339())
+        writeln!(writer, "/*").map_err(|e| e.to_string())?;
+        writeln!(writer, " Mavicat Dump SQL\n").map_err(|e| e.to_string())?;
+        writeln!(writer, " Source Server         : {}", connection_name)
             .map_err(|e| e.to_string())?;
+        writeln!(
+            writer,
+            " Source Server Type    : {}",
+            dump_driver_label(&driver)
+        )
+        .map_err(|e| e.to_string())?;
+        writeln!(writer, " Source Host           : {}", source_host).map_err(|e| e.to_string())?;
+        writeln!(writer, " Source Schema         : {}", schema).map_err(|e| e.to_string())?;
+        writeln!(
+            writer,
+            "\n Target Server Type    : {}",
+            dump_driver_label(&driver)
+        )
+        .map_err(|e| e.to_string())?;
+        writeln!(writer, " File Encoding         : 65001\n").map_err(|e| e.to_string())?;
+        writeln!(
+            writer,
+            " Date: {}",
+            chrono::Local::now().format("%d/%m/%Y %H:%M:%S")
+        )
+        .map_err(|e| e.to_string())?;
+        writeln!(writer, "*/\n").map_err(|e| e.to_string())?;
+
+        if driver == "mysql" {
+            writeln!(writer, "SET NAMES utf8mb4;").map_err(|e| e.to_string())?;
+            writeln!(writer, "SET FOREIGN_KEY_CHECKS = 0;\n").map_err(|e| e.to_string())?;
+        }
+
+        emit_dump_progress(
+            &app_for_task,
+            &task_connection_id,
+            0,
+            0,
+            None,
+            "正在读取表清单",
+        );
 
         // Get tables
         let all_tables = match driver.as_str() {
-            "mysql" => mysql::get_tables(&params, None).await?,
+            "mysql" => mysql::get_tables(&params, Some(&schema)).await?,
             "postgres" => postgres::get_tables(&params, &schema).await?,
             "sqlite" => sqlite::get_tables(&params).await?,
             _ => return Err("Unsupported driver".into()),
@@ -91,22 +208,38 @@ pub async fn dump_database<R: Runtime>(
         } else {
             all_tables.into_iter().map(|t| t.name).collect()
         };
+        let total_tables = tables_to_process.len();
 
-        for table in tables_to_process {
+        emit_dump_progress(
+            &app_for_task,
+            &task_connection_id,
+            0,
+            total_tables,
+            None,
+            "准备导出",
+        );
+
+        for (index, table) in tables_to_process.iter().enumerate() {
+            emit_dump_progress(
+                &app_for_task,
+                &task_connection_id,
+                index,
+                total_tables,
+                Some(table),
+                "正在导出表",
+            );
+
             if options.structure {
-                writeln!(
-                    writer,
-                    "-- Structure for table {}",
-                    format_table_ref(&driver, &schema, &table)
-                )
-                .map_err(|e| e.to_string())?;
-                writeln!(writer, "{}", drop_table_if_exists(&driver, &schema, &table))
+                writeln!(writer, "-- ----------------------------").map_err(|e| e.to_string())?;
+                writeln!(writer, "-- Table structure for {}", table).map_err(|e| e.to_string())?;
+                writeln!(writer, "-- ----------------------------").map_err(|e| e.to_string())?;
+                writeln!(writer, "{}", drop_table_if_exists(&driver, &schema, table))
                     .map_err(|e| e.to_string())?;
 
                 let ddl = match driver.as_str() {
-                    "mysql" => mysql::get_table_ddl(&params, &table, None).await?,
-                    "postgres" => postgres::get_table_ddl(&params, &table, &schema).await?,
-                    "sqlite" => sqlite::get_table_ddl(&params, &table).await?,
+                    "mysql" => mysql::get_table_ddl(&params, table, Some(&schema)).await?,
+                    "postgres" => postgres::get_table_ddl(&params, table, &schema).await?,
+                    "sqlite" => sqlite::get_table_ddl(&params, table).await?,
                     _ => return Err("Unsupported driver".into()),
                 };
 
@@ -114,18 +247,36 @@ pub async fn dump_database<R: Runtime>(
             }
 
             if options.data {
-                writeln!(
-                    writer,
-                    "-- Data for table {}",
-                    format_table_ref(&driver, &schema, &table)
-                )
-                .map_err(|e| e.to_string())?;
-                export_table_data(&mut writer, &params, &driver, &table, &schema).await?;
-                writeln!(writer, "\n").map_err(|e| e.to_string())?;
+                writeln!(writer, "-- ----------------------------").map_err(|e| e.to_string())?;
+                writeln!(writer, "-- Records of {}", table).map_err(|e| e.to_string())?;
+                writeln!(writer, "-- ----------------------------").map_err(|e| e.to_string())?;
+                export_table_data(&mut writer, &params, &driver, table, &schema).await?;
+                writeln!(writer).map_err(|e| e.to_string())?;
             }
+
+            emit_dump_progress(
+                &app_for_task,
+                &task_connection_id,
+                index + 1,
+                total_tables,
+                Some(table),
+                "表导出完成",
+            );
+        }
+
+        if driver == "mysql" {
+            writeln!(writer, "SET FOREIGN_KEY_CHECKS = 1;").map_err(|e| e.to_string())?;
         }
 
         writer.flush().map_err(|e| e.to_string())?;
+        emit_dump_progress(
+            &app_for_task,
+            &task_connection_id,
+            total_tables,
+            total_tables,
+            None,
+            "导出完成",
+        );
         Ok::<(), String>(())
     });
 
@@ -155,7 +306,10 @@ async fn export_table_data(
     // Let's reuse `extract_value` logic but format for SQL.
 
     // Ideally we should use specific batch size
-    let query = format!("SELECT * FROM {}", format_table_ref(driver, schema, table));
+    let query = match driver {
+        "mysql" => format!("SELECT * FROM {}", mysql_qualified_ref(schema, table)),
+        _ => format!("SELECT * FROM {}", format_table_ref(driver, schema, table)),
+    };
 
     match driver {
         "mysql" => {

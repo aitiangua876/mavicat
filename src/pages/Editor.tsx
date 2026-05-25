@@ -246,6 +246,7 @@ export const Editor = () => {
     isOpen: boolean;
     status: ExportStatus;
     rowsProcessed: number;
+    progressPercent?: number;
     fileName: string;
     errorMessage?: string;
   }>({
@@ -2744,6 +2745,7 @@ export const Editor = () => {
           isOpen: true,
           status: "completed",
           rowsProcessed: activeTab.result?.rows.length ?? 0,
+          progressPercent: 100,
           fileName: filePath.split(/[/\\]/).pop() || filePath,
         });
         return;
@@ -2753,6 +2755,7 @@ export const Editor = () => {
         isOpen: true,
         status: "exporting",
         rowsProcessed: 0,
+        progressPercent: 0,
         fileName: filePath.split(/[/\\]/).pop() || filePath, // Show only filename
       });
 
@@ -2770,6 +2773,7 @@ export const Editor = () => {
       setExportState((prev) => ({
         ...prev,
         status: "completed",
+        progressPercent: 100,
       }));
     } catch (e) {
       // Error: update modal state
@@ -3993,6 +3997,7 @@ export const Editor = () => {
         isOpen={exportState.isOpen}
         status={exportState.status}
         rowsProcessed={exportState.rowsProcessed}
+        progressPercent={exportState.progressPercent}
         fileName={exportState.fileName}
         errorMessage={exportState.errorMessage}
         onCancel={cancelExport}

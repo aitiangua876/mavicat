@@ -71,6 +71,9 @@ interface NewConnectionModalProps {
   initialConnection?: SavedConnection | null;
 }
 
+const getDefaultSslMode = (driverId: string) =>
+  driverId === "postgres" ? "disable" : "disabled";
+
 const FieldInput = ({
   label,
   value,
@@ -149,7 +152,7 @@ export const NewConnectionModal = ({
     port: 3306,
     username: "root",
     database: "",
-    ssl_mode: "",
+    ssl_mode: getDefaultSslMode("mysql"),
     ssh_enabled: false,
     ssh_port: 22,
     save_in_keychain: false,
@@ -370,6 +373,7 @@ export const NewConnectionModal = ({
           port: 3306,
           username: "root",
           database: "",
+          ssl_mode: getDefaultSslMode("mysql"),
           ssh_enabled: false,
           ssh_port: 22,
           save_in_keychain: false,
@@ -397,7 +401,7 @@ export const NewConnectionModal = ({
       username: getDefaultUsername(newDriver),
       password: "",
       database: getDefaultDatabase(newDriver),
-      ssl_mode: "",
+      ssl_mode: getDefaultSslMode(newDriver),
       ssh_enabled: false,
       ssh_connection_id: undefined,
       ssh_host: undefined,
@@ -542,6 +546,7 @@ export const NewConnectionModal = ({
         driver,
         ...formData,
         port: formData.port != null ? Number(formData.port) : undefined,
+        ssl_mode: formData.ssl_mode || getDefaultSslMode(driver),
         save_in_keychain: false,
         database: isRedisDriver
           ? typeof formData.database === "string" && formData.database.trim()
@@ -609,6 +614,7 @@ export const NewConnectionModal = ({
           username: parsed.username || "",
           password: parsed.password || "",
           database: parsed.database || "",
+          ssl_mode: getDefaultSslMode(newDriver),
         };
 
         if (parsedIsMultiDb && parsed.database) {
@@ -1046,7 +1052,7 @@ export const NewConnectionModal = ({
           {t("newConnection.sslMode", { defaultValue: "SSL Mode" })}
         </label>
         <Select
-          value={formData.ssl_mode || (driver === "postgres" ? "prefer" : "required")}
+          value={formData.ssl_mode || getDefaultSslMode(driver)}
           options={
             driver === "postgres"
               ? ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"]
@@ -1386,31 +1392,36 @@ export const NewConnectionModal = ({
             className="w-2 h-2 rounded-full shrink-0"
             style={getDriverColorStyle(activeDriver)}
           />
-          <input
-            ref={nameInputRef}
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setNameDirty(true);
-              if (nameError) setNameError(false);
-            }}
-            placeholder={t("newConnection.namePlaceholder")}
-            autoFocus
-            autoCorrect="off"
-            autoCapitalize="off"
-            autoComplete="off"
-            spellCheck={false}
-            className={clsx(
-              "flex-1 bg-transparent text-base font-semibold outline-none",
-              nameError
-                ? "text-red-400 placeholder:text-red-400/60"
-                : "text-primary placeholder:text-muted/50",
-            )}
-          />
-          <span className="text-red-400 text-sm -ml-2" title="必填">
-            *
-          </span>
+          <div className="flex-1 min-w-0">
+            <label className="mb-1 flex items-center gap-1 text-xs font-bold text-primary">
+              <span>连接名</span>
+              <span className="text-red-400" title="必填">
+                *
+              </span>
+            </label>
+            <input
+              ref={nameInputRef}
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameDirty(true);
+                if (nameError) setNameError(false);
+              }}
+              placeholder={t("newConnection.namePlaceholder")}
+              autoFocus
+              autoCorrect="off"
+              autoCapitalize="off"
+              autoComplete="off"
+              spellCheck={false}
+              className={clsx(
+                "w-full bg-transparent text-base font-semibold outline-none",
+                nameError
+                  ? "text-red-400 placeholder:text-red-400/60"
+                  : "text-primary placeholder:text-muted/50",
+              )}
+            />
+          </div>
           <span className="text-xs text-muted bg-surface-secondary px-2 py-0.5 rounded-full font-medium capitalize">
             {activeDriver?.name ?? driver}
           </span>

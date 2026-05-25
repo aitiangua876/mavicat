@@ -48,8 +48,8 @@ pub mod drivers {
     pub mod postgres;
     pub mod redis;
     pub mod registry;
-    pub mod sqlserver;
     pub mod sqlite;
+    pub mod sqlserver;
 }
 
 use logger::{create_log_buffer, init_logger, SharedLogBuffer};
@@ -153,7 +153,8 @@ pub fn run() {
                 drivers::registry::register_driver(drivers::mysql::MysqlDriver::new()).await;
                 drivers::registry::register_driver(drivers::postgres::PostgresDriver::new()).await;
                 drivers::registry::register_driver(drivers::redis::RedisDriver::new()).await;
-                drivers::registry::register_driver(drivers::sqlserver::SqlServerDriver::new()).await;
+                drivers::registry::register_driver(drivers::sqlserver::SqlServerDriver::new())
+                    .await;
                 drivers::registry::register_driver(drivers::sqlite::SqliteDriver::new()).await;
             });
 

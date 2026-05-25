@@ -154,22 +154,30 @@ fn redis_value_to_json(value: RedisValue) -> Value {
         RedisValue::Nil => Value::Null,
         RedisValue::Int(item) => Value::from(item),
         RedisValue::BulkString(bytes) => Value::String(String::from_utf8_lossy(&bytes).to_string()),
-        RedisValue::Array(items) => Value::Array(items.into_iter().map(redis_value_to_json).collect()),
+        RedisValue::Array(items) => {
+            Value::Array(items.into_iter().map(redis_value_to_json).collect())
+        }
         RedisValue::SimpleString(item) => Value::String(item),
         RedisValue::Okay => Value::String("OK".to_string()),
         RedisValue::Map(items) => Value::Array(
             items
                 .into_iter()
-                .map(|(key, value)| Value::Array(vec![redis_value_to_json(key), redis_value_to_json(value)]))
+                .map(|(key, value)| {
+                    Value::Array(vec![redis_value_to_json(key), redis_value_to_json(value)])
+                })
                 .collect(),
         ),
         RedisValue::Attribute { data, .. } => redis_value_to_json(*data),
-        RedisValue::Set(items) => Value::Array(items.into_iter().map(redis_value_to_json).collect()),
+        RedisValue::Set(items) => {
+            Value::Array(items.into_iter().map(redis_value_to_json).collect())
+        }
         RedisValue::Double(item) => Value::from(item),
         RedisValue::Boolean(item) => Value::from(item),
         RedisValue::VerbatimString { text, .. } => Value::String(text),
         RedisValue::BigNumber(item) => Value::String(item.to_string()),
-        RedisValue::Push { data, .. } => Value::Array(data.into_iter().map(redis_value_to_json).collect()),
+        RedisValue::Push { data, .. } => {
+            Value::Array(data.into_iter().map(redis_value_to_json).collect())
+        }
         RedisValue::ServerError(error) => Value::String(format!("{error:?}")),
     }
 }
@@ -251,7 +259,10 @@ async fn inspect_key(params: &ConnectionParams, key: &str) -> Result<QueryResult
                 .map_err(|error| error.to_string())?;
             Ok(QueryResult {
                 columns: vec!["member".to_string()],
-                rows: values.into_iter().map(|value| vec![Value::String(value)]).collect(),
+                rows: values
+                    .into_iter()
+                    .map(|value| vec![Value::String(value)])
+                    .collect(),
                 affected_rows: 0,
                 truncated: false,
                 pagination: None,
@@ -278,7 +289,10 @@ async fn inspect_key(params: &ConnectionParams, key: &str) -> Result<QueryResult
             })
         }
         _ => {
-            let value: Option<String> = connection.get(key).await.map_err(|error| error.to_string())?;
+            let value: Option<String> = connection
+                .get(key)
+                .await
+                .map_err(|error| error.to_string())?;
             Ok(QueryResult {
                 columns: vec!["key".to_string(), "type".to_string(), "value".to_string()],
                 rows: vec![vec![
@@ -645,7 +659,10 @@ impl DatabaseDriver for RedisDriver {
         schema: Option<&str>,
     ) -> Result<HashMap<String, Vec<ForeignKey>>, String> {
         let tables = self.get_tables(params, schema).await?;
-        Ok(tables.into_iter().map(|table| (table.name, vec![])).collect())
+        Ok(tables
+            .into_iter()
+            .map(|table| (table.name, vec![]))
+            .collect())
     }
 }
 

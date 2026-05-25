@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Github, Code2, Library } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
-import { APP_VERSION } from "../../version";
+import { APP_DISPLAY_VERSION } from "../../version";
 import { SettingSection } from "./SettingControls";
 import { OpenSourceLibrariesModal } from "../modals/OpenSourceLibrariesModal";
 
@@ -51,7 +51,7 @@ export function InfoTab() {
             <span className="text-xs font-bold uppercase tracking-wider">
               {t("settings.version")}
             </span>
-            <span className="font-mono font-bold">{APP_VERSION}</span>
+            <span className="font-mono font-bold">{APP_DISPLAY_VERSION}</span>
           </div>
           <button
             onClick={() => setIsOpenSourceLibrariesOpen(true)}

@@ -1,7 +1,7 @@
 {
   "name": "mavicat",
   "private": true,
-  "version": "0.11.0",
+  "version": "1.0.0-20260525",
   "type": "module",
   "links": {
     "github": "https://github.com/chenlong/Mavicat"
@@ -16,10 +16,11 @@
     "test:coverage": "vitest run --coverage",
     "test:rust": "cd src-tauri && cargo test",
     "test:all": "pnpm test:rust && pnpm test:coverage",
-    "tauri": "tauri",
+    "tauri": "node scripts/set-package-version.js && tauri",
+    "version:package": "node scripts/set-package-version.js",
     "roadmap": "node scripts/update-roadmap.js",
     "sync-links": "node scripts/sync-links.js",
-    "version": "node scripts/sync-version.js && conventional-changelog -p angular -i CHANGELOG.md -s && git add README.md CHANGELOG.md src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock src/version.ts"
+    "version": "node scripts/sync-version.js --daily && conventional-changelog -p angular -i CHANGELOG.md -s && git add README.md CHANGELOG.md src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock src/version.ts"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

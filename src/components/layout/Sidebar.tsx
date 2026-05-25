@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Database,
   Edit2,
   Loader2,
   Plus,
@@ -25,6 +26,9 @@ import { ContextMenu, type ContextMenuItem } from "../ui/ContextMenu";
 import { NewConnectionModal } from "../modals/NewConnectionModal";
 import type { SavedConnection } from "../../contexts/DatabaseContext";
 import { NavicatConnectionIcon } from "../icons/NavicatStyleIcons";
+import { CreateDatabaseModal } from "../modals/CreateDatabaseModal";
+import { isMultiDatabaseCapable } from "../../utils/database";
+import { supportsCreateDatabase } from "../../utils/createDatabase";
 
 export const Sidebar = () => {
   const { t } = useTranslation();
@@ -34,6 +38,8 @@ export const Sidebar = () => {
     connections: savedConnections,
     connectionDataMap,
     loadConnections,
+    loadDatabaseData,
+    setSelectedDatabases,
   } = useDatabase();
   const {
     connections,
@@ -52,6 +58,7 @@ export const Sidebar = () => {
     connectionId: string;
   } | null>(null);
   const [editingConnection, setEditingConnection] = useState<SavedConnection | null>(null);
+  const [createDatabaseTarget, setCreateDatabaseTarget] = useState<ConnectionStatus | null>(null);
   const { sidebarWidth, startResize } = useSidebarResize(() => undefined);
 
   useEffect(() => {
@@ -152,6 +159,38 @@ export const Sidebar = () => {
     setEditingConnection(savedConnection);
   };
 
+  const openCreateDatabase = async (connection: ConnectionStatus) => {
+    if (!supportsCreateDatabase(connection.driver)) return;
+
+    if (!connection.isOpen) {
+      await openConnection(connection);
+    } else {
+      handleSwitch(connection.id);
+      setExpandedConnectionIds((prev) => new Set(prev).add(connection.id));
+    }
+
+    setCreateDatabaseTarget(connection);
+  };
+
+  const handleCreateDatabaseSuccess = async (databaseName: string) => {
+    if (!createDatabaseTarget) return;
+
+    const connectionId = createDatabaseTarget.id;
+    const data = connectionDataMap[connectionId];
+    const manifest = allDrivers.find((driver) => driver.id === createDatabaseTarget.driver);
+    const capabilities = data?.capabilities ?? manifest?.capabilities ?? null;
+
+    if (isMultiDatabaseCapable(capabilities)) {
+      const current = data?.selectedDatabases ?? [];
+      const next = current.includes(databaseName) ? current : [...current, databaseName];
+      setSelectedDatabases(next, connectionId);
+      await loadDatabaseData(databaseName, connectionId);
+    }
+
+    setExpandedConnectionIds((prev) => new Set(prev).add(connectionId));
+    handleSwitch(connectionId);
+  };
+
   const handleConnectionContextMenu = (
     event: React.MouseEvent,
     connectionId: string,
@@ -177,6 +216,15 @@ export const Sidebar = () => {
           icon: Terminal,
           action: () => void openConnection(contextConnection),
         },
+        ...(supportsCreateDatabase(contextConnection.driver)
+          ? [
+              {
+                label: "新建数据库...",
+                icon: Database,
+                action: () => void openCreateDatabase(contextConnection),
+              },
+            ]
+          : []),
         {
           label: "编辑连接...",
           icon: Edit2,
@@ -255,6 +303,29 @@ export const Sidebar = () => {
             const isActive = activeConnectionId === connection.id;
             const driverManifest = allDrivers.find((driver) => driver.id === connection.driver);
             const driverColor = getDriverColor(driverManifest);
+            const hasError = !!connection.error;
+            const isConnected = connection.isOpen && connection.isConnected && !hasError;
+            const iconBackground = connection.isConnecting
+              ? "#475569"
+              : isConnected
+                ? driverColor
+                : hasError
+                  ? "#6f2e2e"
+                  : "#565656";
+            const statusTitle = connection.isConnecting
+              ? "连接中"
+              : hasError
+                ? `连接失败：${connection.error}`
+                : isConnected
+                  ? "已连接"
+                  : "未连接";
+            const statusDotClass = connection.isConnecting
+              ? "bg-sky-400 animate-pulse"
+              : hasError
+                ? "bg-red-400"
+                : isConnected
+                  ? "bg-emerald-400"
+                  : "bg-[#777]";
 
             return (
               <div key={connection.id}>
@@ -262,10 +333,13 @@ export const Sidebar = () => {
                   className={`group flex items-center gap-1 h-8 pl-1 pr-1.5 text-[15px] font-semibold cursor-default ${
                     isActive
                       ? "bg-[#2f78d6] text-white"
-                      : "text-[#dcdcdc] hover:bg-[#343434]"
+                      : connection.isOpen
+                        ? "text-[#dcdcdc] hover:bg-[#343434]"
+                        : "text-[#a6a6a6] hover:bg-[#303030]"
                   }`}
                   onDoubleClick={() => void openConnection(connection)}
                   onContextMenu={(event) => handleConnectionContextMenu(event, connection.id)}
+                  title={statusTitle}
                 >
                   <button
                     onClick={(event) => {
@@ -287,16 +361,24 @@ export const Sidebar = () => {
                     className="flex-1 min-w-0 flex items-center gap-2 h-full text-left"
                   >
                     <span
-                      className="w-6 h-6 rounded-[5px] flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: driverColor }}
+                      className={`relative w-6 h-6 rounded-[5px] flex items-center justify-center text-white shrink-0 shadow-sm transition-all ${
+                        isConnected ? "" : "opacity-85 grayscale"
+                      }`}
+                      style={{ backgroundColor: iconBackground }}
+                      title={statusTitle}
                     >
                       {connection.isConnecting ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
                         getDriverIcon(driverManifest, 17)
                       )}
+                      <span
+                        className={`absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full border border-[#242424] ${statusDotClass}`}
+                      />
                     </span>
-                    <span className="truncate">{connection.name}</span>
+                    <span className={`truncate ${connection.isOpen ? "" : "opacity-85"}`}>
+                      {connection.name}
+                    </span>
                     {connection.sshEnabled && (
                       <Shield size={13} className="text-emerald-300 shrink-0" />
                     )}
@@ -355,6 +437,17 @@ export const Sidebar = () => {
         }}
         initialConnection={editingConnection}
       />
+
+      {createDatabaseTarget && (
+        <CreateDatabaseModal
+          isOpen={createDatabaseTarget !== null}
+          connectionId={createDatabaseTarget.id}
+          connectionName={createDatabaseTarget.name}
+          driver={createDatabaseTarget.driver}
+          onClose={() => setCreateDatabaseTarget(null)}
+          onSuccess={handleCreateDatabaseSuccess}
+        />
+      )}
     </aside>
   );
 };
