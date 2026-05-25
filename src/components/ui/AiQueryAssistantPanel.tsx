@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
@@ -7,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Code2,
+  GripVertical,
   KeyRound,
   Loader2,
   Play,
@@ -35,7 +37,12 @@ const STORAGE_KEYS = {
   apiKey: "mavicat.ai.apiKey",
   model: "mavicat.ai.model",
   configOpen: "mavicat.ai.configOpen",
+  panelWidth: "mavicat.ai.panelWidth",
 };
+
+const PANEL_MIN_WIDTH = 320;
+const PANEL_DEFAULT_WIDTH = 390;
+const PANEL_MAX_WIDTH = 720;
 
 interface AiChatResponse {
   content: string;
@@ -69,6 +76,21 @@ interface AiQueryAssistantPanelProps {
 function readStoredValue(key: string, fallback: string) {
   if (typeof window === "undefined") return fallback;
   return window.localStorage.getItem(key) ?? fallback;
+}
+
+function getMaxPanelWidth() {
+  if (typeof window === "undefined") return PANEL_MAX_WIDTH;
+  return Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, window.innerWidth - 260));
+}
+
+function clampPanelWidth(value: number) {
+  return Math.min(getMaxPanelWidth(), Math.max(PANEL_MIN_WIDTH, Math.round(value)));
+}
+
+function readStoredPanelWidth() {
+  const raw = readStoredValue(STORAGE_KEYS.panelWidth, String(PANEL_DEFAULT_WIDTH));
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? clampPanelWidth(parsed) : PANEL_DEFAULT_WIDTH;
 }
 
 function sqlKindLabel(kind: AiSqlBlock["kind"]) {
@@ -106,6 +128,8 @@ export function AiQueryAssistantPanel({
   const [isConfigOpen, setIsConfigOpen] = useState(
     () => readStoredValue(STORAGE_KEYS.configOpen, apiKey ? "false" : "true") === "true",
   );
+  const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth);
+  const [isResizing, setIsResizing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,6 +147,37 @@ export function AiQueryAssistantPanel({
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.configOpen, String(isConfigOpen));
   }, [isConfigOpen]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.panelWidth, String(panelWidth));
+  }, [panelWidth]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handlePointerMove = (event: PointerEvent) => {
+      setPanelWidth(clampPanelWidth(window.innerWidth - event.clientX));
+    };
+
+    const stopResize = () => setIsResizing(false);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopResize, { once: true });
+    window.addEventListener("pointercancel", stopResize, { once: true });
+
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    };
+  }, [isResizing]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -213,24 +268,51 @@ export function AiQueryAssistantPanel({
     await onRunSql(block.sql);
   };
 
+  const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsResizing(true);
+  };
+
   if (collapsed) {
     return (
-      <aside className="absolute right-3 top-1/2 z-20 -translate-y-1/2">
+      <aside className="absolute right-2 top-1/2 z-20 -translate-y-1/2">
         <button
           type="button"
           onClick={onToggle}
-          className="group flex h-11 items-center gap-1.5 rounded-l-full rounded-r-md border border-purple-500/25 bg-elevated/90 px-2.5 text-purple-300 shadow-lg backdrop-blur transition-colors hover:bg-purple-500/15 hover:text-purple-100"
+          className="flex h-16 w-8 flex-col items-center justify-center gap-1 rounded-l-full rounded-r-md border border-purple-500/25 bg-elevated/90 text-purple-300 shadow-lg backdrop-blur transition-colors hover:bg-purple-500/15 hover:text-purple-100"
           title="展开 AI 助手"
         >
-          <Sparkles size={16} />
-          <span className="hidden text-xs font-semibold group-hover:inline">AI</span>
+          <Sparkles size={15} />
+          <span
+            className="text-[10px] font-bold leading-none tracking-widest"
+            style={{ writingMode: "vertical-rl" }}
+          >
+            AI
+          </span>
         </button>
       </aside>
     );
   }
 
   return (
-    <aside className="absolute right-0 top-[86px] bottom-0 z-30 w-[390px] border-l border-default bg-elevated shadow-2xl flex flex-col">
+    <aside
+      className="absolute right-0 top-[86px] bottom-0 z-30 border-l border-default bg-elevated shadow-2xl flex flex-col"
+      style={{ width: panelWidth }}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整 AI 助手宽度"
+        onPointerDown={startResize}
+        className={clsx(
+          "absolute left-0 top-0 bottom-0 z-10 w-2 -translate-x-1 cursor-col-resize group",
+          isResizing && "bg-purple-500/10",
+        )}
+      >
+        <div className="absolute left-1/2 top-1/2 flex h-12 w-3 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-default bg-elevated text-muted opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          <GripVertical size={11} />
+        </div>
+      </div>
       <div className="h-11 px-3 border-b border-default flex items-center gap-2 shrink-0">
         <div className="flex h-7 w-7 items-center justify-center rounded bg-purple-500/15 text-purple-300">
           <Bot size={16} />

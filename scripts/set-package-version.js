@@ -8,28 +8,32 @@ const paths = {
   appVersion: resolve("src/version.ts"),
 };
 
-function currentDateStamp() {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+function parseSemver(version) {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    throw new Error(`Unsupported version format: ${version}`);
+  }
 
-  return formatter.format(new Date()).replaceAll("-", "");
-}
-
-export function buildPackageVersions(dateStamp = currentDateStamp()) {
   return {
-    packageVersion: `1.0.0-${dateStamp}`,
-    displayVersion: `v1.0-${dateStamp}`,
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
   };
 }
 
-const { packageVersion, displayVersion } = buildPackageVersions();
+export function buildPackageVersions(currentVersion) {
+  const { major, minor, patch } = parseSemver(currentVersion);
+  const packageVersion = `${major}.${minor}.${patch + 1}`;
+
+  return {
+    packageVersion,
+    displayVersion: `v${packageVersion}`,
+  };
+}
 
 function applyPackageVersions() {
   const pkg = JSON.parse(readFileSync(paths.package, "utf-8"));
+  const { packageVersion, displayVersion } = buildPackageVersions(pkg.version);
   pkg.version = packageVersion;
   writeFileSync(paths.package, `${JSON.stringify(pkg, null, 2)}\n`);
 

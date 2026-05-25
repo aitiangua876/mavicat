@@ -14,7 +14,7 @@ const paths = {
 const pkg = JSON.parse(readFileSync(paths.package, "utf-8"));
 const isDailyVersion = process.argv.includes("--daily");
 const { packageVersion, displayVersion } = isDailyVersion
-  ? buildPackageVersions()
+  ? buildPackageVersions(pkg.version)
   : { packageVersion: pkg.version, displayVersion: `v${pkg.version}` };
 
 console.log(`🔄 Syncing version to ${packageVersion}...`);
