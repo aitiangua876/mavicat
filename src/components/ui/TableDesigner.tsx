@@ -6,19 +6,23 @@ import {
   Copy,
   Database,
   KeyRound,
+  Link2,
   ListTree,
   Loader2,
   Plus,
   RefreshCw,
   Table2,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { ModifyColumnModal } from "../modals/ModifyColumnModal";
 import { CreateIndexModal } from "../modals/CreateIndexModal";
+import { CreateForeignKeyModal } from "../modals/CreateForeignKeyModal";
 import type { ForeignKey, Index, TableColumn } from "../../types/schema";
+import type { TriggerInfo } from "../../contexts/DatabaseContext";
 import { toErrorMessage } from "../../utils/errors";
 
-type DesignerTab = "fields" | "indexes" | "foreignKeys" | "preview";
+type DesignerTab = "fields" | "indexes" | "foreignKeys" | "triggers" | "preview";
 
 interface TableDesignerProps {
   connectionId: string;
@@ -67,6 +71,7 @@ export const TableDesigner = ({
   const [columns, setColumns] = useState<TableColumn[]>([]);
   const [indexes, setIndexes] = useState<Index[]>([]);
   const [foreignKeys, setForeignKeys] = useState<ForeignKey[]>([]);
+  const [triggers, setTriggers] = useState<TriggerInfo[]>([]);
   const [ddl, setDdl] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +81,7 @@ export const TableDesigner = ({
     column: TableColumn | null;
   }>({ isOpen: false, column: null });
   const [indexModalOpen, setIndexModalOpen] = useState(false);
+  const [foreignKeyModalOpen, setForeignKeyModalOpen] = useState(false);
 
   const groupedIndexes = useMemo(() => normalizeIndexes(indexes), [indexes]);
 
@@ -84,7 +90,7 @@ export const TableDesigner = ({
     setError("");
 
     try {
-      const [nextColumns, nextIndexes, nextForeignKeys, nextDdl] =
+      const [nextColumns, nextIndexes, nextForeignKeys, nextTriggers, nextDdl] =
         await Promise.all([
           invoke<TableColumn[]>("get_columns", {
             connectionId,
@@ -101,6 +107,10 @@ export const TableDesigner = ({
             tableName,
             ...(schema ? { schema } : {}),
           }),
+          invoke<TriggerInfo[]>("get_triggers", {
+            connectionId,
+            ...(schema ? { schema } : {}),
+          }).catch(() => [] as TriggerInfo[]),
           invoke<string>("get_table_ddl", {
             connectionId,
             tableName,
@@ -111,6 +121,7 @@ export const TableDesigner = ({
       setColumns(nextColumns);
       setIndexes(nextIndexes);
       setForeignKeys(nextForeignKeys);
+      setTriggers(nextTriggers.filter((trigger) => trigger.table_name === tableName));
       setDdl(nextDdl);
     } catch (err) {
       setError(toErrorMessage(err));
@@ -146,6 +157,52 @@ export const TableDesigner = ({
     [connectionId, loadDesignerData, schema, tableName],
   );
 
+  const handleDropForeignKey = useCallback(
+    async (foreignKeyName: string) => {
+      const confirmed = await ask(`确认删除外键 "${foreignKeyName}"？`, {
+        title: "删除外键",
+        kind: "warning",
+      });
+      if (!confirmed) return;
+
+      try {
+        await invoke("drop_foreign_key_action", {
+          connectionId,
+          table: tableName,
+          fkName: foreignKeyName,
+          ...(schema ? { schema } : {}),
+        });
+        await loadDesignerData();
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    [connectionId, loadDesignerData, schema, tableName],
+  );
+
+  const handleDropTrigger = useCallback(
+    async (triggerName: string) => {
+      const confirmed = await ask(`确认删除触发器 "${triggerName}"？`, {
+        title: "删除触发器",
+        kind: "warning",
+      });
+      if (!confirmed) return;
+
+      try {
+        await invoke("drop_trigger", {
+          connectionId,
+          triggerName,
+          tableName,
+          ...(schema ? { schema } : {}),
+        });
+        await loadDesignerData();
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    [connectionId, loadDesignerData, schema, tableName],
+  );
+
   const handleCopyDdl = useCallback(async () => {
     if (!ddl.trim()) {
       setCopyStatus("没有可复制的 SQL");
@@ -164,6 +221,7 @@ export const TableDesigner = ({
     { id: "fields", label: "字段" },
     { id: "indexes", label: "索引" },
     { id: "foreignKeys", label: "外键" },
+    { id: "triggers", label: "触发器" },
     { id: "preview", label: "SQL 预览" },
   ];
 
@@ -185,6 +243,14 @@ export const TableDesigner = ({
         >
           <ListTree size={16} className="text-sky-400" />
           添加索引
+        </button>
+        <button
+          onClick={() => setForeignKeyModalOpen(true)}
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-white/10"
+          title="添加外键"
+        >
+          <Link2 size={16} className="text-violet-300" />
+          添加外键
         </button>
         <button
           onClick={() => void loadDesignerData()}
@@ -311,12 +377,15 @@ export const TableDesigner = ({
             ))}
           </div>
         ) : activeTab === "foreignKeys" ? (
-          <div className="min-w-[860px]">
-            <div className="grid grid-cols-[280px_220px_1fr_180px] h-9 items-center text-sm font-medium text-secondary bg-surface-secondary border-b border-default">
+          <div className="min-w-[1080px]">
+            <div className="grid grid-cols-[260px_190px_1fr_160px_140px_140px_90px] h-9 items-center text-sm font-medium text-secondary bg-surface-secondary border-b border-default">
               <div className="px-3 border-r border-default">名称</div>
               <div className="px-3 border-r border-default">字段</div>
               <div className="px-3 border-r border-default">引用表</div>
-              <div className="px-3">引用字段</div>
+              <div className="px-3 border-r border-default">引用字段</div>
+              <div className="px-3 border-r border-default">删除时</div>
+              <div className="px-3 border-r border-default">更新时</div>
+              <div className="px-3">操作</div>
             </div>
             {foreignKeys.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-muted">
@@ -326,7 +395,7 @@ export const TableDesigner = ({
               foreignKeys.map((foreignKey) => (
                 <div
                   key={`${foreignKey.name}:${foreignKey.column_name}:${foreignKey.ref_table}:${foreignKey.ref_column}`}
-                  className="grid grid-cols-[280px_220px_1fr_180px] min-h-9 items-center text-sm border-b border-default hover:bg-surface-secondary/50"
+                  className="grid grid-cols-[260px_190px_1fr_160px_140px_140px_90px] min-h-9 items-center text-sm border-b border-default hover:bg-surface-secondary/50"
                 >
                   <div className="px-3 py-1.5 truncate border-r border-default text-primary">
                     {foreignKey.name}
@@ -337,8 +406,70 @@ export const TableDesigner = ({
                   <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
                     {foreignKey.ref_table}
                   </div>
-                  <div className="px-3 py-1.5 truncate text-secondary">
+                  <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
                     {foreignKey.ref_column}
+                  </div>
+                  <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
+                    {foreignKey.on_delete ?? "-"}
+                  </div>
+                  <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
+                    {foreignKey.on_update ?? "-"}
+                  </div>
+                  <div className="px-2 py-1">
+                    <button
+                      onClick={() => void handleDropForeignKey(foreignKey.name)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-red-300 hover:bg-red-950/40"
+                    >
+                      <Trash2 size={13} />
+                      删除
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : activeTab === "triggers" ? (
+          <div className="min-w-[900px]">
+            <div className="grid grid-cols-[260px_140px_140px_1fr_90px] h-9 items-center text-sm font-medium text-secondary bg-surface-secondary border-b border-default">
+              <div className="px-3 border-r border-default">名称</div>
+              <div className="px-3 border-r border-default">时机</div>
+              <div className="px-3 border-r border-default">事件</div>
+              <div className="px-3 border-r border-default">定义</div>
+              <div className="px-3">操作</div>
+            </div>
+            {triggers.length === 0 ? (
+              <div className="px-3 py-8 text-center text-sm text-muted">
+                未找到触发器
+              </div>
+            ) : (
+              triggers.map((trigger) => (
+                <div
+                  key={trigger.name}
+                  className="grid grid-cols-[260px_140px_140px_1fr_90px] min-h-9 items-center text-sm border-b border-default hover:bg-surface-secondary/50"
+                >
+                  <div className="px-3 py-1.5 truncate border-r border-default text-primary">
+                    {trigger.name}
+                  </div>
+                  <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
+                    {trigger.timing}
+                  </div>
+                  <div className="px-3 py-1.5 truncate border-r border-default text-secondary">
+                    {trigger.event}
+                  </div>
+                  <div
+                    className="px-3 py-1.5 truncate border-r border-default text-secondary"
+                    title={trigger.definition ?? ""}
+                  >
+                    {trigger.definition ?? "-"}
+                  </div>
+                  <div className="px-2 py-1">
+                    <button
+                      onClick={() => void handleDropTrigger(trigger.name)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-red-300 hover:bg-red-950/40"
+                    >
+                      <Zap size={13} />
+                      删除
+                    </button>
                   </div>
                 </div>
               ))
@@ -411,7 +542,7 @@ export const TableDesigner = ({
           表设计
         </div>
         <div className="text-muted">
-          当前版本支持查看字段、索引、外键和 SQL 预览；添加字段、编辑字段和添加/删除索引会直接执行。复杂的批量变更保存队列后续继续补齐。
+          当前版本支持字段、索引、外键、触发器和 SQL 预览；添加/编辑字段、索引和外键前会展示 SQL 或确认弹窗，执行后自动刷新结构。
         </div>
       </div>
 
@@ -433,6 +564,14 @@ export const TableDesigner = ({
         tableName={tableName}
         driver={driver}
         schema={schema}
+      />
+      <CreateForeignKeyModal
+        isOpen={foreignKeyModalOpen}
+        onClose={() => setForeignKeyModalOpen(false)}
+        onSuccess={() => void loadDesignerData()}
+        connectionId={connectionId}
+        tableName={tableName}
+        driver={driver}
       />
     </div>
   );

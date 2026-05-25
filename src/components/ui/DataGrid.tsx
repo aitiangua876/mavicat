@@ -77,6 +77,7 @@ import {
   getSelectedRows,
   copyTextToClipboard,
 } from "../../utils/clipboard";
+import { parseClipboardTable } from "../../utils/clipboardTable";
 import {
   canCopySqlMode,
   rowsToSqlCopy,
@@ -125,6 +126,28 @@ interface DataGridProps {
   sortClause?: string;
   onSort?: (colName: string) => void;
   readonly?: boolean;
+}
+
+type CellUndoOperation =
+  | {
+      kind: "existing";
+      pkVal: unknown;
+      colName: string;
+      previousValue: unknown;
+      hadPendingValue: boolean;
+    }
+  | {
+      kind: "insertion";
+      tempId: string;
+      colName: string;
+      previousValue: unknown;
+    };
+
+function isEditablePasteTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest("input, textarea, select, [contenteditable='true']") !== null
+  );
 }
 
 export const DataGrid = React.memo(
@@ -241,6 +264,7 @@ export const DataGrid = React.memo(
     const editInputRef = useRef<HTMLInputElement>(null);
     const dragAnchorRowIndexRef = useRef<number | null>(null);
     const didDragRowsRef = useRef(false);
+    const editUndoStackRef = useRef<CellUndoOperation[][]>([]);
     const pendingJsonSessions = useRef<
       Map<string, { colName: string; rowData: unknown[]; isInsertion: boolean; tempId?: string }>
     >(new Map());
@@ -1272,6 +1296,136 @@ export const DataGrid = React.memo(
       setContextMenu(null);
     }, [contextMenu, copyCellValue]);
 
+    const applyClipboardMatrix = useCallback(
+      (matrix: string[][]) => {
+        if (
+          readonlyProp ||
+          !focusedCell ||
+          matrix.length === 0 ||
+          columns.length === 0
+        ) {
+          return;
+        }
+
+        const startVisibleColumnIndex = Math.max(
+          0,
+          visibleColumns.indexOf(columns[focusedCell.colIndex]),
+        );
+        const undoBatch: CellUndoOperation[] = [];
+
+        matrix.forEach((rowValues, rowOffset) => {
+          const targetRowIndex = focusedCell.rowIndex + rowOffset;
+          const mergedRow = mergedRows[targetRowIndex];
+          if (!mergedRow) return;
+
+          rowValues.forEach((value, colOffset) => {
+            const visibleColumnName =
+              visibleColumns[startVisibleColumnIndex + colOffset];
+            if (!visibleColumnName) return;
+
+            const sourceColIndex = columns.indexOf(visibleColumnName);
+            if (sourceColIndex < 0) return;
+
+            if (mergedRow.type === "insertion") {
+              if (!mergedRow.tempId || !onPendingInsertionChange) return;
+              const previousValue =
+                pendingInsertions?.[mergedRow.tempId]?.data[visibleColumnName] ??
+                mergedRow.rowData[sourceColIndex];
+
+              if (String(previousValue ?? "") === value) return;
+
+              undoBatch.push({
+                kind: "insertion",
+                tempId: mergedRow.tempId,
+                colName: visibleColumnName,
+                previousValue,
+              });
+              onPendingInsertionChange(mergedRow.tempId, visibleColumnName, value);
+              return;
+            }
+
+            if (!onPendingChange || pkIndexMap === null) return;
+            const pkVal = mergedRow.rowData[pkIndexMap];
+            const pkKey = String(pkVal);
+            const pendingValue =
+              pendingChanges?.[pkKey]?.changes[visibleColumnName];
+            const hadPendingValue =
+              pendingChanges?.[pkKey]?.changes &&
+              Object.prototype.hasOwnProperty.call(
+                pendingChanges[pkKey].changes,
+                visibleColumnName,
+              );
+            const previousValue = hadPendingValue
+              ? pendingValue
+              : mergedRow.rowData[sourceColIndex];
+
+            if (String(previousValue ?? "") === value) return;
+
+            undoBatch.push({
+              kind: "existing",
+              pkVal,
+              colName: visibleColumnName,
+              previousValue,
+              hadPendingValue: Boolean(hadPendingValue),
+            });
+            onPendingChange(pkVal, visibleColumnName, value);
+          });
+        });
+
+        if (undoBatch.length === 0) return;
+
+        editUndoStackRef.current.push(undoBatch);
+        showAlert(`已粘贴 ${undoBatch.length} 个单元格，按 Ctrl+Z 可撤销本次粘贴。`, {
+          title: "批量粘贴完成",
+          kind: "info",
+        });
+      },
+      [
+        readonlyProp,
+        focusedCell,
+        columns,
+        visibleColumns,
+        mergedRows,
+        onPendingInsertionChange,
+        pendingInsertions,
+        onPendingChange,
+        pkIndexMap,
+        pendingChanges,
+        showAlert,
+      ],
+    );
+
+    const undoLastEditBatch = useCallback(() => {
+      const batch = editUndoStackRef.current.pop();
+      if (!batch || batch.length === 0) return false;
+
+      batch
+        .slice()
+        .reverse()
+        .forEach((operation) => {
+          if (operation.kind === "insertion") {
+            onPendingInsertionChange?.(
+              operation.tempId,
+              operation.colName,
+              operation.previousValue,
+            );
+            return;
+          }
+
+          onPendingChange?.(
+            operation.pkVal,
+            operation.colName,
+            operation.hadPendingValue ? operation.previousValue : undefined,
+          );
+        });
+
+      showAlert(`已撤销 ${batch.length} 个粘贴单元格。`, {
+        title: "撤销完成",
+        kind: "info",
+      });
+      return true;
+    }, [onPendingChange, onPendingInsertionChange, showAlert]);
+
     // Handle keyboard shortcuts
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -1289,6 +1443,12 @@ export const DataGrid = React.memo(
           }
         }
 
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+          if (!editingCell && focusedCell && undoLastEditBatch()) {
+            e.preventDefault();
+          }
+        }
+
         // Delete / Backspace — delete selected rows
         if ((e.key === "Delete" || e.key === "Backspace") && !editingCell && !readonlyProp && selectedRowIndices.size > 0) {
           e.preventDefault();
@@ -1298,7 +1458,26 @@ export const DataGrid = React.memo(
 
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [editingCell, selectedRowIndices, focusedCell, copyCellValue, copySelectedCells, readonlyProp, deleteRowsByIndices]);
+    }, [editingCell, selectedRowIndices, focusedCell, copyCellValue, copySelectedCells, readonlyProp, deleteRowsByIndices, undoLastEditBatch]);
+
+    useEffect(() => {
+      const handlePaste = (e: ClipboardEvent) => {
+        if (!focusedCell || editingCell || readonlyProp) return;
+        if (isEditablePasteTarget(e.target)) return;
+
+        const text = e.clipboardData?.getData("text/plain") ?? "";
+        if (!text.trim()) return;
+
+        const matrix = parseClipboardTable(text);
+        if (matrix.length === 0) return;
+
+        e.preventDefault();
+        applyClipboardMatrix(matrix);
+      };
+
+      document.addEventListener("paste", handlePaste);
+      return () => document.removeEventListener("paste", handlePaste);
+    }, [applyClipboardMatrix, editingCell, focusedCell, readonlyProp]);
 
     // Show "no data" if there are no columns (even with pending insertions, we can't render without column info)
     // OR if there are columns but no data and no pending insertions

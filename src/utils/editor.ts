@@ -115,6 +115,10 @@ export function generateTabTitle(
     return `${partial.designTable} - 设计`;
   }
 
+  if (partial?.type === "database_objects") {
+    return partial.schema ? `${partial.schema} - 对象` : "数据库对象";
+  }
+
   const consoleCount = tabs.filter(
     (t) => t.connectionId === activeConnectionId && t.type === "console",
   ).length;

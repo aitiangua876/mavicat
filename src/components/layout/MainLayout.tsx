@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -28,6 +28,10 @@ import { ClipboardImportModal } from '../modals/ClipboardImportModal';
 import { reconstructTableQuery } from '../../utils/editor';
 import { toErrorMessage } from '../../utils/errors';
 import { getDatabaseList, isMultiDatabaseCapable } from '../../utils/database';
+import {
+  OPEN_DATA_TRANSFER_EVENT,
+  type OpenDataTransferRequest,
+} from '../../types/tableClipboard';
 
 type ToolbarAction =
   | 'connections'
@@ -49,6 +53,23 @@ interface ExportSource {
   connectionId: string;
   databaseName?: string;
   tableName: string;
+}
+
+interface SchemaDiffItem {
+  id: string;
+  kind: string;
+  tableName: string;
+  objectName?: string | null;
+  summary: string;
+  statements: string[];
+}
+
+interface SchemaDiffReport {
+  source: { connectionId: string; schema?: string | null };
+  target: { connectionId: string; schema?: string | null };
+  totalChanges: number;
+  executableChanges: number;
+  items: SchemaDiffItem[];
 }
 
 const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string }> = {
@@ -97,6 +118,10 @@ function WorkbenchToolbar() {
   const [wizardDatabaseName, setWizardDatabaseName] = useState('');
   const [transferTargetConnectionId, setTransferTargetConnectionId] = useState('');
   const [transferTargetDatabaseName, setTransferTargetDatabaseName] = useState('');
+  const [initialTransferSourceTable, setInitialTransferSourceTable] = useState('');
+  const [initialTransferSourceTables, setInitialTransferSourceTables] = useState<string[]>([]);
+  const [wizardOpenNonce, setWizardOpenNonce] = useState(0);
+  const wizardInitOverrideRef = useRef<OpenDataTransferRequest | null>(null);
   const [dumpModal, setDumpModal] = useState<{ connectionId: string; databaseName: string } | null>(null);
   const [importModal, setImportModal] = useState<{ connectionId: string; filePath: string; database: string } | null>(null);
   const [dataImportModal, setDataImportModal] = useState<{ text?: string; sourceLabel?: string } | null>(null);
@@ -205,6 +230,23 @@ function WorkbenchToolbar() {
   useEffect(() => {
     if (!wizardKind) return;
 
+    const wizardInitOverride = wizardInitOverrideRef.current;
+    if (wizardKind === 'data_transfer' && wizardInitOverride) {
+      const sourceConnectionId =
+        wizardInitOverride.sourceConnectionId || activeConnectionId || connectionOptions[0]?.id || '';
+      const targetConnectionId =
+        wizardInitOverride.targetConnectionId || sourceConnectionId;
+
+      setWizardConnectionId(sourceConnectionId);
+      setWizardDatabaseName(wizardInitOverride.sourceDatabase ?? '');
+      setTransferTargetConnectionId(targetConnectionId);
+      setTransferTargetDatabaseName(wizardInitOverride.targetDatabase ?? '');
+      setInitialTransferSourceTable(wizardInitOverride.sourceTable);
+      setInitialTransferSourceTables(wizardInitOverride.sourceTables ?? [wizardInitOverride.sourceTable]);
+      wizardInitOverrideRef.current = null;
+      return;
+    }
+
     const nextConnectionId = activeConnectionId || connectionOptions[0]?.id || '';
     const activeDatabase =
       activeSchema ||
@@ -227,11 +269,27 @@ function WorkbenchToolbar() {
         ? activeDatabase
         : databaseOptions[0] ?? activeDatabase,
     );
-  }, [wizardKind]);
+    setInitialTransferSourceTable('');
+    setInitialTransferSourceTables([]);
+  }, [wizardKind, wizardOpenNonce, activeConnectionId, activeDatabaseName, activeSchema, connectionOptions, getConnectionDatabaseOptions, schemas, selectedDatabases, selectedSchemas]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenDataTransferRequest>).detail;
+      if (!detail?.sourceConnectionId || !detail.sourceTable) return;
+
+      wizardInitOverrideRef.current = detail;
+      setWizardKind('data_transfer');
+      setWizardOpenNonce((value) => value + 1);
+    };
+
+    window.addEventListener(OPEN_DATA_TRANSFER_EVENT, handler);
+    return () => window.removeEventListener(OPEN_DATA_TRANSFER_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     if (
-      (wizardKind !== 'data_transfer' && wizardKind !== 'export') ||
+      (wizardKind !== 'data_transfer' && wizardKind !== 'export' && wizardKind !== 'schema_sync') ||
       !selectedWizardConnectionId ||
       !selectedWizardDatabaseName
     ) {
@@ -324,16 +382,54 @@ function WorkbenchToolbar() {
       sourceSchema?: string;
       targetSchema?: string;
       sourceTable: string;
+      sourceTables?: string[];
       targetTable?: string;
       writeMode: 'append' | 'delete_then_insert' | 'create_then_insert';
       batchSize: number;
     }) => {
+      const sourceTables = request.sourceTables?.filter(Boolean) ?? [];
+      if (sourceTables.length > 1) {
+        const report = await invoke<{
+          tablesTotal: number;
+          tablesSucceeded: number;
+          failedTables: number;
+          rowsRead: number;
+          rowsInserted: number;
+          errors: string[];
+        }>('start_data_transfer_batch', {
+          request: {
+            sourceConnectionId: request.sourceConnectionId,
+            targetConnectionId: request.targetConnectionId,
+            sourceSchema: request.sourceSchema,
+            targetSchema: request.targetSchema,
+            sourceTables,
+            writeMode: request.writeMode,
+            batchSize: request.batchSize,
+          },
+        });
+
+        if (request.targetSchema) {
+          await loadDatabaseData(request.targetSchema, request.targetConnectionId);
+        }
+
+        const suffix =
+          report.failedTables > 0
+            ? `，失败 ${report.failedTables} 张：${report.errors[0] ?? '请查看日志'}`
+            : '';
+        return `迁移完成：成功 ${report.tablesSucceeded}/${report.tablesTotal} 张表，读取 ${report.rowsRead} 行，写入 ${report.rowsInserted} 行${suffix}`;
+      }
+
       const report = await invoke<{
         rowsRead: number;
         rowsInserted: number;
         failedStatements: number;
         errors: string[];
-      }>('start_data_transfer', { request });
+      }>('start_data_transfer', {
+        request: {
+          ...request,
+          sourceTable: sourceTables[0] ?? request.sourceTable,
+        },
+      });
 
       if (request.targetSchema) {
         await loadDatabaseData(request.targetSchema, request.targetConnectionId);
@@ -344,6 +440,65 @@ function WorkbenchToolbar() {
           ? `，失败 ${report.failedStatements} 条：${report.errors[0] ?? '请查看日志'}`
           : '';
       return `迁移完成：读取 ${report.rowsRead} 行，写入 ${report.rowsInserted} 行${suffix}`;
+    },
+    [loadDatabaseData],
+  );
+
+  const runSchemaCompare = useCallback(
+    async (request: {
+      sourceConnectionId: string;
+      targetConnectionId: string;
+      sourceSchema?: string;
+      targetSchema?: string;
+    }) => {
+      return invoke<SchemaDiffReport>('compare_schema', {
+        source: {
+          connectionId: request.sourceConnectionId,
+          schema: request.sourceSchema,
+        },
+        target: {
+          connectionId: request.targetConnectionId,
+          schema: request.targetSchema,
+        },
+      });
+    },
+    [],
+  );
+
+  const runSchemaExecute = useCallback(
+    async (report: SchemaDiffReport, selectedChangeIds: string[]) => {
+      const statements = await invoke<string[]>('generate_schema_sync_sql', {
+        report,
+        selectedChangeIds,
+        direction: 'source_to_target',
+      });
+      const executableCount = statements.filter((statement) => {
+        const trimmed = statement.trim();
+        return trimmed && !trimmed.startsWith('--');
+      }).length;
+      if (executableCount === 0) {
+        return '没有可执行的结构同步 SQL。';
+      }
+
+      const execution = await invoke<{
+        statementsTotal: number;
+        statementsExecuted: number;
+        failedStatements: number;
+        errors: string[];
+      }>('execute_schema_sync', {
+        connectionId: report.target.connectionId,
+        statements,
+        schema: report.target.schema || undefined,
+      });
+
+      if (report.target.schema) {
+        await loadDatabaseData(report.target.schema, report.target.connectionId);
+      }
+
+      if (execution.failedStatements > 0) {
+        return `结构同步完成，但失败 ${execution.failedStatements}/${execution.statementsTotal} 条：${execution.errors[0] ?? '请查看日志'}`;
+      }
+      return `结构同步完成：执行 ${execution.statementsExecuted}/${execution.statementsTotal} 条 SQL。`;
     },
     [loadDatabaseData],
   );
@@ -577,6 +732,8 @@ function WorkbenchToolbar() {
         onTargetConnectionChange={handleTransferTargetConnectionChange}
         onTargetDatabaseChange={handleTransferTargetDatabaseChange}
         tableOptions={transferTableOptions}
+        initialTransferSourceTable={initialTransferSourceTable}
+        initialTransferSourceTables={initialTransferSourceTables}
         hasConnection={!!selectedWizardConnectionId}
         canExport={canExport}
         onClipboardImport={handleClipboardImport}
@@ -603,6 +760,8 @@ function WorkbenchToolbar() {
         }}
         onSqlImport={openSqlImport}
         onDataTransfer={runDataTransfer}
+        onSchemaCompare={runSchemaCompare}
+        onSchemaExecute={runSchemaExecute}
       />
       <ExportProgressModal
         isOpen={exportState.isOpen}

@@ -47,6 +47,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { TableToolbar } from "../components/ui/TableToolbar";
 import { DataGrid } from "../components/ui/DataGrid";
+import { DatabaseObjectView } from "../components/ui/DatabaseObjectView";
 import { MultiResultPanel } from "../components/ui/MultiResultPanel";
 import { ErrorDisplay } from "../components/ui/ErrorDisplay";
 import { NewRowModal } from "../components/modals/NewRowModal";
@@ -56,6 +57,7 @@ import { TabSwitcherModal } from "../components/modals/TabSwitcherModal";
 import { QueryModal } from "../components/modals/QueryModal";
 import { QueryParamsModal } from "../components/modals/QueryParamsModal";
 import { ErrorModal } from "../components/modals/ErrorModal";
+import { PendingChangesPreviewModal } from "../components/modals/PendingChangesPreviewModal";
 import { VisualQueryBuilder } from "../components/ui/VisualQueryBuilder";
 import { TableDesigner } from "../components/ui/TableDesigner";
 import { ContextMenu } from "../components/ui/ContextMenu";
@@ -100,6 +102,10 @@ import type {
   TableColumn,
   ForeignKey,
 } from "../types/editor";
+import {
+  dispatchOpenDataTransfer,
+  type CopiedTableSet,
+} from "../types/tableClipboard";
 import { buildForeignKeyFilterClause } from "../utils/foreignKeys";
 import { formatSqlIdentifier, quoteTableRef } from "../utils/identifiers";
 import { beautifySql } from "../utils/sqlFormatter";
@@ -142,12 +148,12 @@ const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
 };
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500, 1000];
-const SQL_IDENTIFIER_CHARS = /[\w$."`\[\]\u4e00-\u9fa5]/;
+const SQL_IDENTIFIER_CHARS = /[\w$."`\x5B\]\u4e00-\u9fa5]/;
 
 function normalizeSqlIdentifierPart(part: string): string {
   return part
     .trim()
-    .replace(/^[`"\[]+|[`"\]]+$/g, "")
+    .replace(/^[`"\x5B]+|[`"\]]+$/g, "")
     .replace(/``/g, "`")
     .replace(/""/g, '"');
 }
@@ -168,7 +174,7 @@ function getSqlIdentifierAtPosition(
   }
 
   const raw = line.slice(start, end).trim();
-  if (!raw || !/[A-Za-z0-9_\u4e00-\u9fa5`"\[]/.test(raw)) return null;
+  if (!raw || !/[A-Za-z0-9_\u4e00-\u9fa5`"\x5B]/.test(raw)) return null;
   return raw;
 }
 
@@ -189,6 +195,7 @@ export const Editor = () => {
     openConnectionIds,
     tables,
     views,
+    isLoadingTables,
     activeDriver,
     activeSchema,
     activeCapabilities,
@@ -342,6 +349,8 @@ export const Editor = () => {
   const [tempPage, setTempPage] = useState("1");
   const [isCountLoading, setIsCountLoading] = useState(false);
   const [applyToAll, setApplyToAll] = useState(false);
+  const [isSubmitPreviewOpen, setIsSubmitPreviewOpen] = useState(false);
+  const [copiedTables, setCopiedTables] = useState<CopiedTableSet | null>(null);
   const [copyFormat, setCopyFormat] = useState<"csv" | "json" | "sql-insert">(
     settings.copyFormat ?? "csv",
   );
@@ -357,6 +366,7 @@ export const Editor = () => {
   const activeTabQuery = activeTab?.query;
   const isTableTab = activeTab?.type === "table";
   const isDesignTab = activeTab?.type === "table_design";
+  const isDatabaseObjectsTab = activeTab?.type === "database_objects";
   const isNotebookTab = activeTab?.type === "notebook";
   const isMultiDb =
     isMultiDatabaseCapable(activeCapabilities) && selectedDatabases.length > 1;
@@ -2410,6 +2420,138 @@ export const Editor = () => {
 
   openEditorTableReferenceRef.current = openEditorTableReference;
 
+  const openObjectViewTable = useCallback(
+    (tableName: string, databaseName: string) => {
+      const query = `SELECT * FROM ${quoteTableRef(
+        tableName,
+        activeDriver,
+        activeCapabilities?.schemas === true ? databaseName : undefined,
+      )}`;
+      const tabId = addTab({
+        type: "table",
+        title: `${tableName} (${databaseName})`,
+        query,
+        activeTable: tableName,
+        schema: databaseName,
+        result: null,
+      });
+      if (!tabId) return;
+      setTimeout(() => {
+        runQuery(query, 1, tabId);
+      }, 0);
+    },
+    [activeCapabilities?.schemas, activeDriver, addTab, runQuery],
+  );
+
+  const designObjectViewTable = useCallback(
+    (tableName: string, databaseName: string) => {
+      addTab({
+        type: "table_design",
+        title: `${tableName} - 设计`,
+        designTable: tableName,
+        activeTable: null,
+        schema: databaseName,
+        query: "",
+        result: null,
+        isEditorOpen: true,
+      });
+    },
+    [addTab],
+  );
+
+  const copyObjectViewTables = useCallback(
+    (payload: CopiedTableSet) => {
+      setCopiedTables(payload);
+      showAlert(`已复制 ${payload.tables.length} 张表。`, {
+        title: "复制表",
+        kind: "info",
+      });
+    },
+    [showAlert],
+  );
+
+  const pasteObjectViewTables = useCallback(
+    async (targetDatabase: string) => {
+      if (!copiedTables || copiedTables.tables.length === 0 || !activeConnectionId) return;
+
+      const targetTableNames = new Set(
+        (databaseDataMap[targetDatabase]?.tables ?? tables).map(
+          (table) => table.name,
+        ),
+      );
+      const duplicates = copiedTables.tables.filter((table) =>
+        targetTableNames.has(table),
+      );
+      const requiresWizard =
+        copiedTables.sourceConnectionId !== activeConnectionId ||
+        duplicates.length > 0;
+
+      if (requiresWizard) {
+        const firstTable = copiedTables.tables[0];
+        dispatchOpenDataTransfer({
+          sourceConnectionId: copiedTables.sourceConnectionId,
+          targetConnectionId: activeConnectionId,
+          sourceDatabase: copiedTables.sourceDatabase,
+          targetDatabase,
+          sourceTable: firstTable,
+          sourceTables: copiedTables.tables,
+          targetTable: firstTable,
+          writeMode: duplicates.includes(firstTable)
+            ? "append"
+            : "create_then_insert",
+        });
+        showAlert(
+          duplicates.length > 0
+            ? `目标库已有 ${duplicates.length} 张同名表，已打开数据迁移向导。`
+            : "跨连接复制需要通过数据迁移向导确认。",
+          { title: "粘贴表", kind: "info" },
+        );
+        return;
+      }
+
+      try {
+        const report = await invoke<{
+          rowsInserted: number;
+          failedTables: number;
+          errors: string[];
+        }>("start_data_transfer_batch", {
+          request: {
+            sourceConnectionId: copiedTables.sourceConnectionId,
+            targetConnectionId: activeConnectionId,
+            sourceSchema: copiedTables.sourceDatabase,
+            targetSchema: targetDatabase,
+            sourceTables: copiedTables.tables,
+            writeMode: "create_then_insert",
+            batchSize: 500,
+          },
+        });
+        if (report.failedTables > 0) {
+          throw new Error(report.errors[0] ?? "部分表迁移失败");
+        }
+
+        await loadDatabaseData(targetDatabase, activeConnectionId);
+        showAlert(
+          `已粘贴 ${copiedTables.tables.length} 张表，写入 ${report.rowsInserted} 行。`,
+          { title: "粘贴完成", kind: "info" },
+        );
+      } catch (error) {
+        showAlert(`粘贴失败：${toErrorMessage(error)}`, {
+          title: t("common.error"),
+          kind: "error",
+        });
+      }
+    },
+    [
+      activeConnectionId,
+      copiedTables,
+      databaseDataMap,
+      loadDatabaseData,
+      showAlert,
+      t,
+      tables,
+    ],
+  );
+
   const handleEditorMount = (
     editor: Parameters<OnMount>[0],
     monaco: Monaco,
@@ -2955,6 +3097,8 @@ export const Editor = () => {
               )}
               {tab.type === "table" || tab.type === "table_design" ? (
                 <TableIcon size={12} className="text-blue-400 shrink-0" />
+              ) : tab.type === "database_objects" ? (
+                <Database size={12} className="text-emerald-400 shrink-0" />
               ) : tab.type === "query_builder" ? (
                 <Network size={12} className="text-purple-400 shrink-0" />
               ) : (
@@ -3014,7 +3158,7 @@ export const Editor = () => {
       </div>
 
       {/* Toolbar — hidden for notebook and table design tabs */}
-      {!isNotebookTab && !isDesignTab && <div className="flex items-center py-2 pl-2 pr-3 border-b border-default bg-elevated gap-2 h-[50px]">
+      {!isNotebookTab && !isDesignTab && !isDatabaseObjectsTab && <div className="flex items-center py-2 pl-2 pr-3 border-b border-default bg-elevated gap-2 h-[50px]">
         {canSwitchQueryContext && (
           <div className="flex items-center gap-2 shrink-0">
             <label
@@ -3320,6 +3464,7 @@ export const Editor = () => {
             style={{
               height:
                 tab.type === "table_design"
+                  || tab.type === "database_objects"
                   ? "calc(100% - 36px)"
                   : isResultsCollapsed
                     ? "calc(100vh - 109px)"
@@ -3334,6 +3479,31 @@ export const Editor = () => {
                 tableName={tab.designTable ?? tab.activeTable ?? ""}
                 driver={activeDriver ?? "sqlite"}
                 schema={tab.schema}
+              />
+            ) : tab.type === "database_objects" ? (
+              <DatabaseObjectView
+                connectionId={tab.connectionId}
+                connectionName={activeConnectionName}
+                databaseName={tab.schema ?? activeDatabaseName ?? ""}
+                tables={
+                  (tab.schema
+                    ? databaseDataMap[tab.schema]?.tables
+                    : tables) ?? []
+                }
+                views={
+                  (tab.schema ? databaseDataMap[tab.schema]?.views : views) ??
+                  []
+                }
+                copiedTables={copiedTables}
+                isLoading={
+                  tab.schema
+                    ? databaseDataMap[tab.schema]?.isLoading
+                    : isLoadingTables
+                }
+                onCopyTables={copyObjectViewTables}
+                onPasteTables={pasteObjectViewTables}
+                onOpenTable={openObjectViewTable}
+                onDesignTable={designObjectViewTable}
               />
             ) : tab.type === "query_builder" ? (
               <VisualQueryBuilder />
@@ -3359,7 +3529,7 @@ export const Editor = () => {
             )}
 
             {/* Editor overlay buttons — bottom-right */}
-            {tab.type !== "query_builder" && tab.type !== "table_design" && (
+            {tab.type !== "query_builder" && tab.type !== "table_design" && tab.type !== "database_objects" && (
               <div className="absolute bottom-2 right-6 z-10 flex items-center gap-1">
                 {/* Visual Explain — hidden for read-only definition tabs */}
                 {!tab.readOnly && (
@@ -3380,7 +3550,7 @@ export const Editor = () => {
       })}
 
       {/* Resize Bar & Results Panel */}
-      {!isNotebookTab && !isDesignTab && (isTableTab || !isResultsCollapsed) ? (
+      {!isNotebookTab && !isDesignTab && !isDatabaseObjectsTab && (isTableTab || !isResultsCollapsed) ? (
         <>
           {isTableTab ? (
             <TableToolbar
@@ -3764,7 +3934,7 @@ export const Editor = () => {
                         </label>
                         <div className="w-[1px] h-4 bg-blue-900/50 mx-0.5"></div>
                         <button
-                          onClick={handleSubmitChanges}
+                          onClick={() => setIsSubmitPreviewOpen(true)}
                           disabled={!applyToAll && !selectionHasPending}
                           className="flex items-center gap-1.5 px-2 h-7 text-green-400 hover:bg-green-900/20 hover:text-green-300 rounded text-xs font-medium border border-transparent hover:border-green-900/50 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:cursor-not-allowed"
                           title={t("editor.submitChanges")}
@@ -3992,6 +4162,16 @@ export const Editor = () => {
         isOpen={errorModal.isOpen}
         onClose={() => setErrorModal({ isOpen: false, message: "" })}
         message={errorModal.message}
+      />
+      <PendingChangesPreviewModal
+        isOpen={isSubmitPreviewOpen}
+        tab={activeTab}
+        applyToAll={applyToAll}
+        onClose={() => setIsSubmitPreviewOpen(false)}
+        onConfirm={() => {
+          setIsSubmitPreviewOpen(false);
+          void handleSubmitChanges();
+        }}
       />
       <ExportProgressModal
         isOpen={exportState.isOpen}

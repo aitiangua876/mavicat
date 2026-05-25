@@ -130,6 +130,19 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     (partial?: Partial<Tab>) => {
       if (!activeConnectionId) return "";
 
+      if (partial?.type === "database_objects" && partial.schema) {
+        const existing = tabsRef.current.find(
+          (tab) =>
+            tab.connectionId === activeConnectionId &&
+            tab.type === "database_objects" &&
+            tab.schema === partial.schema,
+        );
+        if (existing) {
+          setActiveTabId(existing.id);
+          return existing.id;
+        }
+      }
+
       const existing = findExistingTableTab(
         tabsRef.current,
         activeConnectionId,

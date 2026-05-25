@@ -8,7 +8,7 @@ use crate::commands::{
 use crate::export::{value_to_sql_literal, SqlDialect};
 use crate::models::{ColumnDefinition, TableColumn};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataTransferRequest {
     pub source_connection_id: String,
@@ -21,7 +21,19 @@ pub struct DataTransferRequest {
     pub batch_size: Option<u32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTransferBatchRequest {
+    pub source_connection_id: String,
+    pub target_connection_id: String,
+    pub source_schema: Option<String>,
+    pub target_schema: Option<String>,
+    pub source_tables: Vec<String>,
+    pub write_mode: TransferWriteMode,
+    pub batch_size: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferWriteMode {
     Append,
@@ -34,6 +46,8 @@ pub enum TransferWriteMode {
 pub struct DataTransferProgress {
     pub table_name: String,
     pub rows_transferred: u64,
+    pub tables_completed: Option<usize>,
+    pub tables_total: Option<usize>,
 }
 
 #[derive(Debug, Serialize)]
@@ -47,12 +61,107 @@ pub struct DataTransferReport {
     pub errors: Vec<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTransferBatchReport {
+    pub tables_total: usize,
+    pub tables_succeeded: usize,
+    pub failed_tables: usize,
+    pub rows_read: u64,
+    pub rows_inserted: u64,
+    pub reports: Vec<DataTransferReport>,
+    pub errors: Vec<String>,
+}
+
 const DATA_TRANSFER_PROGRESS_EVENT: &str = "data_transfer_progress";
 
 #[tauri::command]
 pub async fn start_data_transfer<R: Runtime>(
     app: AppHandle<R>,
     request: DataTransferRequest,
+) -> Result<DataTransferReport, String> {
+    run_single_data_transfer(app, request, None, None).await
+}
+
+#[tauri::command]
+pub async fn start_data_transfer_batch<R: Runtime>(
+    app: AppHandle<R>,
+    request: DataTransferBatchRequest,
+) -> Result<DataTransferBatchReport, String> {
+    let source_tables = request
+        .source_tables
+        .iter()
+        .map(|table| table.trim().to_string())
+        .filter(|table| !table.is_empty())
+        .collect::<Vec<_>>();
+    if source_tables.is_empty() {
+        return Err("At least one source table is required".into());
+    }
+
+    let tables_total = source_tables.len();
+    let mut reports = Vec::new();
+    let mut errors = Vec::new();
+    let mut rows_read = 0;
+    let mut rows_inserted = 0;
+
+    for (index, table) in source_tables.into_iter().enumerate() {
+        let single = DataTransferRequest {
+            source_connection_id: request.source_connection_id.clone(),
+            target_connection_id: request.target_connection_id.clone(),
+            source_schema: request.source_schema.clone(),
+            target_schema: request.target_schema.clone(),
+            source_table: table.clone(),
+            target_table: None,
+            write_mode: request.write_mode.clone(),
+            batch_size: request.batch_size,
+        };
+
+        match run_single_data_transfer(app.clone(), single, Some(index), Some(tables_total)).await {
+            Ok(report) => {
+                rows_read += report.rows_read;
+                rows_inserted += report.rows_inserted;
+                if report.failed_statements > 0 && errors.len() < 20 {
+                    errors.push(format!(
+                        "{}: {}",
+                        report.source_table,
+                        report
+                            .errors
+                            .first()
+                            .cloned()
+                            .unwrap_or_else(|| "部分语句失败".into())
+                    ));
+                }
+                reports.push(report);
+            }
+            Err(error) => {
+                if errors.len() < 20 {
+                    errors.push(format!("{}: {}", table, error));
+                }
+            }
+        }
+    }
+
+    let tables_succeeded = reports
+        .iter()
+        .filter(|report| report.failed_statements == 0)
+        .count();
+
+    Ok(DataTransferBatchReport {
+        tables_total,
+        tables_succeeded,
+        failed_tables: tables_total.saturating_sub(tables_succeeded),
+        rows_read,
+        rows_inserted,
+        reports,
+        errors,
+    })
+}
+
+async fn run_single_data_transfer<R: Runtime>(
+    app: AppHandle<R>,
+    request: DataTransferRequest,
+    table_index: Option<usize>,
+    tables_total: Option<usize>,
 ) -> Result<DataTransferReport, String> {
     let source_table = request.source_table.trim().to_string();
     if source_table.is_empty() {
@@ -187,6 +296,8 @@ pub async fn start_data_transfer<R: Runtime>(
             DataTransferProgress {
                 table_name: source_table.clone(),
                 rows_transferred: rows_inserted,
+                tables_completed: table_index.map(|index| index + 1),
+                tables_total,
             },
         );
 

@@ -9,6 +9,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import type { ElementType } from "react";
 import { Modal } from "../ui/Modal";
@@ -36,9 +37,46 @@ interface DataTransferWizardRequest {
   sourceSchema?: string;
   targetSchema?: string;
   sourceTable: string;
+  sourceTables?: string[];
   targetTable?: string;
   writeMode: TransferWriteMode;
   batchSize: number;
+}
+
+interface SchemaSyncWizardRequest {
+  sourceConnectionId: string;
+  targetConnectionId: string;
+  sourceSchema?: string;
+  targetSchema?: string;
+}
+
+interface SchemaDiffItem {
+  id: string;
+  kind: string;
+  tableName: string;
+  objectName?: string | null;
+  summary: string;
+  statements: string[];
+}
+
+interface SchemaDiffReport {
+  source: { connectionId: string; schema?: string | null };
+  target: { connectionId: string; schema?: string | null };
+  totalChanges: number;
+  executableChanges: number;
+  items: SchemaDiffItem[];
+}
+
+interface DataTransferProgressPayload {
+  tableName: string;
+  rowsTransferred: number;
+  tablesCompleted?: number | null;
+  tablesTotal?: number | null;
+}
+
+interface SchemaSyncProgressPayload {
+  statementsExecuted: number;
+  statementsTotal: number;
 }
 
 interface ToolWizardModalProps {
@@ -57,6 +95,8 @@ interface ToolWizardModalProps {
   onTargetConnectionChange?: (connectionId: string) => void;
   onTargetDatabaseChange?: (databaseName: string) => void;
   tableOptions?: string[];
+  initialTransferSourceTable?: string;
+  initialTransferSourceTables?: string[];
   hasConnection: boolean;
   canExport: boolean;
   onClipboardImport: () => void;
@@ -65,6 +105,8 @@ interface ToolWizardModalProps {
   onBackup: () => void;
   onSqlImport: () => void;
   onDataTransfer?: (request: DataTransferWizardRequest) => Promise<string>;
+  onSchemaCompare?: (request: SchemaSyncWizardRequest) => Promise<SchemaDiffReport>;
+  onSchemaExecute?: (report: SchemaDiffReport, selectedChangeIds: string[]) => Promise<string>;
 }
 
 const toolContent: Record<
@@ -117,7 +159,8 @@ const toolContent: Record<
     subtitle: "对比源和目标的表、列、主键、索引、外键，并生成同步 SQL。",
     icon: ArrowRightLeft,
     steps: ["选择源/目标", "加载差异", "筛选变更", "预览 SQL", "确认执行"],
-    status: "后端 schema diff 模块尚未接入，本入口先作为统一工作流占位。",
+    status: "已接入结构对比与 SQL 预览，默认从源同步到目标，执行前可勾选变更。",
+    primaryLabel: "加载差异",
   },
   data_transfer: {
     title: "数据迁移",
@@ -145,6 +188,8 @@ export const ToolWizardModal = ({
   onTargetConnectionChange,
   onTargetDatabaseChange,
   tableOptions = [],
+  initialTransferSourceTable = "",
+  initialTransferSourceTables = [],
   hasConnection,
   canExport,
   onClipboardImport,
@@ -153,26 +198,88 @@ export const ToolWizardModal = ({
   onBackup,
   onSqlImport,
   onDataTransfer,
+  onSchemaCompare,
+  onSchemaExecute,
 }: ToolWizardModalProps) => {
   const [sourceTable, setSourceTable] = useState("");
+  const [sourceTables, setSourceTables] = useState<string[]>([]);
   const [targetTable, setTargetTable] = useState("");
   const [writeMode, setWriteMode] = useState<TransferWriteMode>("append");
   const [batchSize, setBatchSize] = useState(500);
   const [transferStatus, setTransferStatus] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
   const [exportTable, setExportTable] = useState("");
+  const [schemaSyncReport, setSchemaSyncReport] = useState<SchemaDiffReport | null>(null);
+  const [selectedSchemaChangeIds, setSelectedSchemaChangeIds] = useState<string[]>([]);
+  const [schemaSyncStatus, setSchemaSyncStatus] = useState("");
+  const [isSchemaSyncing, setIsSchemaSyncing] = useState(false);
 
   useEffect(() => {
     if (kind !== "data_transfer") return;
-    setSourceTable((current) => (current && tableOptions.includes(current) ? current : tableOptions[0] ?? ""));
+    const initialTables = initialTransferSourceTables.filter((table) =>
+      tableOptions.includes(table),
+    );
+    const nextSourceTable =
+      initialTransferSourceTable && tableOptions.includes(initialTransferSourceTable)
+        ? initialTransferSourceTable
+        : sourceTable && tableOptions.includes(sourceTable)
+          ? sourceTable
+          : tableOptions[0] ?? "";
+    setSourceTable(nextSourceTable);
+    setSourceTables(initialTables.length > 0 ? initialTables : nextSourceTable ? [nextSourceTable] : []);
     setTargetTable("");
     setTransferStatus("");
-  }, [kind, tableOptions]);
+  }, [initialTransferSourceTable, initialTransferSourceTables, kind, sourceTable, tableOptions]);
 
   useEffect(() => {
     if (kind !== "export") return;
     setExportTable((current) => (current && tableOptions.includes(current) ? current : tableOptions[0] ?? ""));
   }, [kind, tableOptions]);
+
+  useEffect(() => {
+    if (kind !== "schema_sync") return;
+    setSchemaSyncReport(null);
+    setSelectedSchemaChangeIds([]);
+    setSchemaSyncStatus("");
+  }, [
+    kind,
+    selectedConnectionId,
+    selectedDatabaseName,
+    selectedTargetConnectionId,
+    selectedTargetDatabaseName,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const unlistenTransfer = listen<DataTransferProgressPayload>(
+      "data_transfer_progress",
+      (event) => {
+        const { tableName, rowsTransferred, tablesCompleted, tablesTotal } =
+          event.payload;
+        const tableProgress =
+          tablesCompleted && tablesTotal
+            ? `（${tablesCompleted}/${tablesTotal} 表）`
+            : "";
+        setTransferStatus(
+          `正在迁移 ${tableName}${tableProgress}，已写入 ${rowsTransferred} 行...`,
+        );
+      },
+    );
+    const unlistenSchemaSync = listen<SchemaSyncProgressPayload>(
+      "schema_sync_progress",
+      (event) => {
+        setSchemaSyncStatus(
+          `正在执行结构同步 ${event.payload.statementsExecuted}/${event.payload.statementsTotal}...`,
+        );
+      },
+    );
+
+    return () => {
+      unlistenTransfer.then((dispose) => dispose());
+      unlistenSchemaSync.then((dispose) => dispose());
+    };
+  }, [isOpen]);
 
   if (!kind) return null;
 
@@ -187,6 +294,22 @@ export const ToolWizardModal = ({
         }
       : undefined;
   const hasExportSource = canExport || !!exportSource;
+  const schemaExecutableItems =
+    schemaSyncReport?.items.filter((item) =>
+      item.statements.some((statement) => statement.trim() && !statement.trim().startsWith("--")),
+    ) ?? [];
+  const schemaPreviewSql =
+    schemaSyncReport?.items
+      .filter((item) => selectedSchemaChangeIds.includes(item.id))
+      .flatMap((item) => item.statements)
+      .join("\n\n") ?? "";
+  const allSchemaChangesSelected =
+    schemaExecutableItems.length > 0 &&
+    selectedSchemaChangeIds.length === schemaExecutableItems.length;
+  const primaryLabel =
+    kind === "schema_sync" && schemaSyncReport
+      ? "执行同步"
+      : content.primaryLabel;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -331,10 +454,17 @@ export const ToolWizardModal = ({
                   <label className="block">
                     <span className="text-xs text-muted mb-1 block">源表</span>
                     <select
-                      value={sourceTable}
-                      onChange={(event) => setSourceTable(event.target.value)}
+                      multiple
+                      value={sourceTables}
+                      onChange={(event) => {
+                        const values = Array.from(event.target.selectedOptions).map(
+                          (option) => option.value,
+                        );
+                        setSourceTables(values);
+                        setSourceTable(values[0] ?? "");
+                      }}
                       disabled={tableOptions.length === 0 || isTransferring}
-                      className="w-full h-9 bg-surface-secondary border border-default rounded px-2 text-sm text-primary outline-none disabled:text-muted"
+                      className="w-full h-28 bg-surface-secondary border border-default rounded px-2 py-1 text-sm text-primary outline-none disabled:text-muted"
                     >
                       {tableOptions.length === 0 ? (
                         <option value="">未加载表</option>
@@ -352,10 +482,17 @@ export const ToolWizardModal = ({
                     <input
                       value={targetTable}
                       onChange={(event) => setTargetTable(event.target.value)}
-                      placeholder={sourceTable || "默认同名"}
-                      disabled={isTransferring}
+                      placeholder={
+                        sourceTables.length > 1 ? "多表迁移默认同名" : sourceTable || "默认同名"
+                      }
+                      disabled={isTransferring || sourceTables.length > 1}
                       className="w-full h-9 bg-surface-secondary border border-default rounded px-2 text-sm text-primary outline-none placeholder:text-muted"
                     />
+                    {sourceTables.length > 1 && (
+                      <span className="mt-1 block text-[11px] text-muted">
+                        多表迁移会按原表名写入目标库。
+                      </span>
+                    )}
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -428,6 +565,119 @@ export const ToolWizardModal = ({
                 )}
               </div>
             )}
+
+            {kind === "schema_sync" && (
+              <div className="mt-4 border border-default rounded-md p-4 bg-base space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-xs text-muted mb-1 block">目标连接</span>
+                    <select
+                      value={selectedTargetConnectionId}
+                      onChange={(event) => onTargetConnectionChange?.(event.target.value)}
+                      disabled={connectionOptions.length === 0 || isSchemaSyncing}
+                      className="w-full h-9 bg-surface-secondary border border-default rounded px-2 text-sm text-primary outline-none disabled:text-muted"
+                    >
+                      {connectionOptions.map((connection) => (
+                        <option key={connection.id} value={connection.id}>
+                          {connection.name || "未命名连接"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs text-muted mb-1 block">目标数据库/Schema</span>
+                    <select
+                      value={selectedTargetDatabaseName}
+                      onChange={(event) => onTargetDatabaseChange?.(event.target.value)}
+                      disabled={targetDatabaseOptions.length === 0 || isSchemaSyncing}
+                      className="w-full h-9 bg-surface-secondary border border-default rounded px-2 text-sm text-primary outline-none disabled:text-muted"
+                    >
+                      {targetDatabaseOptions.length === 0 ? (
+                        <option value="">未选择</option>
+                      ) : (
+                        targetDatabaseOptions.map((database) => (
+                          <option key={database} value={database}>
+                            {database}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                </div>
+
+                {schemaSyncStatus && (
+                  <div className="text-xs text-secondary bg-surface-secondary border border-default rounded px-3 py-2">
+                    {schemaSyncStatus}
+                  </div>
+                )}
+
+                {schemaSyncReport && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm text-primary">
+                        差异 {schemaSyncReport.totalChanges} 项，可执行 {schemaSyncReport.executableChanges} 项
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSchemaChangeIds(
+                            allSchemaChangesSelected
+                              ? []
+                              : schemaExecutableItems.map((item) => item.id),
+                          );
+                        }}
+                        className="text-xs text-blue-300 hover:text-blue-200"
+                      >
+                        {allSchemaChangesSelected ? "取消全选" : "全选可执行"}
+                      </button>
+                    </div>
+                    <div className="max-h-48 overflow-auto border border-default rounded bg-surface-secondary/60">
+                      {schemaSyncReport.items.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-sm text-muted">
+                          源和目标结构一致。
+                        </div>
+                      ) : (
+                        schemaSyncReport.items.map((item) => {
+                          const executable = item.statements.some(
+                            (statement) => statement.trim() && !statement.trim().startsWith("--"),
+                          );
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-start gap-2 px-3 py-2 border-b border-default last:border-b-0 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedSchemaChangeIds.includes(item.id)}
+                                disabled={!executable || isSchemaSyncing}
+                                onChange={(event) => {
+                                  setSelectedSchemaChangeIds((current) =>
+                                    event.target.checked
+                                      ? [...current, item.id]
+                                      : current.filter((id) => id !== item.id),
+                                  );
+                                }}
+                                className="mt-1"
+                              />
+                              <span className={executable ? "text-primary" : "text-muted"}>
+                                {item.summary}
+                                {!executable && "（仅提示）"}
+                              </span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted mb-1">SQL 预览</div>
+                      <pre className="max-h-52 overflow-auto rounded border border-default bg-[#151515] p-3 text-xs leading-5 text-[#d7e6ff] whitespace-pre-wrap">
+                        {schemaPreviewSql || "-- 请选择可执行变更预览 SQL"}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </main>
         </div>
 
@@ -472,7 +722,7 @@ export const ToolWizardModal = ({
               })}
             </div>
           )}
-          {content.primaryLabel && (
+          {primaryLabel && (
             <button
               onClick={() => {
                 if (kind === "import") onFileImport();
@@ -487,8 +737,10 @@ export const ToolWizardModal = ({
                     targetConnectionId: selectedTargetConnectionId || selectedConnectionId,
                     sourceSchema: selectedDatabaseName || undefined,
                     targetSchema: selectedTargetDatabaseName || undefined,
-                    sourceTable,
-                    targetTable: targetTable.trim() || undefined,
+                    sourceTable: sourceTables[0] ?? sourceTable,
+                    sourceTables,
+                    targetTable:
+                      sourceTables.length > 1 ? undefined : targetTable.trim() || undefined,
                     writeMode,
                     batchSize,
                   })
@@ -497,19 +749,68 @@ export const ToolWizardModal = ({
                     .finally(() => setIsTransferring(false));
                   return;
                 }
-                if (kind === "schema_sync") return;
+                if (kind === "schema_sync") {
+                  if (!schemaSyncReport && onSchemaCompare) {
+                    setIsSchemaSyncing(true);
+                    setSchemaSyncStatus("正在加载源和目标结构差异...");
+                    onSchemaCompare({
+                      sourceConnectionId: selectedConnectionId,
+                      targetConnectionId: selectedTargetConnectionId || selectedConnectionId,
+                      sourceSchema: selectedDatabaseName || undefined,
+                      targetSchema: selectedTargetDatabaseName || undefined,
+                    })
+                      .then((report) => {
+                        setSchemaSyncReport(report);
+                        const selected = report.items
+                          .filter((item) =>
+                            item.statements.some(
+                              (statement) =>
+                                statement.trim() && !statement.trim().startsWith("--"),
+                            ),
+                          )
+                          .map((item) => item.id);
+                        setSelectedSchemaChangeIds(selected);
+                        setSchemaSyncStatus(
+                          report.totalChanges === 0
+                            ? "结构一致，无需同步。"
+                            : `已加载 ${report.totalChanges} 项差异。`,
+                        );
+                      })
+                      .catch((error) => setSchemaSyncStatus(String(error)))
+                      .finally(() => setIsSchemaSyncing(false));
+                    return;
+                  }
+
+                  if (schemaSyncReport && onSchemaExecute) {
+                    setIsSchemaSyncing(true);
+                    setSchemaSyncStatus("正在执行结构同步...");
+                    onSchemaExecute(schemaSyncReport, selectedSchemaChangeIds)
+                      .then((message) => setSchemaSyncStatus(message))
+                      .catch((error) => setSchemaSyncStatus(String(error)))
+                      .finally(() => setIsSchemaSyncing(false));
+                    return;
+                  }
+                  return;
+                }
                 if (kind !== "export") onClose();
               }}
               disabled={
                 !hasConnection ||
                 (kind === "export" && !hasExportSource) ||
-                kind === "schema_sync" ||
+                (kind === "schema_sync" &&
+                  (isSchemaSyncing ||
+                    !onSchemaCompare ||
+                    (!schemaSyncReport &&
+                      !(selectedTargetConnectionId || selectedConnectionId)) ||
+                    (!!schemaSyncReport && selectedSchemaChangeIds.length === 0))) ||
                 (kind === "data_transfer" &&
-                  (!sourceTable || !(selectedTargetConnectionId || selectedConnectionId) || isTransferring))
+                  (sourceTables.length === 0 ||
+                    !(selectedTargetConnectionId || selectedConnectionId) ||
+                    isTransferring))
               }
               className="px-4 py-2 text-sm rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-surface-tertiary disabled:text-muted disabled:cursor-not-allowed text-white"
             >
-              {content.primaryLabel}
+              {isSchemaSyncing && kind === "schema_sync" ? "处理中..." : primaryLabel}
             </button>
           )}
         </div>

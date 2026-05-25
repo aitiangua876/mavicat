@@ -14,6 +14,7 @@ import {
   PlaySquare,
   Hash,
   FileText,
+  FileSpreadsheet,
   Copy,
   Loader2,
   Download,
@@ -31,7 +32,8 @@ import {
   Clock,
   Clipboard,
 } from "lucide-react";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { ask, open, save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { toErrorMessage } from "../../utils/errors";
 import { useAlert } from "../../hooks/useAlert";
 import { useDatabase } from "../../hooks/useDatabase";
@@ -63,9 +65,9 @@ import { SidebarDatabaseItem } from "./sidebar/SidebarDatabaseItem";
 import { SidebarTriggerItem } from "./sidebar/SidebarTriggerItem";
 import { QueryHistorySection } from "./sidebar/QueryHistorySection";
 import { useConnectionLayoutContext } from "../../hooks/useConnectionLayoutContext";
-import type { TableColumn } from "../../types/schema";
+import type { ForeignKey, Index, TableColumn } from "../../types/schema";
 import type { ContextMenuData } from "../../types/sidebar";
-import type { RoutineInfo, TriggerInfo } from "../../contexts/DatabaseContext";
+import type { RoutineInfo, TableInfo, TriggerInfo, ViewInfo } from "../../contexts/DatabaseContext";
 import { NavicatDatabaseIcon } from "../icons/NavicatStyleIcons";
 import { groupRoutinesByType } from "../../utils/routines";
 import { formatObjectCount } from "../../utils/schema";
@@ -79,6 +81,14 @@ import {
   getCreateTableRefreshPlan,
   type CreateTableTarget,
 } from "../../utils/createTable";
+import {
+  buildDatabaseDictionaryExcel,
+  buildDatabaseDictionaryHtml,
+  buildDatabaseDictionaryMarkdown,
+  getDatabaseDictionaryFileName,
+  type DatabaseDictionaryFormat,
+  type DictionaryObject,
+} from "../../utils/databaseDictionary";
 
 export type SidebarTab = "structure" | "favorites" | "history";
 
@@ -405,6 +415,16 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
 
   const selectDatabaseNode = (database: string) => {
     setActiveTable(null, database);
+    addTab({
+      type: "database_objects",
+      title: `${database} - 对象`,
+      schema: database,
+      activeTable: null,
+      query: "",
+      result: null,
+      isEditorOpen: true,
+    });
+    navigate("/editor");
   };
 
   const closeDatabaseNode = (database: string) => {
@@ -432,6 +452,112 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
       );
       if (!confirmed) return;
       setImportModal({ filePath: file, database: database ?? activeDatabaseName ?? "" });
+    }
+  };
+
+  const handleExportDatabaseDictionary = async (
+    database: string,
+    format: DatabaseDictionaryFormat,
+  ) => {
+    if (!activeConnectionId) return;
+
+    const formatMeta = {
+      html: { label: "HTML Document", extension: "html" },
+      excel: { label: "Excel Workbook", extension: "xls" },
+      markdown: { label: "Markdown Document", extension: "md" },
+    }[format];
+    const filePath = await save({
+      filters: [{ name: formatMeta.label, extensions: [formatMeta.extension] }],
+      defaultPath: getDatabaseDictionaryFileName(database, format),
+    });
+    if (!filePath) return;
+
+    try {
+      const schema = database || activeSchema || activeDatabaseName || undefined;
+      const [tableList, viewList] = await Promise.all([
+        invoke<TableInfo[]>("get_tables", {
+          connectionId: activeConnectionId,
+          ...(schema ? { schema } : {}),
+        }),
+        invoke<ViewInfo[]>("get_views", {
+          connectionId: activeConnectionId,
+          ...(schema ? { schema } : {}),
+        }).catch(() => [] as ViewInfo[]),
+      ]);
+
+      const objects: DictionaryObject[] = [];
+
+      for (const table of tableList) {
+        const [columns, foreignKeys, indexes, ddl] = await Promise.all([
+          invoke<TableColumn[]>("get_columns", {
+            connectionId: activeConnectionId,
+            tableName: table.name,
+            ...(schema ? { schema } : {}),
+          }),
+          invoke<ForeignKey[]>("get_foreign_keys", {
+            connectionId: activeConnectionId,
+            tableName: table.name,
+            ...(schema ? { schema } : {}),
+          }).catch(() => [] as ForeignKey[]),
+          invoke<Index[]>("get_indexes", {
+            connectionId: activeConnectionId,
+            tableName: table.name,
+            ...(schema ? { schema } : {}),
+          }).catch(() => [] as Index[]),
+          invoke<string>("get_table_ddl", {
+            connectionId: activeConnectionId,
+            tableName: table.name,
+            ...(schema ? { schema } : {}),
+          }).catch(() => ""),
+        ]);
+
+        objects.push({
+          kind: "table",
+          name: table.name,
+          comment: table.comment,
+          columns,
+          foreignKeys,
+          indexes,
+          ddl,
+        });
+      }
+
+      for (const view of viewList) {
+        const columns = await invoke<TableColumn[]>("get_view_columns", {
+          connectionId: activeConnectionId,
+          viewName: view.name,
+          ...(schema ? { schema } : {}),
+        }).catch(() => [] as TableColumn[]);
+
+        objects.push({
+          kind: "view",
+          name: view.name,
+          columns,
+          ddl: view.definition,
+        });
+      }
+
+      const dictionaryInput = {
+        connectionName: activeConnectionName || "",
+        databaseName: database || activeDatabaseName || "Database",
+        driver: activeDriver,
+        generatedAt: new Date().toLocaleString(),
+        objects,
+      };
+
+      const content =
+        format === "excel"
+          ? buildDatabaseDictionaryExcel(dictionaryInput)
+          : format === "markdown"
+            ? buildDatabaseDictionaryMarkdown(dictionaryInput)
+            : buildDatabaseDictionaryHtml(dictionaryInput);
+
+      await writeTextFile(filePath, content);
+      showAlert(`数据库字典已导出：${filePath.split(/[\\/]/).pop() || filePath}`, {
+        kind: "info",
+      });
+    } catch (error) {
+      showAlert(`导出数据库字典失败：${toErrorMessage(error)}`, { kind: "error" });
     }
   };
 
@@ -1993,6 +2119,21 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                                   label: t("dump.dumpDatabase"),
                                   icon: Download,
                                   action: () => setDumpModal({ database: contextMenu.id }),
+                                },
+                                {
+                                  label: "导出数据库字典（HTML）...",
+                                  icon: FileText,
+                                  action: () => void handleExportDatabaseDictionary(contextMenu.id, "html"),
+                                },
+                                {
+                                  label: "导出数据库字典（Excel）...",
+                                  icon: FileSpreadsheet,
+                                  action: () => void handleExportDatabaseDictionary(contextMenu.id, "excel"),
+                                },
+                                {
+                                  label: "导出数据库字典（Markdown）...",
+                                  icon: FileCode,
+                                  action: () => void handleExportDatabaseDictionary(contextMenu.id, "markdown"),
                                 },
                                 {
                                   label: t("sidebar.viewERDiagram"),

@@ -37,6 +37,7 @@ pub mod query_history_tests;
 pub mod saved_queries;
 #[cfg(test)]
 pub mod saved_queries_tests;
+pub mod schema_sync;
 pub mod ssh_tunnel;
 pub mod theme_commands;
 pub mod theme_models;
@@ -267,6 +268,10 @@ pub fn run() {
             explain_import::get_pending_explain_file,
             explain_import::open_visual_explain_window,
             data_transfer::start_data_transfer,
+            data_transfer::start_data_transfer_batch,
+            schema_sync::compare_schema,
+            schema_sync::generate_schema_sync_sql,
+            schema_sync::execute_schema_sync,
             export::export_query_to_file,
             export::cancel_export,
             saved_queries::get_saved_queries,
