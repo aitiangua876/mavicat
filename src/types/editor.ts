@@ -1,4 +1,5 @@
 import type { ForeignKey } from "./schema";
+import type { AiMessage, AiSqlBlock } from "./ai";
 
 export type { ForeignKey };
 
@@ -120,6 +121,9 @@ export interface Tab {
   readOnly?: boolean; // Hides the Run button (e.g. for definition views)
   results?: QueryResultEntry[];
   activeResultId?: string;
+  aiMessages?: AiMessage[];
+  aiSqlBlocks?: AiSqlBlock[];
+  aiInputDraft?: string;
   notebookId?: string; // Reference to notebook file in config dir
   notebookState?: unknown; // Deprecated: old notebook tabs are ignored in Mavicat core
 }

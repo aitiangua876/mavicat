@@ -60,6 +60,7 @@ import { ErrorModal } from "../components/modals/ErrorModal";
 import { PendingChangesPreviewModal } from "../components/modals/PendingChangesPreviewModal";
 import { VisualQueryBuilder } from "../components/ui/VisualQueryBuilder";
 import { TableDesigner } from "../components/ui/TableDesigner";
+import { AiQueryAssistantPanel } from "../components/ui/AiQueryAssistantPanel";
 import { ContextMenu } from "../components/ui/ContextMenu";
 import { NavicatDatabaseIcon } from "../components/icons/NavicatStyleIcons";
 import {
@@ -332,6 +333,7 @@ export const Editor = () => {
   const editorHeightRef = useRef(300);
   const resultPageSizeRef = useRef(settings.resultPageSize);
   const [isResultsCollapsed, setIsResultsCollapsed] = useState(false);
+  const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(true);
   const isDragging = useRef(false);
   const rafRef = useRef<number | null>(null);
   const editorsRef = useRef<Record<string, Parameters<OnMount>[0]>>({});
@@ -427,6 +429,52 @@ export const Editor = () => {
         ? activeSchema ?? selectedDatabases[0]
         : activeDatabaseName) ??
     "";
+
+  const aiContextTables = useMemo(() => {
+    if (activeCapabilities?.schemas === true && activeQueryDatabase) {
+      return (schemaDataMap[activeQueryDatabase]?.tables ?? tables).map(
+        (table) => table.name,
+      );
+    }
+
+    if (isMultiDatabaseCapable(activeCapabilities) && activeQueryDatabase) {
+      return (databaseDataMap[activeQueryDatabase]?.tables ?? []).map(
+        (table) => table.name,
+      );
+    }
+
+    return tables.map((table) => table.name);
+  }, [
+    activeCapabilities,
+    activeQueryDatabase,
+    databaseDataMap,
+    schemaDataMap,
+    tables,
+  ]);
+
+  const aiDatabaseContext = useMemo(
+    () => ({
+      connectionName: activeConnectionName,
+      databaseName: activeDatabaseName,
+      schema: activeQueryDatabase || activeSchema,
+      driver: activeDriver,
+      tables: aiContextTables,
+      currentSql:
+        activeTab?.type === "console"
+          ? activeTab.query
+          : activeTab?.query ?? "",
+    }),
+    [
+      activeConnectionName,
+      activeDatabaseName,
+      activeQueryDatabase,
+      activeSchema,
+      activeDriver,
+      aiContextTables,
+      activeTab?.type,
+      activeTab?.query,
+    ],
+  );
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
@@ -1338,6 +1386,62 @@ export const Editor = () => {
       showAlert(`SQL 格式化失败：${toErrorMessage(error)}`, { kind: "error" });
     }
   }, [activeDriver, activeTab, showAlert, updateTab]);
+
+  const appendSqlToActiveEditor = useCallback(
+    (sql: string) => {
+      const nextSql = sql.trim();
+      if (!nextSql || !activeConnectionId) return null;
+
+      const defaultSchema =
+        activeTab?.schema ??
+        activeSchema ??
+        (isMultiDb ? selectedDatabases[0] : undefined);
+      const isWritableConsole =
+        activeTab?.type === "console" && activeTab.readOnly !== true;
+
+      if (!isWritableConsole) {
+        return addTab({
+          type: "console",
+          query: nextSql,
+          ...(defaultSchema ? { schema: defaultSchema } : {}),
+        });
+      }
+
+      const targetTabId = activeTab.id;
+      const editor = editorsRef.current[targetTabId];
+      const currentSql = editor?.getValue() ?? activeTab.query ?? "";
+      const needsSeparator = currentSql.trim().length > 0;
+      const insert = `${needsSeparator ? "\n\n" : ""}${nextSql}`;
+      const combinedSql = `${currentSql.replace(/\s+$/g, "")}${insert}`;
+
+      if (editor) {
+        editor.setValue(combinedSql);
+        editor.revealLine(editor.getModel()?.getLineCount() ?? 1);
+        editor.focus();
+      }
+      updateTab(targetTabId, { query: combinedSql });
+      return targetTabId;
+    },
+    [
+      activeConnectionId,
+      activeSchema,
+      activeTab,
+      addTab,
+      isMultiDb,
+      selectedDatabases,
+      updateTab,
+    ],
+  );
+
+  const runAiSql = useCallback(
+    async (sql: string) => {
+      const targetTabId = appendSqlToActiveEditor(sql);
+      if (!targetTabId) return;
+      setIsResultsCollapsed(false);
+      await runQuery(sql, 1, targetTabId);
+    },
+    [appendSqlToActiveEditor, runQuery],
+  );
 
   const openExplainForQuery = useCallback((query: string) => {
     setVisualExplainQuery(query);
@@ -3052,7 +3156,7 @@ export const Editor = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-base">
+    <div className="relative flex flex-col h-full bg-base overflow-hidden">
       {/* Tab Bar */}
       <div className="flex items-center bg-elevated border-b border-default h-9 shrink-0">
         <button
@@ -3448,6 +3552,30 @@ export const Editor = () => {
           </span>
         )}
       </div>}
+
+      {activeTab.type === "console" && (
+        <AiQueryAssistantPanel
+          key={activeTab.id}
+          collapsed={isAiPanelCollapsed}
+          onToggle={() => setIsAiPanelCollapsed((value) => !value)}
+          disabled={!activeConnectionId || activeTab.isLoading}
+          context={aiDatabaseContext}
+          messages={activeTab.aiMessages ?? []}
+          sqlBlocks={activeTab.aiSqlBlocks ?? []}
+          inputDraft={activeTab.aiInputDraft ?? ""}
+          onMessagesChange={(messages) =>
+            updateTab(activeTab.id, { aiMessages: messages })
+          }
+          onSqlBlocksChange={(blocks) =>
+            updateTab(activeTab.id, { aiSqlBlocks: blocks })
+          }
+          onInputDraftChange={(value) =>
+            updateTab(activeTab.id, { aiInputDraft: value })
+          }
+          onAppendSql={appendSqlToActiveEditor}
+          onRunSql={runAiSql}
+        />
+      )}
 
       {/* Render all non-table tabs to prevent Monaco remounting */}
       {tabs.map((tab) => {

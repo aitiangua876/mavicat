@@ -1,3 +1,4 @@
+pub mod ai_chat;
 pub mod cli;
 pub mod clipboard_import;
 pub mod commands;
@@ -272,6 +273,7 @@ pub fn run() {
             schema_sync::compare_schema,
             schema_sync::generate_schema_sync_sql,
             schema_sync::execute_schema_sync,
+            ai_chat::ai_chat_completion,
             export::export_query_to_file,
             export::cancel_export,
             saved_queries::get_saved_queries,
