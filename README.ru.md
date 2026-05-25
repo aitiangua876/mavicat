@@ -29,7 +29,7 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
-Mavicat переносит привычные рабочие сценарии профессиональных database-клиентов в современное, локальное и расширяемое desktop-приложение. Оно построено на Tauri v2, Rust, React и TypeScript: нативная оболочка, быстрый интерфейс и надежная backend-логика.
+Mavicat переносит профессиональные database-workflows в современное, локальное и расширяемое desktop-приложение. Оно построено на Tauri v2, Rust, React и TypeScript: нативная оболочка, быстрый интерфейс и надежная backend-логика.
 
 Если вам нравится направление проекта, поставьте Star. Это помогает другим разработчикам найти Mavicat и поддерживает развитие open-source roadmap.
 
@@ -38,8 +38,26 @@ Mavicat переносит привычные рабочие сценарии п
 - **Один workspace для ежедневной работы**: подключения, схемы, SQL, результаты, редактирование данных, дизайн таблиц, экспорт, backup, sync, миграция, Redis и AI.
 - **Привычный desktop UX**: компактное дерево подключений, object views, вкладки, панели результатов, context menu и мастера.
 - **Local-first**: подключения, история, настройки и AI-конфигурация по умолчанию хранятся локально.
+- **Без поиска драйверов**: основные драйверы встроены в Rust backend; для обычной работы не нужно ставить отдельные JDBC, ODBC или client packages.
+- **Легкий footprint**: Tauri держит приложение компактным, а Rust выполняет тяжелые database-задачи без большого фонового сервиса.
 - **Rust + React**: Rust отвечает за базы данных и OS-интеграцию, React — за редактор и data grid.
-- **Открытый и расширяемый**: лицензия Apache-2.0, база Tabularis.
+- **Открытый и расширяемый**: лицензия Apache-2.0, roadmap для практичных plugins и drivers.
+
+## Product tour
+
+### All-in-one database workspace
+
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+
+Главный экран объединяет connection tree, SQL editor, result grid, toolbar actions и database context. Он помогает быстро переключаться между connections, databases, tables, query tabs и export tasks.
+
+| Область | Для чего нужна |
+|---|---|
+| Connection tree | Просмотр connections, databases, schemas, tables, columns, views и Redis keys. |
+| SQL editor | Выполнение выделения или всего скрипта, multi-result output, formatting и AI на уровне tab. |
+| Data grid | Export current page, filtered results или full data в CSV, JSON, Excel и SQL. |
+| Object tools | Table design, DDL, dictionary export, backup, schema compare и data migration. |
+| Native runtime | Без отдельной настройки drivers для обычных сценариев, меньше расход памяти и диска. |
 
 ## Поддерживаемые базы
 
@@ -141,7 +159,5 @@ cd src-tauri && cargo test
 Issues, воспроизводимые bugs, UI feedback, database edge cases, переводы и pull requests приветствуются.
 
 ## Лицензия и примечания
-
-Mavicat основан на [Tabularis](https://github.com/TabularisDB/tabularis) под Apache-2.0. Mavicat не связан с Navicat, TablePlus, DataGrip, DBeaver или другими упомянутыми продуктами; названия используются только для описания известных workflow.
 
 [Apache License 2.0](./LICENSE)

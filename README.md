@@ -29,7 +29,7 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
-Mavicat brings the familiar productivity of premium database clients into a modern, local-first, hackable desktop app. It is built with Tauri v2, Rust, React, and TypeScript, so it feels native, starts quickly, and keeps your database workflow close to your machine.
+Mavicat brings professional database workflows into a modern, local-first, hackable desktop app. It is built with Tauri v2, Rust, React, and TypeScript, so it feels native, starts quickly, and keeps your database workflow close to your machine.
 
 If you like the direction of the project, please give it a star. It helps more developers discover Mavicat and makes the open-source roadmap easier to sustain.
 
@@ -38,8 +38,26 @@ If you like the direction of the project, please give it a star. It helps more d
 - **One workspace for daily database work**: connections, schemas, SQL tabs, data grids, table design, export, backup, sync, migration, Redis keys, and AI assistance.
 - **Familiar desktop UX**: a compact connection tree, object views, tabbed editors, result panels, context menus, and wizard-style tools inspired by the workflows people already know.
 - **Local-first by design**: connection profiles, query history, settings, and AI configuration live locally unless you explicitly choose otherwise.
+- **No driver hunting**: common database drivers are built into the app through the Rust backend, so you do not need to install separate JDBC/ODBC/client packages for everyday use.
+- **Lightweight desktop footprint**: Tauri keeps the shell compact, while Rust handles heavy database work without running a bulky server process in the background.
 - **Native shell, web-speed UI**: Rust handles database work and OS integration; React powers the rich editor and data experience.
-- **Open and extensible**: Apache-2.0 licensed, based on the proven Tabularis foundation, and moving toward a practical plugin/driver ecosystem.
+- **Open and extensible**: Apache-2.0 licensed and moving toward a practical plugin/driver ecosystem.
+
+## Product Tour
+
+### All-in-one Database Workspace
+
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+
+The main workspace keeps the connection tree, SQL editor, result grid, toolbar actions, and database context in one place. It is designed for fast switching between connections, databases, tables, query tabs, and export workflows.
+
+| Area | What it helps with |
+|---|---|
+| Connection tree | Browse connections, databases, schemas, tables, columns, views, and Redis keys. |
+| SQL editor | Run selected SQL or the full script, inspect multiple result sets, format SQL, and use per-tab AI help. |
+| Data grid | Export current page, filtered results, or full data to CSV, JSON, Excel, and SQL. |
+| Object tools | Design tables, view DDL, export dictionaries, back up databases, compare schemas, and migrate data. |
+| Native runtime | No external database driver setup for common workflows; lower memory and disk overhead than heavyweight desktop stacks. |
 
 ## Supported Databases
 
@@ -56,7 +74,7 @@ If you like the direction of the project, please give it a star. It helps more d
 
 ### Database Workspace
 
-- Navicat-style left connection tree with connection/database/table states.
+- Compact left connection tree with connection/database/table states.
 - Database object page with table list and icon views.
 - Right-click operations for connections, databases, tables, and result grids.
 - Multi-tab workspace that can restore editor context across sessions.
@@ -162,10 +180,6 @@ Core stack:
 ## Contributing
 
 Issues, bug reports, UI feedback, database-specific edge cases, translations, and pull requests are welcome. If you are not sure where to start, open an issue with your database type, operating system, and the workflow you want Mavicat to improve.
-
-## Acknowledgements
-
-Mavicat is built on the Apache-2.0 licensed [Tabularis](https://github.com/TabularisDB/tabularis) foundation and keeps the original license notice. Mavicat is not affiliated with Navicat, TablePlus, DataGrip, DBeaver, or other referenced products; those names are used only to describe familiar database-tool workflows.
 
 ## License
 

@@ -29,7 +29,7 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
-Mavicat bringt vertraute Workflows professioneller Datenbank-Clients in eine moderne, lokale und gut erweiterbare Desktop-App. Die App basiert auf Tauri v2, Rust, React und TypeScript: native Hülle, schneller Start, leistungsfähige Datenbanklogik und eine flexible Oberfläche.
+Mavicat bringt professionelle Datenbank-Workflows in eine moderne, lokale und gut erweiterbare Desktop-App. Die App basiert auf Tauri v2, Rust, React und TypeScript: native Hülle, schneller Start, leistungsfähige Datenbanklogik und eine flexible Oberfläche.
 
 Wenn dir die Richtung gefällt, gib dem Projekt gern einen Star. Das hilft, Mavicat sichtbarer zu machen und die Open-Source-Roadmap voranzubringen.
 
@@ -38,8 +38,26 @@ Wenn dir die Richtung gefällt, gib dem Projekt gern einen Star. Das hilft, Mavi
 - **Ein Workspace für den Alltag**: Verbindungen, Schemas, SQL-Tabs, Tabellenansichten, Tabellen-Designer, Export, Backup, Synchronisierung, Migration, Redis und KI-Unterstützung.
 - **Vertraute Desktop-UX**: kompakter Verbindungsbaum, Objektansichten, Tabs, Ergebnispanels, Kontextmenüs und assistentenbasierte Tools.
 - **Local-first**: Verbindungen, Verlauf, Einstellungen und KI-Konfiguration bleiben lokal, sofern du nichts anderes entscheidest.
+- **Keine Treibersuche**: gängige Datenbanktreiber sind über das Rust-Backend integriert; für typische Workflows brauchst du keine separaten JDBC-, ODBC- oder Client-Pakete.
+- **Schlanker Desktop-Footprint**: Tauri hält die Shell kompakt, Rust übernimmt die schweren Datenbankaufgaben ohne großen Hintergrunddienst.
 - **Rust + React**: Rust übernimmt Datenbankzugriff und OS-Integration, React liefert Editor, Grids und Interaktion.
-- **Offen und erweiterbar**: Apache-2.0, aufgebaut auf der bewährten Tabularis-Basis.
+- **Offen und erweiterbar**: Apache-2.0, mit einer Roadmap für praktische Plugins und Treiber.
+
+## Produkttour
+
+### Alles in einem Datenbank-Workspace
+
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+
+Der Hauptbereich kombiniert Verbindungsbaum, SQL-Editor, Ergebnisraster, Toolbar-Aktionen und Datenbankkontext. So wechselst du schnell zwischen Verbindungen, Datenbanken, Tabellen, Query-Tabs und Exportaufgaben.
+
+| Bereich | Nutzen |
+|---|---|
+| Verbindungsbaum | Verbindungen, Datenbanken, Schemas, Tabellen, Spalten, Views und Redis Keys durchsuchen. |
+| SQL-Editor | Auswahl oder gesamtes Script ausführen, mehrere Resultsets prüfen, SQL formatieren und KI pro Tab nutzen. |
+| Datenraster | Aktuelle Seite, gefilterte Ergebnisse oder komplette Daten nach CSV, JSON, Excel und SQL exportieren. |
+| Objekt-Tools | Tabellen designen, DDL anzeigen, Dictionaries exportieren, Backups erstellen, Schemas vergleichen und Daten migrieren. |
+| Nativer Runtime | Kein separates Treiber-Setup für typische Workflows, geringerer Speicher- und Plattenbedarf. |
 
 ## Unterstützte Datenbanken
 
@@ -141,7 +159,5 @@ cd src-tauri && cargo test
 Issues, Reproduktionen, UI-Feedback, Datenbank-Sonderfälle, Übersetzungen und Pull Requests sind willkommen.
 
 ## Lizenz und Hinweise
-
-Mavicat basiert auf [Tabularis](https://github.com/TabularisDB/tabularis) unter Apache-2.0. Mavicat ist nicht mit Navicat, TablePlus, DataGrip, DBeaver oder anderen genannten Produkten verbunden; die Namen beschreiben nur bekannte Workflows.
 
 [Apache License 2.0](./LICENSE)

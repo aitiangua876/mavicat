@@ -29,7 +29,7 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
-Mavicat transpose les workflows familiers des clients de bases de données professionnels dans une application moderne, locale et extensible. Elle est construite avec Tauri v2, Rust, React et TypeScript pour offrir une coque native, une logique backend solide et une interface rapide.
+Mavicat transpose les workflows professionnels de base de données dans une application moderne, locale et extensible. Elle est construite avec Tauri v2, Rust, React et TypeScript pour offrir une coque native, une logique backend solide et une interface rapide.
 
 Si le projet vous plaît, une étoile aide beaucoup à le rendre visible et à soutenir sa roadmap open source.
 
@@ -38,8 +38,26 @@ Si le projet vous plaît, une étoile aide beaucoup à le rendre visible et à s
 - **Un workspace pour le quotidien** : connexions, schémas, SQL, résultats, édition de données, design de tables, export, backup, synchronisation, migration, Redis et IA.
 - **UX desktop familière** : arbre de connexions compact, vues objet, onglets, panneaux de résultats, menus contextuels et assistants.
 - **Local-first** : profils, historique, préférences et configuration IA restent locaux par défaut.
+- **Pas de chasse aux drivers** : les drivers courants sont intégrés dans le backend Rust; les workflows habituels ne demandent pas de packages JDBC, ODBC ou clients externes.
+- **Empreinte légère** : Tauri garde l'application compacte, Rust exécute les tâches lourdes sans service massif en arrière-plan.
 - **Rust + React** : Rust pour la base de données et l'intégration système, React pour l'éditeur et les grilles riches.
-- **Ouvert et extensible** : licence Apache-2.0, construit sur la base Tabularis.
+- **Ouvert et extensible** : licence Apache-2.0, avec une roadmap pour des plugins et drivers pratiques.
+
+## Tour produit
+
+### Workspace de base de données tout-en-un
+
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+
+L'écran principal rassemble arbre de connexions, éditeur SQL, grille de résultats, actions de toolbar et contexte de base. Il est conçu pour passer vite d'une connexion, base, table, requête ou export à l'autre.
+
+| Zone | Utilité |
+|---|---|
+| Arbre de connexions | Parcourir connexions, bases, schémas, tables, colonnes, vues et clés Redis. |
+| Éditeur SQL | Exécuter une sélection ou tout le script, inspecter plusieurs résultats, formater SQL et utiliser l'IA par onglet. |
+| Grille de données | Exporter page courante, résultats filtrés ou données complètes en CSV, JSON, Excel et SQL. |
+| Outils objet | Designer des tables, voir le DDL, exporter des dictionnaires, sauvegarder, comparer les schémas et migrer les données. |
+| Runtime natif | Pas de configuration de drivers pour les workflows courants, avec une consommation plus sobre. |
 
 ## Bases supportées
 
@@ -141,7 +159,5 @@ cd src-tauri && cargo test
 Issues, reproductions, feedback UI, cas spécifiques de bases, traductions et pull requests sont les bienvenus.
 
 ## Licence et notes
-
-Mavicat est basé sur [Tabularis](https://github.com/TabularisDB/tabularis), sous Apache-2.0. Mavicat n'est pas affilié à Navicat, TablePlus, DataGrip, DBeaver ou aux autres produits mentionnés; ces noms décrivent uniquement des workflows connus.
 
 [Apache License 2.0](./LICENSE)
