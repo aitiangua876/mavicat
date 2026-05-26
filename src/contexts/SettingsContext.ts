@@ -84,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiOllamaPort: 11434,
   aiCustomOpenaiUrl: "",
   aiCustomOpenaiModel: "",
+  autoCheckUpdatesOnStartup: true,
   loggingEnabled: true,
   maxLogEntries: 1000,
   copyFormat: "csv",

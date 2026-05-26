@@ -1,5 +1,6 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -35,25 +36,22 @@ struct UpdateCheckCache {
     last_result: Option<UpdateCheckResult>,
 }
 
-// GitHub API response
 #[derive(Deserialize, Debug)]
-struct GitHubRelease {
-    tag_name: String,
-    body: String,
-    html_url: String,
-    published_at: String,
-    assets: Vec<GitHubAsset>,
+struct UpdateManifest {
+    version: String,
+    notes: Option<String>,
+    pub_date: Option<String>,
+    platforms: HashMap<String, UpdatePlatform>,
 }
 
 #[derive(Deserialize, Debug)]
-struct GitHubAsset {
-    name: String,
-    browser_download_url: String,
-    size: u64,
+struct UpdatePlatform {
+    url: String,
 }
 
 // Constants
-const GITHUB_REPO: &str = "aitiangua876/mavicat";
+const UPDATE_MANIFEST_URL: &str = "https://mavicat.kailingteck.com/api/updater/latest.json";
+const RELEASES_URL: &str = "https://mavicat.kailingteck.com/#versions";
 const CACHE_DURATION_SECS: u64 = 43200; // 12 hours
 /// Returns the installation source: "snap", "aur", or None for direct installs.
 /// Only meaningful on Linux; always returns None on other platforms.
@@ -123,36 +121,31 @@ fn is_newer_version(current: &str, latest: &str) -> bool {
     }
 }
 
-async fn fetch_latest_release() -> Result<GitHubRelease, String> {
+async fn fetch_latest_manifest() -> Result<UpdateManifest, String> {
     let client = Client::new();
-    let url = format!(
-        "https://api.github.com/repos/{}/releases/latest",
-        GITHUB_REPO
-    );
-
     let res = client
-        .get(&url)
+        .get(UPDATE_MANIFEST_URL)
         .header("User-Agent", "Mavicat")
-        .header("Accept", "application/vnd.github.v3+json")
+        .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|e| format!("Network error: {}", e))?;
+        .map_err(|e| format!("Update server network error: {}", e))?;
 
     if !res.status().is_success() {
-        return Err(format!("GitHub API error: {}", res.status()));
+        return Err(format!("Update server error: {}", res.status()));
     }
 
-    res.json::<GitHubRelease>()
+    res.json::<UpdateManifest>()
         .await
-        .map_err(|e| format!("Failed to parse response: {}", e))
+        .map_err(|e| format!("Failed to parse update manifest: {}", e))
 }
 
-fn categorize_asset(name: &str) -> String {
-    if name.ends_with(".dmg") || name.contains("darwin") || name.contains("macos") {
+fn platform_from_target(target: &str) -> String {
+    if target.starts_with("darwin-") {
         "macos".to_string()
-    } else if name.ends_with(".exe") || name.ends_with(".msi") || name.contains("windows") {
+    } else if target.starts_with("windows-") {
         "windows".to_string()
-    } else if name.ends_with(".AppImage") || name.ends_with(".deb") || name.ends_with(".rpm") {
+    } else if target.starts_with("linux-") {
         "linux".to_string()
     } else {
         "other".to_string()
@@ -199,30 +192,29 @@ pub async fn check_for_updates(app: AppHandle, force: bool) -> Result<UpdateChec
         }
     }
 
-    // Fetch latest release from GitHub
-    let release = fetch_latest_release().await?;
+    let manifest = fetch_latest_manifest().await?;
 
     let current_version = env!("CARGO_PKG_VERSION");
-    let latest_version = release.tag_name.trim_start_matches('v');
+    let latest_version = manifest.version.trim_start_matches('v');
 
-    let download_urls = release
-        .assets
+    let download_urls = manifest
+        .platforms
         .into_iter()
-        .map(|asset| DownloadAsset {
-            name: asset.name.clone(),
-            url: asset.browser_download_url,
-            size: asset.size,
-            platform: categorize_asset(&asset.name),
+        .map(|(target, asset)| DownloadAsset {
+            name: target.clone(),
+            url: asset.url,
+            size: 0,
+            platform: platform_from_target(&target),
         })
         .collect();
 
     let result = UpdateCheckResult {
-        has_update: is_newer_version(current_version, &release.tag_name),
+        has_update: is_newer_version(current_version, &manifest.version),
         current_version: current_version.to_string(),
         latest_version: latest_version.to_string(),
-        release_notes: release.body,
-        release_url: release.html_url,
-        published_at: release.published_at,
+        release_notes: manifest.notes.unwrap_or_default(),
+        release_url: RELEASES_URL.to_string(),
+        published_at: manifest.pub_date.unwrap_or_default(),
         download_urls,
     };
 

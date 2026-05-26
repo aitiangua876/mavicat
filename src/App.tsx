@@ -12,6 +12,7 @@ import { SchemaDiagramPage } from "./pages/SchemaDiagramPage";
 import { VisualExplainPage } from "./pages/VisualExplainPage";
 import { JsonViewerPage } from "./pages/JsonViewerPage";
 import { ConnectionHealthMonitor } from "./components/ConnectionHealthMonitor";
+import { UpdateChecker } from "./components/UpdateChecker";
 import { EditorErrorBoundary } from "./components/ui/EditorErrorBoundary";
 
 export function App() {
@@ -42,6 +43,7 @@ export function App() {
       <AlertProvider>
         <BrowserRouter>
           <ConnectionHealthMonitor />
+          <UpdateChecker />
           <KeybindingsProvider>
             <ConnectionLayoutProvider>
               <Routes>

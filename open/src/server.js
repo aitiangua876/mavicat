@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { hashPassword, makeId, paths, readDb, verifyPassword, writeDb } from "./store.js";
 
@@ -98,6 +98,16 @@ function normalizeToken(value) {
   return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+function normalizeSignature(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getBaseUrl(request) {
+  const proto = request.headers["x-forwarded-proto"] || request.protocol;
+  const host = request.headers["x-forwarded-host"] || request.headers.host;
+  return `${proto}://${host}`;
+}
+
 function detectPlatform(userAgent = "") {
   const value = normalizeToken(userAgent);
   if (value.includes("macintosh") || value.includes("macos") || value.includes("macosx")) {
@@ -167,6 +177,16 @@ function sortedVisibleVersions(request) {
     });
 }
 
+function sortedPublishedVersions() {
+  return readDb().versions
+    .filter((version) => version.published)
+    .sort((left, right) => {
+      const leftTime = new Date(left.updatedAt ?? left.releaseDate ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.updatedAt ?? right.releaseDate ?? right.createdAt ?? 0).getTime();
+      return rightTime - leftTime;
+    });
+}
+
 function findLatestPackage(request, requestedPlatform) {
   const platform = requestedPlatform === "auto" ? detectPlatform(request.headers["user-agent"]) : requestedPlatform;
   const hints = architectureHints(request.headers["user-agent"]);
@@ -183,6 +203,25 @@ function findLatestPackage(request, requestedPlatform) {
   }
 
   return null;
+}
+
+function toUpdaterTarget(pkg) {
+  const platform = normalizeToken(pkg.platform);
+  const arch = normalizeToken(pkg.arch);
+  const os = platform === "macos" ? "darwin" : platform === "windows" ? "windows" : platform === "linux" ? "linux" : "";
+  const cpu = arch === "arm64" || arch === "aarch64" ? "aarch64" : arch === "x64" || arch === "x8664" || arch === "amd64" ? "x86_64" : "";
+
+  if (!os || !cpu) {
+    return "";
+  }
+  return `${os}-${cpu}`;
+}
+
+function absoluteUrl(request, url) {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  return `${getBaseUrl(request)}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 function getClientIp(request) {
@@ -304,6 +343,37 @@ app.get("/api/download/latest", (request, response) => {
     return;
   }
   response.redirect(302, pkg.url);
+});
+
+app.get("/api/updater/latest.json", (request, response) => {
+  const latestVersion = sortedPublishedVersions().find((version) =>
+    version.packages?.some((pkg) => pkg.updaterSignature)
+  );
+
+  if (!latestVersion) {
+    response.status(204).end();
+    return;
+  }
+
+  const platforms = {};
+  latestVersion.packages.forEach((pkg) => {
+    const target = toUpdaterTarget(pkg);
+    if (!target || !pkg.updaterSignature || platforms[target]) {
+      return;
+    }
+
+    platforms[target] = {
+      signature: pkg.updaterSignature,
+      url: absoluteUrl(request, pkg.url)
+    };
+  });
+
+  response.json({
+    version: latestVersion.version,
+    notes: latestVersion.notes,
+    pub_date: latestVersion.releaseDate,
+    platforms
+  });
 });
 
 app.post("/api/auth/register", (request, response) => {
@@ -505,39 +575,52 @@ app.delete("/api/admin/versions/:id", requireAdmin, (request, response) => {
   response.json({ ok: true });
 });
 
-app.post("/api/admin/versions/:id/packages", requireAdmin, upload.single("installer"), (request, response) => {
-  const platform = normalizeText(request.body.platform);
-  const arch = normalizeText(request.body.arch);
-  const label = normalizeText(request.body.label, `${platform} ${arch}`);
+app.post(
+  "/api/admin/versions/:id/packages",
+  requireAdmin,
+  upload.fields([
+    { name: "installer", maxCount: 1 },
+    { name: "signatureFile", maxCount: 1 }
+  ]),
+  (request, response) => {
+    const platform = normalizeText(request.body.platform);
+    const arch = normalizeText(request.body.arch);
+    const label = normalizeText(request.body.label, `${platform} ${arch}`);
+    const installerFile = request.files?.installer?.[0];
+    const signatureFile = request.files?.signatureFile?.[0];
 
-  if (!request.file || !platform || !arch) {
-    response.status(400).json({ message: "Installer file, platform, and architecture are required." });
-    return;
+    if (!installerFile || !platform || !arch) {
+      response.status(400).json({ message: "Installer file, platform, and architecture are required." });
+      return;
+    }
+
+    const db = readDb();
+    const version = db.versions.find((item) => item.id === request.params.id);
+    if (!version) {
+      response.status(404).json({ message: "Version not found." });
+      return;
+    }
+
+    const pkg = {
+      id: makeId("pkg"),
+      platform,
+      arch,
+      label,
+      originalName: installerFile.originalname,
+      fileName: installerFile.filename,
+      size: installerFile.size,
+      url: `/uploads/${installerFile.filename}`,
+      updaterSignature: normalizeSignature(
+        request.body.signature || (signatureFile ? readFileSync(signatureFile.path, "utf8") : "")
+      ),
+      uploadedAt: new Date().toISOString()
+    };
+    version.packages.push(pkg);
+    version.updatedAt = new Date().toISOString();
+    writeDb(db);
+    response.status(201).json({ package: pkg, version });
   }
-
-  const db = readDb();
-  const version = db.versions.find((item) => item.id === request.params.id);
-  if (!version) {
-    response.status(404).json({ message: "Version not found." });
-    return;
-  }
-
-  const pkg = {
-    id: makeId("pkg"),
-    platform,
-    arch,
-    label,
-    originalName: request.file.originalname,
-    fileName: request.file.filename,
-    size: request.file.size,
-    url: `/uploads/${request.file.filename}`,
-    uploadedAt: new Date().toISOString()
-  };
-  version.packages.push(pkg);
-  version.updatedAt = new Date().toISOString();
-  writeDb(db);
-  response.status(201).json({ package: pkg, version });
-});
+);
 
 app.delete("/api/admin/versions/:versionId/packages/:packageId", requireAdmin, (request, response) => {
   const db = readDb();

@@ -378,7 +378,10 @@ function renderAdmin() {
             <div class="package-row">
               <div>
                 <div class="package-name">${escapeHtml(pkg.label)}</div>
-                <p class="package-meta">${escapeHtml(pkg.originalName)} · ${formatBytes(pkg.size)}</p>
+                <p class="package-meta">
+                  ${escapeHtml(pkg.originalName)} · ${formatBytes(pkg.size)}
+                  · 自动更新 ${pkg.updaterSignature ? "已配置签名" : "未配置签名"}
+                </p>
               </div>
               <button class="danger delete-package" data-version-id="${escapeHtml(version.id)}" data-package-id="${escapeHtml(pkg.id)}" type="button">删除</button>
             </div>
@@ -429,6 +432,14 @@ function renderAdmin() {
               <label>
                 安装包文件
                 <input name="installer" type="file" />
+              </label>
+              <label>
+                自动更新签名
+                <input name="signatureFile" type="file" accept=".sig,.txt" />
+              </label>
+              <label class="wide-field">
+                或粘贴签名内容
+                <textarea name="signature" rows="3" placeholder="从 .sig 文件复制完整内容；仅用于自动更新校验，普通下载可留空。"></textarea>
               </label>
               <button class="primary upload-inline" type="submit">上传</button>
             </form>
@@ -575,7 +586,10 @@ async function submitUpload(form) {
   const platformInput = form.elements.namedItem("platform");
   const archInput = form.elements.namedItem("arch");
   const labelInput = form.elements.namedItem("label");
+  const signatureInput = form.elements.namedItem("signature");
+  const signatureFileInput = form.elements.namedItem("signatureFile");
   const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
+  const signatureFile = signatureFileInput instanceof HTMLInputElement ? signatureFileInput.files?.[0] : null;
   if (!file) {
     window.alert("请选择安装包文件。");
     return;
@@ -589,6 +603,12 @@ async function submitUpload(form) {
   formData.append("arch", arch);
   formData.append("label", label || `${platform} ${arch}`);
   formData.append("installer", file);
+  if (signatureInput instanceof HTMLTextAreaElement && signatureInput.value.trim()) {
+    formData.append("signature", signatureInput.value.trim());
+  }
+  if (signatureFile) {
+    formData.append("signatureFile", signatureFile);
+  }
 
   try {
     await api(`/api/admin/versions/${form.dataset.versionId}/packages`, {

@@ -25,6 +25,15 @@ export function GeneralTab() {
             onChange={(v) => updateSetting("showWelcome", v)}
           />
         </SettingRow>
+        <SettingRow
+          label="启动时检查更新"
+          description="发现官网发布的新版本时，在应用启动后提示下载安装。"
+        >
+          <SettingToggle
+            checked={settings.autoCheckUpdatesOnStartup !== false}
+            onChange={(v) => updateSetting("autoCheckUpdatesOnStartup", v)}
+          />
+        </SettingRow>
       </SettingSection>
 
       <SettingSection title={t("settings.dataEditor")}>

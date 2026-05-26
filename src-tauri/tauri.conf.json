@@ -52,7 +52,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/aitiangua876/mavicat/releases/latest/download/latest.json"
+        "https://mavicat.kailingteck.com/api/updater/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY0NzY0QjNEQjI4QjFEQjcKUldTM0hZdXlQVXQyWkRYdmRJOEJhVEpYTit2VXRYS0drTit1bmthSHVzcWlQK09Wb2l5cVpOWXAK"
     }

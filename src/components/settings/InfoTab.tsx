@@ -1,17 +1,69 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Github, Code2, Library } from "lucide-react";
+import { Github, Code2, Library, RefreshCw } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { useAlert } from "../../hooks/useAlert";
 import { APP_DISPLAY_VERSION } from "../../version";
 import { SettingSection } from "./SettingControls";
 import { OpenSourceLibrariesModal } from "../modals/OpenSourceLibrariesModal";
+import { ConfirmModal } from "../modals/ConfirmModal";
+
+interface UpdateCheckResult {
+  hasUpdate: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  releaseNotes: string;
+}
 
 export function InfoTab() {
   const { t } = useTranslation();
   const { currentTheme } = useTheme();
+  const { showAlert } = useAlert();
   const [isOpenSourceLibrariesOpen, setIsOpenSourceLibrariesOpen] =
     useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [availableUpdate, setAvailableUpdate] =
+    useState<UpdateCheckResult | null>(null);
+
+  const checkUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await invoke<UpdateCheckResult>("check_for_updates", {
+        force: true,
+      });
+      if (result.hasUpdate) {
+        setAvailableUpdate(result);
+      } else {
+        showAlert(`当前已经是最新版本：${result.currentVersion}`, {
+          title: "检查更新",
+          kind: "info",
+        });
+      }
+    } catch (error) {
+      showAlert(`检查更新失败：${error instanceof Error ? error.message : String(error)}`, {
+        title: "检查更新",
+        kind: "error",
+      });
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    setIsInstallingUpdate(true);
+    try {
+      await invoke("download_and_install_update");
+    } catch (error) {
+      setIsInstallingUpdate(false);
+      showAlert(`自动更新失败：${error instanceof Error ? error.message : String(error)}`, {
+        title: "更新失败",
+        kind: "error",
+      });
+    }
+  };
 
   return (
     <div>
@@ -60,6 +112,14 @@ export function InfoTab() {
             <Library size={18} />
             {t("settings.openSourceLibraries")}
           </button>
+          <button
+            onClick={() => void checkUpdates()}
+            disabled={isCheckingUpdate}
+            className="flex items-center gap-2 bg-orange-900/20 hover:bg-orange-900/30 disabled:opacity-60 disabled:cursor-not-allowed text-orange-300 px-4 py-2 rounded-lg font-medium transition-colors border border-orange-500/30"
+          >
+            <RefreshCw size={18} className={isCheckingUpdate ? "animate-spin" : ""} />
+            {isCheckingUpdate ? "检查中..." : "检查更新"}
+          </button>
         </div>
       </div>
 
@@ -76,6 +136,23 @@ export function InfoTab() {
       <OpenSourceLibrariesModal
         isOpen={isOpenSourceLibrariesOpen}
         onClose={() => setIsOpenSourceLibrariesOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={availableUpdate !== null}
+        onClose={() => setAvailableUpdate(null)}
+        title={
+          availableUpdate
+            ? `发现新版本 ${availableUpdate.latestVersion}`
+            : "发现新版本"
+        }
+        message={
+          availableUpdate
+            ? `当前版本 ${availableUpdate.currentVersion}。${availableUpdate.releaseNotes || "建议更新到最新版本以获得功能改进和修复。"}`
+            : ""
+        }
+        confirmLabel={isInstallingUpdate ? "正在更新..." : "立即更新"}
+        onConfirm={() => void installUpdate()}
+        variant="info"
       />
     </div>
   );
