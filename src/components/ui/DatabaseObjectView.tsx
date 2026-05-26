@@ -9,11 +9,10 @@ import {
   List,
   PenTool,
   Search,
-  Table2,
 } from "lucide-react";
 import type { TableInfo, ViewInfo } from "../../contexts/DatabaseContext";
 import type { CopiedTableSet } from "../../types/tableClipboard";
-import { NavicatDatabaseIcon } from "../icons/NavicatStyleIcons";
+import { NavicatDatabaseIcon, NavicatTableIcon } from "../icons/NavicatStyleIcons";
 
 type ObjectViewMode = "list" | "icons";
 
@@ -429,7 +428,7 @@ export function DatabaseObjectView({
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <Table2 size={17} className="text-sky-300 shrink-0" />
+                          <NavicatTableIcon size={17} className="shrink-0" />
                           <span className="font-mono text-sm font-medium text-primary truncate">
                             {table.name}
                           </span>
@@ -504,10 +503,7 @@ export function DatabaseObjectView({
                       title={table.comment ? `${table.name}: ${table.comment}` : table.name}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <Table2
-                          size={30}
-                          className={selected ? "text-blue-200" : "text-sky-300"}
-                        />
+                        <NavicatTableIcon size={26} className="shrink-0" />
                         {renderConflictBadge(table.name)}
                       </div>
                       <div className="mt-3 font-mono text-sm font-semibold text-primary break-all line-clamp-2">
