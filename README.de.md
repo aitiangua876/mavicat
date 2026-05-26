@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Mavicat bringt professionelle Datenbank-Workflows in eine moderne, lokale und gut erweiterbare Desktop-App. Die App basiert auf Tauri v2, Rust, React und TypeScript: native Hülle, schneller Start, leistungsfähige Datenbanklogik und eine flexible Oberfläche.
 
@@ -37,6 +37,7 @@ Wenn dir die Richtung gefällt, gib dem Projekt gern einen Star. Das hilft, Mavi
 
 - **Ein Workspace für den Alltag**: Verbindungen, Schemas, SQL-Tabs, Tabellenansichten, Tabellen-Designer, Export, Backup, Synchronisierung, Migration, Redis und KI-Unterstützung.
 - **Vertraute Desktop-UX**: kompakter Verbindungsbaum, Objektansichten, Tabs, Ergebnispanels, Kontextmenüs und assistentenbasierte Tools.
+- **Frischer Mavicat-Stil**: sattere Toolbar-Icons, ein klareres Navicat-ähnliches Workspace-Layout und ein einheitliches Light/Dark Theme.
 - **Local-first**: Verbindungen, Verlauf, Einstellungen und KI-Konfiguration bleiben lokal, sofern du nichts anderes entscheidest.
 - **Keine Treibersuche**: gängige Datenbanktreiber sind über das Rust-Backend integriert; für typische Workflows brauchst du keine separaten JDBC-, ODBC- oder Client-Pakete.
 - **Schlanker Desktop-Footprint**: Tauri hält die Shell kompakt, Rust übernimmt die schweren Datenbankaufgaben ohne großen Hintergrunddienst.
@@ -47,7 +48,7 @@ Wenn dir die Richtung gefällt, gib dem Projekt gern einen Star. Das hilft, Mavi
 
 ### Alles in einem Datenbank-Workspace
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Der Hauptbereich kombiniert Verbindungsbaum, SQL-Editor, Ergebnisraster, Toolbar-Aktionen und Datenbankkontext. So wechselst du schnell zwischen Verbindungen, Datenbanken, Tabellen, Query-Tabs und Exportaufgaben.
 
@@ -114,8 +115,8 @@ Der Hauptbereich kombiniert Verbindungsbaum, SQL-Editor, Ergebnisraster, Toolbar
 
 - [Offizielle Website](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download für macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
-- [Download für Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
+- [Aktuelles Release](https://github.com/aitiangua876/mavicat/releases/latest)
+- [Download über die Website](https://mavicat.kailingteck.com/)
 
 Mavicat zielt auf macOS, Windows und Linux. Die verfügbaren Artefakte können je nach Meilenstein variieren.
 

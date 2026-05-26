@@ -180,8 +180,8 @@ export const SidebarTableItem = ({
         className={clsx(
           "flex items-center gap-1.5 pl-1 pr-3 py-1 text-[15px] font-semibold cursor-pointer group select-none transition-colors border-l-2",
           activeTable === table.name
-            ? "bg-[#1f3f7f] text-[#f3f8ff] border-[#4aa3ff] shadow-[inset_0_0_0_1px_rgba(96,165,250,0.14)]"
-            : "text-[#d7e2f0] border-transparent hover:bg-[#303842] hover:text-white",
+            ? "bg-accent-primary text-white border-focus shadow-[inset_0_0_0_1px_rgba(96,165,250,0.14)]"
+            : "text-primary border-transparent hover:bg-surface-hover hover:text-primary",
         )}
       >
         <button
@@ -189,8 +189,8 @@ export const SidebarTableItem = ({
           className={clsx(
             "p-0.5 rounded transition-colors",
             activeTable === table.name
-              ? "text-[#dbeafe] hover:bg-white/10"
-              : "text-[#8fa6c3] hover:bg-white/10 hover:text-[#dcecff]",
+              ? "text-white hover:bg-white/10"
+              : "text-muted hover:bg-surface-hover hover:text-primary",
           )}
         >
           {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}

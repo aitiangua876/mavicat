@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Mavicat brings professional database workflows into a modern, local-first, hackable desktop app. It is built with Tauri v2, Rust, React, and TypeScript, so it feels native, starts quickly, and keeps your database workflow close to your machine.
 
@@ -37,6 +37,7 @@ If you like the direction of the project, please give it a star. It helps more d
 
 - **One workspace for daily database work**: connections, schemas, SQL tabs, data grids, table design, export, backup, sync, migration, Redis keys, and AI assistance.
 - **Familiar desktop UX**: a compact connection tree, object views, tabbed editors, result panels, context menus, and wizard-style tools inspired by the workflows people already know.
+- **Fresh Mavicat visual style**: richer toolbar icons, a cleaner Navicat-like workspace, and a unified light/dark theme so the whole app feels consistent.
 - **Local-first by design**: connection profiles, query history, settings, and AI configuration live locally unless you explicitly choose otherwise.
 - **No driver hunting**: common database drivers are built into the app through the Rust backend, so you do not need to install separate JDBC/ODBC/client packages for everyday use.
 - **Lightweight desktop footprint**: Tauri keeps the shell compact, while Rust handles heavy database work without running a bulky server process in the background.
@@ -47,7 +48,7 @@ If you like the direction of the project, please give it a star. It helps more d
 
 ### All-in-one Database Workspace
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 The main workspace keeps the connection tree, SQL editor, result grid, toolbar actions, and database context in one place. It is designed for fast switching between connections, databases, tables, query tabs, and export workflows.
 
@@ -116,8 +117,8 @@ Get the latest builds from:
 
 - [Official website](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download for macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
-- [Download for Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
+- [Latest release](https://github.com/aitiangua876/mavicat/releases/latest)
+- [Download from the official website](https://mavicat.kailingteck.com/)
 
 Mavicat targets macOS, Windows, and Linux through the Tauri bundler. Release artifacts may vary by milestone.
 

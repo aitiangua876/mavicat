@@ -157,7 +157,7 @@ export const SidebarDatabaseItem = ({
       <div
         className={`flex items-center justify-between px-2 py-1 group/db cursor-pointer transition-colors ${
           isSelected
-            ? "bg-emerald-600/25 text-primary border-l-2 border-emerald-400"
+            ? "bg-accent-success text-white border-l-2 border-accent-success"
             : "border-l-2 border-transparent hover:bg-surface-secondary"
         }`}
         onClick={handleSelect}
@@ -185,7 +185,7 @@ export const SidebarDatabaseItem = ({
           />
           <span
             className={`text-[15px] font-semibold truncate ${
-              isSelected ? "text-emerald-50" : isOpen ? "text-secondary" : "text-muted"
+              isSelected ? "text-white" : isOpen ? "text-primary" : "text-muted"
             }`}
           >
             {databaseName}

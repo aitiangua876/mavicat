@@ -684,14 +684,14 @@ function WorkbenchToolbar() {
 
   return (
     <>
-      <header className="mavicat-toolbar shrink-0 bg-[#3d3d3d] border-b border-[#202020] text-[#e5e5e5]">
+      <header className="mavicat-toolbar shrink-0 bg-surface-primary border-b border-default text-primary">
         <div className="h-[82px] flex items-stretch px-3 gap-1">
           {toolbarItems.map((item, index) => {
             return (
               <button
                 key={`${item.label}-${index}`}
                 onClick={() => handleAction(item.action)}
-                className="w-[78px] flex flex-col items-center justify-center gap-0.5 border-x border-transparent text-xs text-[#eeeeee] hover:bg-white/10 hover:border-white/10 transition-colors"
+                className="w-[78px] flex flex-col items-center justify-center gap-0.5 border-x border-transparent text-xs text-primary hover:bg-surface-hover hover:border-default transition-colors"
                 title={item.label}
               >
                 <img src={item.icon} alt="" className="h-[46px] w-[46px] object-contain drop-shadow-[0_3px_3px_rgba(0,0,0,0.35)]" />
@@ -700,7 +700,7 @@ function WorkbenchToolbar() {
             );
           })}
           <div className="ml-auto flex items-center pr-2">
-            <img src="/logo-sm.png" alt="Mavicat" className="w-11 h-11 rounded-xl bg-white" />
+            <img src="/logo-sm.png" alt="Mavicat" className="w-11 h-11 rounded-xl bg-input" />
           </div>
         </div>
       </header>
@@ -802,14 +802,14 @@ function WorkbenchStatusBar() {
   const { activeConnectionName, activeDatabaseName, activeConnectionId } = useDatabase();
 
   return (
-    <footer className="h-7 shrink-0 bg-[#3c3c3c] border-t border-[#202020] text-xs text-[#e0e0e0] flex items-center">
-      <div className="px-3 border-r border-white/10 min-w-[260px] truncate">
+    <footer className="h-7 shrink-0 bg-surface-primary border-t border-default text-xs text-secondary flex items-center">
+      <div className="px-3 border-r border-default min-w-[260px] truncate">
         {activeConnectionId ? activeConnectionName : '未连接'}
       </div>
-      <div className="px-3 border-r border-white/10 truncate">
+      <div className="px-3 border-r border-default truncate">
         {activeDatabaseName || '无活动数据库'}
       </div>
-      <div className="ml-auto px-3 text-[#d8d8d8]">就绪</div>
+      <div className="ml-auto px-3 text-muted">就绪</div>
     </footer>
   );
 }
@@ -826,7 +826,7 @@ export const MainLayout = () => {
     && location.pathname !== '/settings';
 
   return (
-    <div className="flex h-screen bg-[#222] text-primary overflow-hidden">
+    <div className="flex h-screen bg-base text-primary overflow-hidden">
       <div className="flex flex-col flex-1 min-w-0">
         <WorkbenchToolbar />
         <div className="flex flex-1 min-h-0 overflow-hidden bg-base">

@@ -227,10 +227,10 @@ export const TableDesigner = ({
 
   return (
     <div className="flex flex-col h-full bg-base text-primary">
-      <div className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-default bg-[#3d3d3d]">
+      <div className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-default bg-surface-primary">
         <button
           onClick={() => setColumnModal({ isOpen: true, column: null })}
-          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-white/10"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-surface-hover hover:text-primary"
           title="添加字段"
         >
           <Plus size={16} className="text-green-400" />
@@ -238,7 +238,7 @@ export const TableDesigner = ({
         </button>
         <button
           onClick={() => setIndexModalOpen(true)}
-          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-white/10"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-surface-hover hover:text-primary"
           title="添加索引"
         >
           <ListTree size={16} className="text-sky-400" />
@@ -246,7 +246,7 @@ export const TableDesigner = ({
         </button>
         <button
           onClick={() => setForeignKeyModalOpen(true)}
-          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-white/10"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-surface-hover hover:text-primary"
           title="添加外键"
         >
           <Link2 size={16} className="text-violet-300" />
@@ -254,7 +254,7 @@ export const TableDesigner = ({
         </button>
         <button
           onClick={() => void loadDesignerData()}
-          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-white/10"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-secondary rounded hover:bg-surface-hover hover:text-primary"
           title="刷新"
         >
           <RefreshCw size={16} />
@@ -529,7 +529,7 @@ export const TableDesigner = ({
                 复制 SQL
               </button>
             </div>
-            <pre className="h-full overflow-auto rounded border border-default bg-[#1f1f1f] p-4 text-sm leading-6 text-secondary">
+            <pre className="h-full overflow-auto rounded border border-default bg-input p-4 text-sm leading-6 text-secondary">
               {ddl || "-- 无建表语句"}
             </pre>
           </div>

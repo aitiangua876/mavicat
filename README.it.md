@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Mavicat porta i flussi di lavoro database professionali in una app desktop moderna, locale ed estendibile. È costruita con Tauri v2, Rust, React e TypeScript per unire shell nativa, backend solido e UI ricca.
 
@@ -37,6 +37,7 @@ Se il progetto ti piace, lascia una stella: aiuta altri sviluppatori a scoprirlo
 
 - **Un workspace per il lavoro quotidiano**: connessioni, schemi, SQL, risultati, editing dati, table design, export, backup, sync, migrazione, Redis e IA.
 - **UX desktop familiare**: albero connessioni compatto, viste oggetti, tab, pannelli risultati, menu contestuali e wizard.
+- **Nuovo stile visuale Mavicat**: icone toolbar più ricche, workspace più pulito in stile Navicat e tema chiaro/scuro coerente.
 - **Local-first**: profili, cronologia, preferenze e configurazione IA restano locali di default.
 - **Niente caccia ai driver**: i driver comuni sono integrati nel backend Rust; per l'uso quotidiano non servono pacchetti JDBC, ODBC o client esterni.
 - **Footprint leggero**: Tauri mantiene l'app compatta e Rust gestisce il lavoro pesante senza un grande servizio in background.
@@ -47,7 +48,7 @@ Se il progetto ti piace, lascia una stella: aiuta altri sviluppatori a scoprirlo
 
 ### Database workspace tutto in uno
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 La schermata principale riunisce albero connessioni, editor SQL, griglia risultati, toolbar e contesto database. È pensata per passare rapidamente tra connessioni, database, tabelle, query tab ed export.
 
@@ -114,8 +115,8 @@ La schermata principale riunisce albero connessioni, editor SQL, griglia risulta
 
 - [Sito ufficiale](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [Download per macOS](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
-- [Download per Windows](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
+- [Ultima release](https://github.com/aitiangua876/mavicat/releases/latest)
+- [Download dal sito ufficiale](https://mavicat.kailingteck.com/)
 
 Mavicat punta a macOS, Windows e Linux. Gli artefatti disponibili possono variare per milestone.
 

@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Mavicat は、プロ向けデータベースワークフローを、モダンでローカルファーストなデスクトップアプリとして再構築するプロジェクトです。Tauri v2、Rust、React、TypeScript により、ネイティブな操作感と柔軟な UI を両立します。
 
@@ -37,6 +37,7 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 
 - **日常作業を 1 つのワークスペースに**: 接続、スキーマ、SQL、結果、データ編集、テーブル設計、エクスポート、バックアップ、同期、移行、Redis、AI 支援。
 - **馴染みのあるデスクトップ UX**: コンパクトな接続ツリー、オブジェクトビュー、タブ、結果パネル、コンテキストメニュー、ウィザード。
+- **新しい Mavicat ビジュアル**: 立体感のあるツールバーアイコン、Navicat 風の見通しのよいワークスペース、統一されたライト/ダークテーマ。
 - **ローカルファースト**: 接続、履歴、設定、AI 構成はデフォルトでローカル保存。
 - **ドライバ探し不要**: 一般的なデータベースドライバは Rust バックエンドに組み込まれており、日常利用で JDBC、ODBC、外部クライアントを別途入れる必要はありません。
 - **軽量なデスクトップ設計**: Tauri がアプリ本体をコンパクトに保ち、Rust が重い DB 処理を担当します。
@@ -47,7 +48,7 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 
 ### オールインワンのデータベースワークスペース
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 メイン画面には接続ツリー、SQL エディタ、結果グリッド、ツールバー、DB コンテキストがまとまっています。接続、DB、テーブル、クエリタブ、エクスポート作業を素早く切り替えられます。
 
@@ -114,8 +115,8 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 
 - [公式サイト](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [macOS 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
-- [Windows 版をダウンロード](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
+- [最新 Release](https://github.com/aitiangua876/mavicat/releases/latest)
+- [公式サイトからダウンロード](https://mavicat.kailingteck.com/)
 
 Mavicat は macOS、Windows、Linux を対象にしています。利用可能なビルドはマイルストーンにより異なります。
 

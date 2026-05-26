@@ -290,7 +290,7 @@ export const Sidebar = () => {
 
   return (
     <aside
-      className="relative shrink-0 bg-[#242424] border-r border-[#151515] text-[#e6e6e6] flex flex-col min-h-0"
+      className="relative shrink-0 bg-base border-r border-default text-primary flex flex-col min-h-0"
       style={{ width: sidebarWidth }}
     >
       <div
@@ -298,7 +298,7 @@ export const Sidebar = () => {
         className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/60 z-40"
       />
 
-      <div className="h-10 px-2.5 flex items-center justify-between border-b border-[#151515] bg-[#2f2f2f]">
+      <div className="h-10 px-2.5 flex items-center justify-between border-b border-default bg-surface-primary">
         <div className="flex items-center gap-2 text-[15px] font-semibold">
           <NavicatConnectionIcon size={22} />
           <span>我的连接</span>
@@ -306,14 +306,14 @@ export const Sidebar = () => {
         <div className="flex items-center">
           <button
             onClick={() => navigate("/connections")}
-            className="p-1.5 rounded-sm text-[#d7d7d7] hover:bg-white/10 hover:text-white"
+            className="p-1.5 rounded-sm text-secondary hover:bg-surface-hover hover:text-primary"
             title={t("connections.addConnection")}
           >
             <Plus size={19} />
           </button>
           <button
             onClick={() => navigate("/settings")}
-            className="p-1.5 rounded-sm text-[#d7d7d7] hover:bg-white/10 hover:text-white"
+            className="p-1.5 rounded-sm text-secondary hover:bg-surface-hover hover:text-primary"
             title={t("sidebar.settings")}
           >
             <Settings size={19} />
@@ -321,21 +321,21 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      <div className="p-2 border-b border-[#151515]">
+      <div className="p-2 border-b border-default">
         <div className="relative">
-          <Search size={17} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8a8a8a]" />
+          <Search size={17} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="搜索"
-            className="w-full h-9 bg-[#1f1f1f] border border-[#3a3a3a] rounded-sm pl-8 pr-2.5 text-[15px] text-[#eeeeee] placeholder:text-[#777] focus:outline-none focus:border-[#3778d8]"
+            className="w-full h-9 bg-input border border-default rounded-sm pl-8 pr-2.5 text-[15px] text-primary placeholder:text-muted focus:outline-none focus:border-focus"
           />
         </div>
       </div>
 
       <div className="custom-scrollbar overflow-y-auto flex-1 min-h-0 py-1">
         {filteredConnections.length === 0 ? (
-          <div className="px-3 py-6 text-center text-xs text-[#8a8a8a]">
+          <div className="px-3 py-6 text-center text-xs text-muted">
             暂无连接
           </div>
         ) : (
@@ -366,17 +366,17 @@ export const Sidebar = () => {
                 ? "bg-red-400"
                 : isConnected
                   ? "bg-emerald-400"
-                  : "bg-[#777]";
+                  : "bg-muted";
 
             return (
               <div key={connection.id}>
                 <div
                   className={`group flex items-center gap-1 h-8 pl-1 pr-1.5 text-[15px] font-semibold cursor-default ${
                     isActive
-                      ? "bg-[#2f78d6] text-white"
+                      ? "bg-accent-primary text-white"
                       : connection.isOpen
-                        ? "text-[#dcdcdc] hover:bg-[#343434]"
-                        : "text-[#a6a6a6] hover:bg-[#303030]"
+                        ? "text-primary hover:bg-surface-hover"
+                        : "text-muted hover:bg-surface-hover"
                   }`}
                   onDoubleClick={() => void openConnection(connection)}
                   onContextMenu={(event) => handleConnectionContextMenu(event, connection.id)}
@@ -414,7 +414,7 @@ export const Sidebar = () => {
                         getDriverIcon(driverManifest, 17)
                       )}
                       <span
-                        className={`absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full border border-[#242424] ${statusDotClass}`}
+                        className={`absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full border border-base ${statusDotClass}`}
                       />
                     </span>
                     <span className={`truncate ${connection.isOpen ? "" : "opacity-85"}`}>

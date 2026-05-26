@@ -1,11 +1,12 @@
-# Mavicat Open
+# Mavicat Website
 
-Mavicat Open is a standalone Node.js website for publishing Mavicat releases.
+Mavicat Website is the standalone Node.js site for publishing Mavicat releases, collecting product feedback, and giving users a clean download entry outside the desktop app.
 
 ## Features
 
-- Product introduction and release download page
+- Product introduction, latest screenshots, and release download page
 - User registration, login, logout, and password changes
+- Public comments and feedback for visitors and signed-in users
 - Default administrator account: `admin`
 - Default administrator password: `Kailing@2026`
 - Admin release management with inline installer uploads by platform and architecture

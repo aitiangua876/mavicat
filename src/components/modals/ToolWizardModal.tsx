@@ -670,7 +670,7 @@ export const ToolWizardModal = ({
                     </div>
                     <div>
                       <div className="text-xs text-muted mb-1">SQL 预览</div>
-                      <pre className="max-h-52 overflow-auto rounded border border-default bg-[#151515] p-3 text-xs leading-5 text-[#d7e6ff] whitespace-pre-wrap">
+                      <pre className="max-h-52 overflow-auto rounded border border-default bg-input p-3 text-xs leading-5 text-secondary whitespace-pre-wrap">
                         {schemaPreviewSql || "-- 请选择可执行变更预览 SQL"}
                       </pre>
                     </div>

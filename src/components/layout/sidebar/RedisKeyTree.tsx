@@ -111,8 +111,8 @@ export function RedisKeyTree({
           className={clsx(
             "flex items-center gap-1.5 py-1 pr-2 text-[14px] font-medium cursor-pointer select-none border-l-2 transition-colors",
             activeKey === node.path
-              ? "bg-[#1f3f7f] text-[#f3f8ff] border-[#4aa3ff]"
-              : "text-[#d7e2f0] border-transparent hover:bg-[#303842] hover:text-white",
+              ? "bg-accent-primary text-white border-focus"
+              : "text-primary border-transparent hover:bg-surface-hover hover:text-primary",
           )}
           style={{ paddingLeft: 8 + depth * 14 }}
         >
@@ -129,7 +129,7 @@ export function RedisKeyTree({
         {node.path && (
           <div
             onClick={() => toggle(node.path)}
-            className="flex items-center gap-1.5 py-1 pr-2 text-[13px] font-semibold text-[#b9c7d8] hover:text-white hover:bg-[#2d343d] cursor-pointer select-none"
+            className="flex items-center gap-1.5 py-1 pr-2 text-[13px] font-semibold text-secondary hover:text-primary hover:bg-surface-hover cursor-pointer select-none"
             style={{ paddingLeft: 8 + depth * 14 }}
           >
             {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}

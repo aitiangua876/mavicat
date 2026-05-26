@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现代、轻量、本地优先、可持续开源的桌面工具。它基于 Tauri v2、Rust、React 和 TypeScript 构建，既有原生桌面应用的手感，也保留了前端界面的迭代速度。
 
@@ -37,6 +37,7 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 
 - **一个窗口完成日常数据库工作**：连接、库表浏览、SQL、多结果集、数据编辑、表设计、导入导出、备份、结构同步、数据迁移、Redis、AI 辅助。
 - **熟悉的桌面体验**：紧凑连接树、对象视图、多标签页、结果面板、右键菜单、向导式工具，尽量贴近大家已经习惯的专业数据库工具工作流。
+- **新的 Mavicat 视觉风格**：更饱满的工具栏图标、更统一的亮色/暗色主题、更清晰的侧边栏状态，让整个工作台从左到右都一致。
 - **本地优先**：连接配置、查询历史、应用设置和 AI 配置默认保存在本机。
 - **无需到处安装驱动**：常用数据库驱动由 Rust 后端内置，日常连接 MySQL、PostgreSQL、SQLite、SQL Server、Redis 不需要额外折腾 JDBC、ODBC 或数据库客户端包。
 - **体积和占用更克制**：Tauri 提供轻量桌面壳，Rust 负责高负载数据库任务，不需要在后台常驻一整套笨重服务。
@@ -47,7 +48,7 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 
 ### 一体化数据库工作台
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
 
 主界面把连接树、SQL 编辑器、结果网格、工具栏和数据库上下文放在同一个工作区里。你可以在连接、数据库、表、查询标签和导出任务之间快速切换，不需要在多个窗口之间来回找东西。
 
@@ -116,8 +117,8 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 
 - [Mavicat 官网](https://mavicat.kailingteck.com/)
 - [GitHub Releases](https://github.com/aitiangua876/mavicat/releases)
-- [下载 macOS 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_aarch64.dmg)
-- [下载 Windows 版](https://github.com/aitiangua876/mavicat/releases/download/v1.0.3/Mavicat_1.0.3_Windows_Setup.exe)
+- [最新 Release](https://github.com/aitiangua876/mavicat/releases/latest)
+- [从官网下载](https://mavicat.kailingteck.com/)
 
 Mavicat 通过 Tauri 打包，目标支持 macOS、Windows 和 Linux。不同里程碑可用安装包可能不同。
 
