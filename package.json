@@ -1,7 +1,7 @@
 {
   "name": "mavicat",
   "private": true,
-  "version": "1.0.12",
+  "version": "1.0.13",
   "type": "module",
   "links": {
     "github": "https://github.com/aitiangua876/mavicat"
