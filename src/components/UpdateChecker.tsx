@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { ConfirmModal } from "./modals/ConfirmModal";
 import { useAlert } from "../hooks/useAlert";
 import { useSettings } from "../hooks/useSettings";
@@ -20,6 +21,8 @@ export function UpdateChecker() {
   const { showAlert } = useAlert();
   const [update, setUpdate] = useState<UpdateCheckResult | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     if (isLoading || settings.autoCheckUpdatesOnStartup === false) {
@@ -65,14 +68,31 @@ export function UpdateChecker() {
 
   const installUpdate = async () => {
     setIsInstalling(true);
+    setProgress(0);
+    setStatus("正在准备下载更新...");
+
+    const unlistenProgress = await listen<number>("update-progress", (event) => {
+      setProgress(Math.max(0, Math.min(100, Math.round(event.payload))));
+      setStatus("正在下载更新...");
+    });
+    const unlistenInstalling = await listen("update-installing", () => {
+      setProgress(100);
+      setStatus("下载完成，正在安装并重启...");
+    });
+
     try {
       await invoke("download_and_install_update");
     } catch (error) {
       setIsInstalling(false);
+      setProgress(0);
+      setStatus("");
       showAlert(`自动更新失败：${error instanceof Error ? error.message : String(error)}`, {
         title: "更新失败",
         kind: "error",
       });
+    } finally {
+      unlistenProgress();
+      unlistenInstalling();
     }
   };
 
@@ -87,8 +107,24 @@ export function UpdateChecker() {
           : ""
       }
       confirmLabel={isInstalling ? "正在更新..." : "立即更新"}
+      confirmDisabled={isInstalling}
       onConfirm={() => void installUpdate()}
       variant="info"
-    />
+    >
+      {isInstalling && (
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-between text-xs text-secondary">
+            <span>{status || "正在更新..."}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-secondary border border-default">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-all duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </ConfirmModal>
   );
 }

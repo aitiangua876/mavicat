@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Github, Code2, Library, RefreshCw } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
@@ -25,6 +26,8 @@ export function InfoTab() {
     useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateStatus, setUpdateStatus] = useState("");
   const [availableUpdate, setAvailableUpdate] =
     useState<UpdateCheckResult | null>(null);
 
@@ -54,14 +57,31 @@ export function InfoTab() {
 
   const installUpdate = async () => {
     setIsInstallingUpdate(true);
+    setUpdateProgress(0);
+    setUpdateStatus("正在准备下载更新...");
+
+    const unlistenProgress = await listen<number>("update-progress", (event) => {
+      setUpdateProgress(Math.max(0, Math.min(100, Math.round(event.payload))));
+      setUpdateStatus("正在下载更新...");
+    });
+    const unlistenInstalling = await listen("update-installing", () => {
+      setUpdateProgress(100);
+      setUpdateStatus("下载完成，正在安装并重启...");
+    });
+
     try {
       await invoke("download_and_install_update");
     } catch (error) {
       setIsInstallingUpdate(false);
+      setUpdateStatus("");
+      setUpdateProgress(0);
       showAlert(`自动更新失败：${error instanceof Error ? error.message : String(error)}`, {
         title: "更新失败",
         kind: "error",
       });
+    } finally {
+      unlistenProgress();
+      unlistenInstalling();
     }
   };
 
@@ -151,9 +171,25 @@ export function InfoTab() {
             : ""
         }
         confirmLabel={isInstallingUpdate ? "正在更新..." : "立即更新"}
+        confirmDisabled={isInstallingUpdate}
         onConfirm={() => void installUpdate()}
         variant="info"
-      />
+      >
+        {isInstallingUpdate && (
+          <div className="mt-5 space-y-2">
+            <div className="flex items-center justify-between text-xs text-secondary">
+              <span>{updateStatus || "正在更新..."}</span>
+              <span>{updateProgress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-surface-secondary border border-default">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all duration-200"
+                style={{ width: `${updateProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

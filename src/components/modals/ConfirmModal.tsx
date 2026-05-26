@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { Modal } from "../ui/Modal";
 
@@ -7,8 +8,10 @@ interface ConfirmModalProps {
   onClose: () => void;
   title: string;
   message: string;
+  children?: ReactNode;
   confirmLabel?: string;
   confirmClassName?: string;
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   variant?: "danger" | "warning" | "info";
 }
@@ -18,8 +21,10 @@ export const ConfirmModal = ({
   onClose,
   title,
   message,
+  children,
   confirmLabel,
   confirmClassName,
+  confirmDisabled = false,
   onConfirm,
   variant = "danger",
 }: ConfirmModalProps) => {
@@ -64,6 +69,7 @@ export const ConfirmModal = ({
         {/* Content */}
         <div className="p-6">
           <p className="text-sm text-secondary leading-relaxed">{message}</p>
+          {children}
         </div>
 
         {/* Footer */}
@@ -76,9 +82,10 @@ export const ConfirmModal = ({
           </button>
           <button
             onClick={onConfirm}
+            disabled={confirmDisabled}
             className={
               confirmClassName ??
-              `px-4 py-2 ${currentVariant.button} text-white rounded-lg text-sm font-medium transition-colors`
+              `px-4 py-2 ${currentVariant.button} disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors`
             }
           >
             {confirmLabel ?? (variant === "danger" ? t("common.delete") : t("common.ok"))}

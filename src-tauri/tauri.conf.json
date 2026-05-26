@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Mavicat",
-  "version": "1.0.9",
+  "version": "1.0.12",
   "identifier": "com.mavicat.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -25,7 +25,7 @@
     }
   },
   "bundle": {
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [
@@ -54,7 +54,7 @@
       "endpoints": [
         "https://mavicat.kailingteck.com/api/updater/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVDQTVEMzUwOTI3M0UzNzQKUldSMDQzT1NVTk9sWEluYmR2YnFFTVB3RE5SNHZHZzErb3ZIZlk1TlR3YmxwZ2JIcWcyalJtMWcK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFBMDQ1NzZEMDI1REZCMkEKUldRcSsxMENiVmNFR3EyaklaNGJjdWZZQXFybmcvWlc0WXVpN3RkRUdUQUM5SWw4L3hKbitJeHQK"
     }
   }
 }
