@@ -183,7 +183,11 @@ function getPlatformLabel(platform) {
   }[platform] ?? "当前设备";
 }
 
-function applyDownloadTarget(link, match, fallbackText) {
+function getDownloadEndpoint(platform) {
+  return platform && platform !== "auto" ? `/api/download/latest?platform=${platform}` : "/api/download/latest";
+}
+
+function applyDownloadTarget(link, match, fallbackText, platform = "auto") {
   if (!link) {
     return;
   }
@@ -196,8 +200,8 @@ function applyDownloadTarget(link, match, fallbackText) {
     return;
   }
 
-  link.href = match.pkg.url;
-  link.setAttribute("download", "");
+  link.href = getDownloadEndpoint(platform);
+  link.removeAttribute("download");
   link.classList.remove("is-unavailable");
 }
 
@@ -209,7 +213,7 @@ function renderSmartDownload() {
   const match = platform === "unknown" ? null : findDownloadForPlatform(platform);
   const alternateMatch = findDownloadForPlatform(alternatePlatform);
 
-  applyDownloadTarget(nodes.smartDownloadButton, match, `下载 ${platformLabel} 版`);
+  applyDownloadTarget(nodes.smartDownloadButton, match, `下载 ${platformLabel} 版`, platform);
   if (match) {
     nodes.smartDownloadButton.textContent = `下载 ${platformLabel} 版`;
     nodes.smartDownloadButton.setAttribute("title", `${match.version.version} · ${match.pkg.originalName}`);
@@ -218,7 +222,7 @@ function renderSmartDownload() {
     nodes.smartDownloadButton.setAttribute("title", "当前设备暂未匹配到直链安装包，可在下载中心查看全部版本。");
   }
 
-  applyDownloadTarget(nodes.alternateDownloadButton, alternateMatch, `下载 ${alternateLabel} 版`);
+  applyDownloadTarget(nodes.alternateDownloadButton, alternateMatch, `下载 ${alternateLabel} 版`, alternatePlatform);
   nodes.alternateDownloadButton.textContent = `下载 ${alternateLabel} 版`;
   nodes.alternateDownloadButton.setAttribute(
     "title",
@@ -228,7 +232,7 @@ function renderSmartDownload() {
   nodes.platformDownloadLinks.forEach((link) => {
     const targetPlatform = link.dataset.platformDownload;
     const platformMatch = findDownloadForPlatform(targetPlatform);
-    applyDownloadTarget(link, platformMatch, link.textContent);
+    applyDownloadTarget(link, platformMatch, link.textContent, targetPlatform);
     if (platformMatch) {
       link.setAttribute("title", `${platformMatch.version.version} · ${platformMatch.pkg.label}`);
     } else {
