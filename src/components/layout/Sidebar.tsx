@@ -27,6 +27,7 @@ import { getDriverColor, getDriverIcon } from "../../utils/driverUI";
 import { ExplorerSidebar, type SidebarTab } from "./ExplorerSidebar";
 import { PanelDatabaseProvider } from "./PanelDatabaseProvider";
 import { ContextMenu, type ContextMenuItem } from "../ui/ContextMenu";
+import { ConfirmModal } from "../modals/ConfirmModal";
 import { NewConnectionModal } from "../modals/NewConnectionModal";
 import type { SavedConnection } from "../../contexts/DatabaseContext";
 import { NavicatConnectionIcon } from "../icons/NavicatStyleIcons";
@@ -63,6 +64,9 @@ export const Sidebar = () => {
     connectionId: string;
   } | null>(null);
   const [editingConnection, setEditingConnection] = useState<SavedConnection | null>(null);
+  const [renamingConnection, setRenamingConnection] = useState<ConnectionStatus | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenamingConnection, setIsRenamingConnection] = useState(false);
   const [createDatabaseTarget, setCreateDatabaseTarget] = useState<ConnectionStatus | null>(null);
   const { sidebarWidth, startResize } = useSidebarResize(() => undefined);
 
@@ -166,6 +170,59 @@ export const Sidebar = () => {
     setEditingConnection(savedConnection);
   };
 
+  const openRenameConnection = (connection: ConnectionStatus) => {
+    setRenamingConnection(connection);
+    setRenameValue(connection.name);
+  };
+
+  const closeRenameConnection = () => {
+    if (isRenamingConnection) return;
+    setRenamingConnection(null);
+    setRenameValue("");
+  };
+
+  const renameConnection = async () => {
+    const connection = renamingConnection;
+    if (!connection) return;
+
+    const name = renameValue.trim();
+    if (!name) {
+      showAlert("连接名称不能为空", { title: "重命名连接", kind: "warning" });
+      return;
+    }
+
+    const existing = savedConnectionById.get(connection.id);
+    if (!existing) {
+      showAlert("未找到连接配置，请刷新后重试", { title: "重命名连接", kind: "error" });
+      return;
+    }
+
+    try {
+      setIsRenamingConnection(true);
+      const fullConnection = await invoke<SavedConnection>("get_connection_by_id", {
+        id: connection.id,
+      });
+      await invoke("update_connection", {
+        id: fullConnection.id,
+        name,
+        params: fullConnection.params,
+        detectJsonInTextColumns: fullConnection.detect_json_in_text_columns ? true : null,
+      });
+      await loadConnections();
+      setRenamingConnection(null);
+      setRenameValue("");
+      showAlert(`已重命名为“${name}”`, { title: "重命名连接", kind: "info" });
+    } catch (error) {
+      console.error("Failed to rename connection", error);
+      showAlert(`重命名连接失败：${error instanceof Error ? error.message : String(error)}`, {
+        title: "重命名连接",
+        kind: "error",
+      });
+    } finally {
+      setIsRenamingConnection(false);
+    }
+  };
+
   const openCreateDatabase = async (connection: ConnectionStatus) => {
     if (!supportsCreateDatabase(connection.driver)) return;
 
@@ -260,6 +317,11 @@ export const Sidebar = () => {
               },
             ]
           : []),
+        {
+          label: "重命名连接...",
+          icon: Edit2,
+          action: () => openRenameConnection(contextConnection),
+        },
         {
           label: "编辑连接...",
           icon: Edit2,
@@ -478,6 +540,31 @@ export const Sidebar = () => {
         }}
         initialConnection={editingConnection}
       />
+
+      <ConfirmModal
+        isOpen={renamingConnection !== null}
+        onClose={closeRenameConnection}
+        title="重命名连接"
+        message="给这个连接设置一个更容易识别的名称。连接参数不会改变。"
+        confirmLabel={isRenamingConnection ? "保存中..." : "保存"}
+        confirmDisabled={isRenamingConnection || !renameValue.trim()}
+        variant="info"
+        onConfirm={() => void renameConnection()}
+      >
+        <input
+          autoFocus
+          value={renameValue}
+          onChange={(event) => setRenameValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void renameConnection();
+            }
+          }}
+          className="mt-4 w-full h-10 rounded-lg border border-default bg-input px-3 text-sm text-primary outline-none focus:border-focus"
+          placeholder="连接名称"
+        />
+      </ConfirmModal>
 
       {createDatabaseTarget && (
         <CreateDatabaseModal
