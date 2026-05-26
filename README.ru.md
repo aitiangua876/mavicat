@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Mavicat переносит профессиональные database-workflows в современное, локальное и расширяемое desktop-приложение. Оно построено на Tauri v2, Rust, React и TypeScript: нативная оболочка, быстрый интерфейс и надежная backend-логика.
 
@@ -48,7 +48,7 @@ Mavicat переносит профессиональные database-workflows �
 
 ### All-in-one database workspace
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Главный экран объединяет connection tree, SQL editor, result grid, toolbar actions и database context. Он помогает быстро переключаться между connections, databases, tables, query tabs и export tasks.
 

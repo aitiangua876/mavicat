@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Mavicat brings professional database workflows into a modern, local-first, hackable desktop app. It is built with Tauri v2, Rust, React, and TypeScript, so it feels native, starts quickly, and keeps your database workflow close to your machine.
 
@@ -48,7 +48,7 @@ If you like the direction of the project, please give it a star. It helps more d
 
 ### All-in-one Database Workspace
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 The main workspace keeps the connection tree, SQL editor, result grid, toolbar actions, and database context in one place. It is designed for fast switching between connections, databases, tables, query tabs, and export workflows.
 

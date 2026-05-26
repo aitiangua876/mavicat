@@ -111,12 +111,12 @@
   <path d="M37 260l8 8" stroke="#9aa4b4" stroke-width="3" stroke-linecap="round"/>
 
   <g font-family="Inter, Arial, sans-serif">
-    <text x="48" y="326" fill="#f6f8fb" font-size="25" font-weight="900">本地 Mysql</text>
-    <text x="48" y="360" fill="#8d98a8" font-size="14" font-weight="800">数据库（203）</text>
+    <text x="48" y="326" fill="#f6f8fb" font-size="25" font-weight="900">Demo MySQL</text>
+    <text x="48" y="360" fill="#8d98a8" font-size="14" font-weight="800">Databases (12)</text>
     <rect x="22" y="380" width="362" height="42" rx="0" fill="#164c36"/>
     <rect x="22" y="380" width="4" height="42" fill="#20d99b"/>
     <use href="#dbIcon" x="52" y="390" width="24" height="24"/>
-    <text x="86" y="407" fill="#eaf1f8" font-size="22" font-weight="900">vat_dws_dev</text>
+    <text x="86" y="407" fill="#eaf1f8" font-size="22" font-weight="900">demo_workspace</text>
     <g fill="#a6b0bd" font-size="17" font-weight="760">
       <text x="88" y="454">act_app</text>
       <text x="88" y="492">act_cmmn</text>
@@ -135,14 +135,14 @@
     </g>
     <rect x="0" y="1012" width="408" height="48" fill="#2674d8"/>
     <use href="#dbIcon" x="16" y="1021" width="28" height="28"/>
-    <text x="58" y="1043" fill="#fff" font-size="22" font-weight="900">测试RDS</text>
+    <text x="58" y="1043" fill="#fff" font-size="22" font-weight="900">Demo Cloud</text>
   </g>
 
   <rect x="408" y="160" width="1640" height="108" fill="#272b32" stroke="#40454f"/>
   <rect x="428" y="184" width="360" height="44" rx="10" fill="#1f232a" stroke="#4b5260"/>
   <use href="#dbIcon" x="450" y="193" width="26" height="26"/>
-  <text x="486" y="213" fill="#f7f9fc" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900">vat_dws_dev</text>
-  <text x="486" y="242" fill="#95a0b2" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="750">戴维斯 · 203 表 / 0 视图</text>
+  <text x="486" y="213" fill="#f7f9fc" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900">demo_workspace</text>
+  <text x="486" y="242" fill="#95a0b2" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="750">Demo Team · 203 tables / 0 views</text>
   <rect x="1738" y="187" width="126" height="48" rx="9" fill="#2c3037" stroke="#4f5661"/>
   <text x="1801" y="218" fill="#909aaa" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900" text-anchor="middle">复制表</text>
   <rect x="1880" y="187" width="146" height="48" rx="9" fill="#163d35" stroke="#1f765c"/>

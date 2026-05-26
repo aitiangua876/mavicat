@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Mavicat transpose les workflows professionnels de base de données dans une application moderne, locale et extensible. Elle est construite avec Tauri v2, Rust, React et TypeScript pour offrir une coque native, une logique backend solide et une interface rapide.
 
@@ -48,7 +48,7 @@ Si le projet vous plaît, une étoile aide beaucoup à le rendre visible et à s
 
 ### Workspace de base de données tout-en-un
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 L'écran principal rassemble arbre de connexions, éditeur SQL, grille de résultats, actions de toolbar et contexte de base. Il est conçu pour passer vite d'une connexion, base, table, requête ou export à l'autre.
 

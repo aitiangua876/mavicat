@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现代、轻量、本地优先、可持续开源的桌面工具。它基于 Tauri v2、Rust、React 和 TypeScript 构建，既有原生桌面应用的手感，也保留了前端界面的迭代速度。
 
@@ -48,7 +48,7 @@ Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现
 
 ### 一体化数据库工作台
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 主界面把连接树、SQL 编辑器、结果网格、工具栏和数据库上下文放在同一个工作区里。你可以在连接、数据库、表、查询标签和导出任务之间快速切换，不需要在多个窗口之间来回找东西。
 

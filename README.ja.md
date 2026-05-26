@@ -27,7 +27,7 @@
 </p>
 </div>
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 Mavicat は、プロ向けデータベースワークフローを、モダンでローカルファーストなデスクトップアプリとして再構築するプロジェクトです。Tauri v2、Rust、React、TypeScript により、ネイティブな操作感と柔軟な UI を両立します。
 
@@ -48,7 +48,7 @@ Mavicat は、プロ向けデータベースワークフローを、モダンで
 
 ### オールインワンのデータベースワークスペース
 
-![Mavicat workspace](open/public/assets/mavicat-workspace.jpg)
+![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
 メイン画面には接続ツリー、SQL エディタ、結果グリッド、ツールバー、DB コンテキストがまとまっています。接続、DB、テーブル、クエリタブ、エクスポート作業を素早く切り替えられます。
 
