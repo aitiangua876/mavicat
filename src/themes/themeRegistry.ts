@@ -1,6 +1,8 @@
 import type { Theme } from '../types/theme';
 import { mavicatDark } from './presets/mavicatDark';
 import { mavicatLight } from './presets/mavicatLight';
+import { mavicatOfficialDark } from './presets/mavicatOfficialDark';
+import { mavicatOfficialLight } from './presets/mavicatOfficialLight';
 import { monokai } from './presets/monokai';
 import { oneDarkPro } from './presets/oneDarkPro';
 import { nord } from './presets/nord';
@@ -16,6 +18,8 @@ class ThemeRegistry {
   constructor() {
     this.registerPreset(mavicatDark);
     this.registerPreset(mavicatLight);
+    this.registerPreset(mavicatOfficialDark);
+    this.registerPreset(mavicatOfficialLight);
     this.registerPreset(monokai);
     this.registerPreset(oneDarkPro);
     this.registerPreset(nord);

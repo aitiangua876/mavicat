@@ -4,16 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { ask, open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import {
-  ArrowRightLeft,
-  Archive,
-  DatabaseBackup,
-  Download,
-  FilePlus2,
-  FileInput,
-  Plus,
-  Upload,
-} from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { SplitPaneLayout } from './SplitPaneLayout';
 import { useConnectionLayoutContext } from '../../hooks/useConnectionLayoutContext';
@@ -80,14 +70,14 @@ const EXPORT_FILE_META: Record<ExportFormat, { label: string; extension: string 
 };
 
 const toolbarItems = [
-  { label: '连接', icon: Plus, tone: 'text-emerald-300', action: 'connections' },
-  { label: '新建查询', icon: FilePlus2, tone: 'text-sky-300', action: 'query' },
-  { label: '导入', icon: Upload, tone: 'text-cyan-300', action: 'import' },
-  { label: '导出', icon: Download, tone: 'text-indigo-300', action: 'export' },
-  { label: '备份', icon: DatabaseBackup, tone: 'text-amber-300', action: 'backup' },
-  { label: 'SQL文件', icon: FileInput, tone: 'text-rose-300', action: 'sql_import' },
-  { label: '结构同步', icon: ArrowRightLeft, tone: 'text-violet-300', action: 'schema_sync' },
-  { label: '数据迁移', icon: Archive, tone: 'text-lime-300', action: 'data_transfer' },
+  { label: '连接', icon: '/toolbar-icons/connection.png', action: 'connections' },
+  { label: '新建查询', icon: '/toolbar-icons/new-query.png', action: 'query' },
+  { label: '导入', icon: '/toolbar-icons/import.png', action: 'import' },
+  { label: '导出', icon: '/toolbar-icons/export.png', action: 'export' },
+  { label: '备份', icon: '/toolbar-icons/backup.png', action: 'backup' },
+  { label: 'SQL文件', icon: '/toolbar-icons/sql-file.png', action: 'sql_import' },
+  { label: '结构同步', icon: '/toolbar-icons/structure-sync.png', action: 'schema_sync' },
+  { label: '数据迁移', icon: '/toolbar-icons/data-migration.png', action: 'data_transfer' },
 ] as const;
 
 function WorkbenchToolbar() {
@@ -697,15 +687,14 @@ function WorkbenchToolbar() {
       <header className="mavicat-toolbar shrink-0 bg-[#3d3d3d] border-b border-[#202020] text-[#e5e5e5]">
         <div className="h-[82px] flex items-stretch px-3 gap-1">
           {toolbarItems.map((item, index) => {
-            const Icon = item.icon;
             return (
               <button
                 key={`${item.label}-${index}`}
                 onClick={() => handleAction(item.action)}
-                className="w-[78px] flex flex-col items-center justify-center gap-1.5 border-x border-transparent text-xs text-[#eeeeee] hover:bg-white/10 hover:border-white/10 transition-colors"
+                className="w-[78px] flex flex-col items-center justify-center gap-0.5 border-x border-transparent text-xs text-[#eeeeee] hover:bg-white/10 hover:border-white/10 transition-colors"
                 title={item.label}
               >
-                <Icon size={29} strokeWidth={1.8} className={item.tone} />
+                <img src={item.icon} alt="" className="h-[46px] w-[46px] object-contain drop-shadow-[0_3px_3px_rgba(0,0,0,0.35)]" />
                 <span className="leading-none">{item.label}</span>
               </button>
             );

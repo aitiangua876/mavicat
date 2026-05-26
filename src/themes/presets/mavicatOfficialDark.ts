@@ -1,0 +1,95 @@
+import type { Theme } from '../../types/theme';
+
+export const mavicatOfficialDark: Theme = {
+  id: 'mavicat-official-dark',
+  name: 'Mavicat Official Dark',
+  isPreset: true,
+  isReadOnly: true,
+  colors: {
+    bg: {
+      base: '#10141d',
+      elevated: '#151b27',
+      overlay: '#1d2635',
+      input: '#111827',
+      tooltip: '#1c2533',
+    },
+    surface: {
+      primary: '#182131',
+      secondary: '#223047',
+      tertiary: '#2d3d59',
+      hover: '#263650',
+      active: '#2563eb',
+      disabled: '#151b27',
+    },
+    text: {
+      primary: '#f8fbff',
+      secondary: '#c8d4e8',
+      muted: '#8fa2c0',
+      disabled: '#61708a',
+      accent: '#65a5ff',
+      inverse: '#08111f',
+    },
+    accent: {
+      primary: '#2563eb',
+      secondary: '#f97316',
+      success: '#22c55e',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      info: '#38bdf8',
+    },
+    border: {
+      subtle: '#202b3c',
+      default: '#33445f',
+      strong: '#49617f',
+      focus: '#65a5ff',
+    },
+    semantic: {
+      string: '#fb7185',
+      number: '#60a5fa',
+      boolean: '#f59e0b',
+      date: '#34d399',
+      null: '#718096',
+      primaryKey: '#f97316',
+      foreignKey: '#38bdf8',
+      index: '#93c5fd',
+      connectionActive: '#22c55e',
+      connectionInactive: '#6b7280',
+      modified: '#60a5fa',
+      deleted: '#f87171',
+      new: '#34d399',
+    },
+  },
+  typography: {
+    fontFamily: {
+      base: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+      mono: 'JetBrains Mono, Fira Code, Monaco, Consolas, monospace',
+    },
+    fontSize: {
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+    },
+  },
+  layout: {
+    borderRadius: {
+      sm: '0.25rem',
+      base: '0.5rem',
+      lg: '0.75rem',
+      xl: '1rem',
+    },
+    spacing: {
+      xs: '0.25rem',
+      sm: '0.5rem',
+      base: '1rem',
+      lg: '1.5rem',
+      xl: '2rem',
+    },
+  },
+  monacoTheme: {
+    base: 'vs-dark',
+    inherit: true,
+    themeName: 'GitHub Dark',
+  },
+};
