@@ -1,6 +1,6 @@
 [package]
 name = "mavicat"
-version = "1.0.4"
+version = "1.0.6"
 description = "Mavicat - A cross-platform database manager"
 authors = ["Mavicat Contributors"]
 edition = "2021"
