@@ -29,6 +29,8 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
+> 预览图只使用脱敏演示连接、演示库表和演示 SQL，不包含任何真实地址、真实连接名或私有库名。
+
 Mavicat 希望把高频、顺手、专业的数据库工作流，做成一个现代、轻量、本地优先、可持续开源的桌面工具。它基于 Tauri v2、Rust、React 和 TypeScript 构建，既有原生桌面应用的手感，也保留了前端界面的迭代速度。
 
 如果你喜欢这个方向，欢迎给项目点一个 Star。对早期开源项目来说，Star 会直接帮助更多开发者发现它，也能让路线图更容易持续推进。

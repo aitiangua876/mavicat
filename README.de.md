@@ -29,6 +29,8 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
+> Die Vorschau nutzt nur Demo-Verbindungen, Demo-Schemas, Demo-Tabellen und Demo-SQL. Es werden keine produktiven Endpunkte oder privaten Datenbanknamen gezeigt.
+
 Mavicat bringt professionelle Datenbank-Workflows in eine moderne, lokale und gut erweiterbare Desktop-App. Die App basiert auf Tauri v2, Rust, React und TypeScript: native Hülle, schneller Start, leistungsfähige Datenbanklogik und eine flexible Oberfläche.
 
 Wenn dir die Richtung gefällt, gib dem Projekt gern einen Star. Das hilft, Mavicat sichtbarer zu machen und die Open-Source-Roadmap voranzubringen.

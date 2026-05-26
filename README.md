@@ -29,6 +29,8 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
+> The preview uses demo-only connections, schemas, tables, and SQL. No production endpoint or private database name is shown.
+
 Mavicat brings professional database workflows into a modern, local-first, hackable desktop app. It is built with Tauri v2, Rust, React, and TypeScript, so it feels native, starts quickly, and keeps your database workflow close to your machine.
 
 If you like the direction of the project, please give it a star. It helps more developers discover Mavicat and makes the open-source roadmap easier to sustain.

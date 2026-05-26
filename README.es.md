@@ -29,6 +29,8 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
+> La vista previa usa solo conexiones, esquemas, tablas y SQL de demostración. No muestra endpoints de producción ni nombres privados de bases de datos.
+
 Mavicat lleva los flujos de trabajo profesionales de bases de datos a una app moderna, local-first y extensible. Está construida con Tauri v2, Rust, React y TypeScript para combinar rendimiento nativo con una interfaz rica y rápida de iterar.
 
 Si te gusta el proyecto, deja una estrella. Ayuda a que más desarrolladores lo descubran y a que la hoja de ruta open source avance.

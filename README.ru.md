@@ -29,6 +29,8 @@
 
 ![Mavicat workspace](open/public/assets/mavicat-workspace.svg)
 
+> Превью использует только demo-подключения, схемы, таблицы и SQL. Production endpoints и приватные имена баз данных не отображаются.
+
 Mavicat переносит профессиональные database-workflows в современное, локальное и расширяемое desktop-приложение. Оно построено на Tauri v2, Rust, React и TypeScript: нативная оболочка, быстрый интерфейс и надежная backend-логика.
 
 Если вам нравится направление проекта, поставьте Star. Это помогает другим разработчикам найти Mavicat и поддерживает развитие open-source roadmap.

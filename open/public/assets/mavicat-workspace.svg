@@ -1,288 +1,263 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1216" role="img" aria-labelledby="title desc">
-  <title id="title">Mavicat database object workspace</title>
-  <desc id="desc">A modern dark Mavicat database management workspace showing connection navigation, object search, table cards, and brand blue orange accents.</desc>
+  <title id="title">Mavicat latest workspace preview</title>
+  <desc id="desc">A sanitized Mavicat desktop database workspace preview with demo connections, demo tables, SQL editor, result grid, and AI assistant panel.</desc>
   <defs>
-    <linearGradient id="window" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#30343b"/>
-      <stop offset=".45" stop-color="#24272d"/>
-      <stop offset="1" stop-color="#171a1f"/>
+    <linearGradient id="page" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset=".5" stop-color="#edf6ff"/>
+      <stop offset="1" stop-color="#eaf3ff"/>
     </linearGradient>
-    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#272b31"/>
-      <stop offset="1" stop-color="#1d2025"/>
+    <linearGradient id="chrome" x1="0" x2="1">
+      <stop offset="0" stop-color="#34373b"/>
+      <stop offset="1" stop-color="#2d3034"/>
     </linearGradient>
-    <linearGradient id="brand" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#0f7cff"/>
-      <stop offset=".48" stop-color="#42b7ff"/>
-      <stop offset="1" stop-color="#ff8a18"/>
+    <linearGradient id="toolbar" x1="0" x2="1">
+      <stop offset="0" stop-color="#3f4348"/>
+      <stop offset="1" stop-color="#393d42"/>
     </linearGradient>
-    <linearGradient id="blueGlow" x1="0" x2="1">
-      <stop offset="0" stop-color="#0f7cff" stop-opacity=".22"/>
-      <stop offset="1" stop-color="#ff8a18" stop-opacity=".16"/>
+    <linearGradient id="darkPanel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#282b30"/>
+      <stop offset="1" stop-color="#202328"/>
+    </linearGradient>
+    <linearGradient id="editor" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#24282e"/>
+      <stop offset="1" stop-color="#1f2227"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#53c7ff"/>
+      <stop offset=".5" stop-color="#1577f2"/>
+      <stop offset="1" stop-color="#0b4cc8"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffd765"/>
+      <stop offset=".55" stop-color="#ff9d18"/>
+      <stop offset="1" stop-color="#f06b00"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#7df070"/>
+      <stop offset="1" stop-color="#21b55b"/>
+    </linearGradient>
+    <linearGradient id="select" x1="0" x2="1">
+      <stop offset="0" stop-color="#1c6fe8"/>
+      <stop offset="1" stop-color="#0e8bff"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="34" stdDeviation="42" flood-color="#02040a" flood-opacity=".55"/>
+      <feDropShadow dx="0" dy="28" stdDeviation="38" flood-color="#142033" flood-opacity=".26"/>
     </filter>
-    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="22" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="iconShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity=".28"/>
     </filter>
-    <symbol id="dbIcon" viewBox="0 0 32 32">
-      <ellipse cx="16" cy="8" rx="11" ry="5" fill="#47d36f"/>
-      <path d="M5 8v14c0 3 5 6 11 6s11-3 11-6V8" fill="#31b857"/>
-      <path d="M5 15c0 3 5 6 11 6s11-3 11-6" fill="none" stroke="#83f39c" stroke-width="2"/>
-      <path d="M5 22c0 3 5 6 11 6s11-3 11-6" fill="none" stroke="#83f39c" stroke-width="2"/>
+    <symbol id="db" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="15" rx="23" ry="10" fill="url(#green)"/>
+      <path d="M9 15v30c0 6 10 11 23 11s23-5 23-11V15" fill="#28c565"/>
+      <path d="M9 26c0 6 10 11 23 11s23-5 23-11M9 38c0 6 10 11 23 11s23-5 23-11" fill="none" stroke="#96f3a3" stroke-width="4" opacity=".75"/>
     </symbol>
-    <symbol id="tableIcon" viewBox="0 0 48 48">
-      <rect x="6" y="8" width="36" height="32" rx="4" fill="none" stroke="#63d5ff" stroke-width="4"/>
-      <path d="M6 19h36M19 8v32" stroke="#63d5ff" stroke-width="4" stroke-linecap="round"/>
-      <rect x="10" y="12" width="7" height="5" rx="1" fill="#63d5ff"/>
+    <symbol id="table" viewBox="0 0 64 64">
+      <rect x="9" y="12" width="46" height="40" rx="7" fill="#dff7ff"/>
+      <rect x="9" y="12" width="46" height="12" rx="7" fill="#1688e8"/>
+      <path d="M9 24h46M22 24v28M39 24v28" stroke="#9ddff8" stroke-width="3"/>
+    </symbol>
+    <symbol id="doc" viewBox="0 0 64 64">
+      <path d="M15 7h24l10 10v40H15z" fill="#eaf6ff"/>
+      <path d="M39 7v13h13" fill="#9fdcff"/>
+      <path d="M24 29h18M24 39h15M24 49h22" stroke="#207de0" stroke-width="5" stroke-linecap="round"/>
     </symbol>
   </defs>
 
-  <rect width="2048" height="1216" rx="30" fill="#0d1118"/>
-  <rect x="1" y="1" width="2046" height="1214" rx="29" fill="url(#window)" stroke="#4a5260" stroke-width="2"/>
-  <circle cx="1540" cy="130" r="280" fill="#0f7cff" opacity=".12" filter="url(#softGlow)"/>
-  <circle cx="1824" cy="282" r="210" fill="#ff8a18" opacity=".08" filter="url(#softGlow)"/>
+  <rect width="2048" height="1216" fill="url(#page)"/>
+  <rect x="72" y="64" width="1904" height="1088" rx="28" fill="#202328" filter="url(#shadow)"/>
+  <rect x="72" y="64" width="1904" height="1088" rx="28" fill="url(#chrome)" stroke="#51565d" stroke-width="2"/>
 
-  <rect x="0" y="0" width="2048" height="56" rx="28" fill="#191c22"/>
-  <circle cx="24" cy="28" r="10" fill="#ff5f57"/>
-  <circle cx="56" cy="28" r="10" fill="#ffbd2e"/>
-  <circle cx="88" cy="28" r="10" fill="#28c840"/>
-  <text x="128" y="36" fill="#d8dde7" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="800">Mavicat - 对象浏览工作台</text>
+  <rect x="72" y="64" width="1904" height="48" rx="28" fill="#191b1f"/>
+  <circle cx="108" cy="88" r="11" fill="#ff5f57"/>
+  <circle cx="142" cy="88" r="11" fill="#ffbd2e"/>
+  <circle cx="176" cy="88" r="11" fill="#28c840"/>
+  <text x="228" y="96" fill="#cfd6df" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Mavicat - Demo Workspace</text>
 
-  <rect x="0" y="56" width="2048" height="104" fill="#2b2e35"/>
-  <rect x="0" y="158" width="2048" height="1" fill="#464b55"/>
-  <g font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" text-anchor="middle">
-    <g transform="translate(72 98)">
-      <path d="M0-17v31M-15-2H15" stroke="#58e4bb" stroke-width="5" stroke-linecap="round"/>
-      <text y="42" fill="#e8edf4">连接</text>
+  <rect x="72" y="112" width="1904" height="118" fill="url(#toolbar)"/>
+  <g font-family="Inter, Arial, sans-serif" font-size="15" font-weight="850" text-anchor="middle" fill="#f3f6fb">
+    <g transform="translate(138 164)" filter="url(#iconShadow)">
+      <path d="M-20 0c14-20 32-24 46-10 12 12 8 31-9 43" fill="none" stroke="url(#blue)" stroke-width="13" stroke-linecap="round"/>
+      <path d="M20 0c-14 20-32 24-46 10-12-12-8-31 9-43" fill="none" stroke="url(#orange)" stroke-width="13" stroke-linecap="round"/>
+      <text y="58">连接</text>
     </g>
-    <g transform="translate(182 98)">
-      <path d="M-14-22h20l12 12v37h-32z" fill="none" stroke="#63d5ff" stroke-width="4" stroke-linejoin="round"/>
-      <path d="M6-21v13h13M18 9h22M29-2v22" stroke="#63d5ff" stroke-width="4" stroke-linecap="round"/>
-      <text y="42" fill="#e8edf4">新建查询</text>
+    <g transform="translate(255 164)" filter="url(#iconShadow)">
+      <use href="#doc" x="-28" y="-34" width="56" height="56"/>
+      <circle cx="24" cy="22" r="15" fill="url(#orange)"/>
+      <path d="M24 13v18M15 22h18" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+      <text y="58">新建查询</text>
     </g>
-    <g transform="translate(294 98)">
-      <path d="M0-22v36M-13-9 0-22 13-9M-22 17v12h44V17" fill="none" stroke="#58d8ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      <text y="42" fill="#e8edf4">导入</text>
+    <g transform="translate(372 164)" filter="url(#iconShadow)">
+      <use href="#db" x="-29" y="-36" width="58" height="58"/>
+      <path d="M0-34v48M-17-17 0-34 17-17" stroke="url(#orange)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="58">导入</text>
     </g>
-    <g transform="translate(404 98)">
-      <path d="M0-22v36M-13 1 0 14 13 1M-22 28h44" fill="none" stroke="#91a7ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      <text y="42" fill="#e8edf4">导出</text>
+    <g transform="translate(489 164)" filter="url(#iconShadow)">
+      <use href="#db" x="-29" y="-36" width="58" height="58"/>
+      <path d="M0-30v48M-17 1 0 18 17 1" stroke="url(#orange)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="58">导出</text>
     </g>
-    <g transform="translate(514 98)">
-      <ellipse cx="0" cy="-13" rx="16" ry="7" fill="none" stroke="#ffd447" stroke-width="4"/>
-      <path d="M-16-13v34c0 4 7 7 16 7s16-3 16-7v-34" fill="none" stroke="#ffd447" stroke-width="4"/>
-      <path d="M8 12c20 4 20 25 2 28M12 40h22V18" fill="none" stroke="#ffd447" stroke-width="4" stroke-linecap="round"/>
-      <text y="42" fill="#e8edf4">备份</text>
+    <g transform="translate(606 164)" filter="url(#iconShadow)">
+      <use href="#db" x="-29" y="-36" width="58" height="58"/>
+      <path d="M18 0c22 5 22 32 0 38M22 38h23V16" fill="none" stroke="url(#orange)" stroke-width="8" stroke-linecap="round"/>
+      <text y="58">备份</text>
     </g>
-    <g transform="translate(624 98)">
-      <path d="M-16-22h20l14 14v36h-34z" fill="none" stroke="#ff9ac7" stroke-width="4" stroke-linejoin="round"/>
-      <path d="M4-22v15h15M-4 10h22M8-2l13 13-13 13" fill="none" stroke="#ff9ac7" stroke-width="4" stroke-linecap="round"/>
-      <text y="42" fill="#e8edf4">SQL文件</text>
+    <g transform="translate(735 164)" filter="url(#iconShadow)">
+      <use href="#doc" x="-30" y="-36" width="60" height="60"/>
+      <path d="M-8-4h20M4-17l17 17L4 17" stroke="url(#orange)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="58">SQL文件</text>
     </g>
-    <g transform="translate(744 98)">
-      <path d="M-20-11h34M0-25l19 14L0 3M20 19h-34M0 5l-19 14L0 33" fill="none" stroke="#b8a7ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      <text y="42" fill="#e8edf4">结构同步</text>
+    <g transform="translate(874 164)" filter="url(#iconShadow)">
+      <path d="M-32-12h42M-5-31 23-12-5 7M32 17h-42M5-2-23 17 5 36" fill="none" stroke="url(#blue)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="-11" y="-10" width="22" height="22" rx="5" fill="url(#orange)"/>
+      <text y="58">结构同步</text>
     </g>
-    <g transform="translate(864 98)">
-      <path d="M-18-22h36v10h-36zM-11-12h22v40h-22z" fill="none" stroke="#95e83a" stroke-width="4" stroke-linejoin="round"/>
-      <text y="42" fill="#e8edf4">数据迁移</text>
+    <g transform="translate(1024 164)" filter="url(#iconShadow)">
+      <use href="#db" x="-50" y="-35" width="50" height="50"/>
+      <use href="#db" x="8" y="-35" width="50" height="50"/>
+      <path d="M-7-4h34M16-19 31-4 16 11" fill="none" stroke="url(#orange)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="58">数据迁移</text>
     </g>
   </g>
-  <rect x="1968" y="78" width="52" height="52" rx="12" fill="#f7fbff"/>
-  <path d="M1994 91c-15 2-23 15-18 27 10-9 23-13 34-7-2-12-7-18-16-20z" fill="#0f7cff"/>
-  <path d="M1998 91c15 2 23 15 18 27-10-9-23-13-34-7 2-12 7-18 16-20z" fill="#ff8a18"/>
+  <rect x="1896" y="139" width="48" height="48" rx="12" fill="#f8fbff"/>
+  <path d="M1920 151c-18 3-27 18-20 34 11-13 27-17 39-9-2-14-8-22-19-25z" fill="#1577f2"/>
+  <path d="M1922 151c18 3 27 18 20 34-11-13-27-17-39-9 2-14 8-22 19-25z" fill="#ff9918"/>
 
-  <rect x="0" y="160" width="408" height="1056" fill="#202329"/>
-  <rect x="408" y="160" width="1640" height="1056" fill="#25282e"/>
-  <rect x="0" y="160" width="408" height="58" fill="#242830" stroke="#40454f"/>
-  <use href="#dbIcon" x="16" y="174" width="30" height="30"/>
-  <text x="58" y="198" fill="#f5f7fb" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="900">我的连接</text>
-  <text x="346" y="199" fill="#cbd3df" font-family="Inter, Arial, sans-serif" font-size="28">＋</text>
-  <text x="377" y="198" fill="#cbd3df" font-family="Inter, Arial, sans-serif" font-size="24">⚙</text>
-  <rect x="12" y="231" width="384" height="46" rx="10" fill="#1c1f25" stroke="#4a505a"/>
-  <text x="44" y="260" fill="#9aa4b4" font-family="Inter, Arial, sans-serif" font-size="19">搜索连接...</text>
-  <circle cx="30" cy="253" r="9" fill="none" stroke="#9aa4b4" stroke-width="3"/>
-  <path d="M37 260l8 8" stroke="#9aa4b4" stroke-width="3" stroke-linecap="round"/>
+  <rect x="72" y="230" width="540" height="922" fill="#23262b"/>
+  <rect x="72" y="230" width="540" height="58" fill="#2a2d32" stroke="#444a52"/>
+  <use href="#db" x="94" y="245" width="32" height="32"/>
+  <text x="146" y="267" fill="#fbfbfd" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900">我的连接</text>
+  <text x="531" y="267" fill="#d9dfe7" font-family="Inter, Arial, sans-serif" font-size="31">＋</text>
+  <text x="572" y="267" fill="#d9dfe7" font-family="Inter, Arial, sans-serif" font-size="27">⚙</text>
+  <rect x="92" y="306" width="500" height="48" rx="8" fill="#1e2126" stroke="#4a505a"/>
+  <text x="138" y="337" fill="#9ea8b6" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="750">搜索连接、数据库、表...</text>
+  <circle cx="116" cy="329" r="10" fill="none" stroke="#9ea8b6" stroke-width="3"/>
+  <path d="M124 337l9 9" stroke="#9ea8b6" stroke-width="3" stroke-linecap="round"/>
 
   <g font-family="Inter, Arial, sans-serif">
-    <text x="48" y="326" fill="#f6f8fb" font-size="25" font-weight="900">Demo MySQL</text>
-    <text x="48" y="360" fill="#8d98a8" font-size="14" font-weight="800">Databases (12)</text>
-    <rect x="22" y="380" width="362" height="42" rx="0" fill="#164c36"/>
-    <rect x="22" y="380" width="4" height="42" fill="#20d99b"/>
-    <use href="#dbIcon" x="52" y="390" width="24" height="24"/>
-    <text x="86" y="407" fill="#eaf1f8" font-size="22" font-weight="900">demo_workspace</text>
-    <g fill="#a6b0bd" font-size="17" font-weight="760">
-      <text x="88" y="454">act_app</text>
-      <text x="88" y="492">act_cmmn</text>
-      <text x="88" y="530">act_dmn</text>
-      <text x="88" y="568">act_evt</text>
-      <text x="88" y="606">act_fo</text>
-      <text x="88" y="644">sys_config</text>
-      <text x="88" y="682">sys_dept</text>
-      <text x="88" y="720">sys_user</text>
-      <text x="88" y="758">workflow</text>
-      <text x="88" y="796">reporting</text>
+    <rect x="72" y="372" width="540" height="48" fill="url(#select)"/>
+    <path d="M96 390l12 12 12-12" fill="none" stroke="#eaf4ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <use href="#db" x="138" y="383" width="28" height="28"/>
+    <text x="180" y="404" fill="#fff" font-size="23" font-weight="900">Local Demo</text>
+    <text x="92" y="462" fill="#8d98a8" font-size="14" font-weight="900">对象</text>
+    <use href="#db" x="105" y="484" width="31" height="31"/>
+    <text x="150" y="506" fill="#eef5ff" font-size="24" font-weight="900">demo_store</text>
+    <text x="150" y="534" fill="#8fa0b4" font-size="14" font-weight="850">36T / 4V / 6R</text>
+    <text x="135" y="578" fill="#9ca9ba" font-size="18" font-weight="900">表 (36)</text>
+    <g font-size="21" font-weight="850">
+      <g transform="translate(126 614)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">customers</text></g>
+      <g transform="translate(126 658)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">orders</text></g>
+      <g transform="translate(126 702)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">order_items</text></g>
+      <g transform="translate(126 746)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">products</text></g>
+      <g transform="translate(126 790)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">inventory</text></g>
+      <g transform="translate(126 834)"><use href="#table" width="28" height="28"/><text x="42" y="22" fill="#eaf1fb">audit_log</text></g>
     </g>
-    <g fill="#8f99a6">
-      <circle cx="64" cy="448" r="6"/><circle cx="64" cy="486" r="6"/><circle cx="64" cy="524" r="6"/><circle cx="64" cy="562" r="6"/>
-      <circle cx="64" cy="600" r="6"/><circle cx="64" cy="638" r="6"/><circle cx="64" cy="676" r="6"/><circle cx="64" cy="714" r="6"/><circle cx="64" cy="752" r="6"/><circle cx="64" cy="790" r="6"/>
-    </g>
-    <rect x="0" y="1012" width="408" height="48" fill="#2674d8"/>
-    <use href="#dbIcon" x="16" y="1021" width="28" height="28"/>
-    <text x="58" y="1043" fill="#fff" font-size="22" font-weight="900">Demo Cloud</text>
+    <rect x="102" y="900" width="450" height="42" rx="8" fill="#1f2329"/>
+    <path d="M123 914l13 13 13-13" fill="none" stroke="#9ca9ba" stroke-width="4" stroke-linecap="round"/>
+    <text x="162" y="928" fill="#9ca9ba" font-size="18" font-weight="900">视图 (4)</text>
+    <rect x="102" y="954" width="450" height="42" rx="8" fill="#1f2329"/>
+    <path d="M123 968l13 13 13-13" fill="none" stroke="#9ca9ba" stroke-width="4" stroke-linecap="round"/>
+    <text x="162" y="982" fill="#9ca9ba" font-size="18" font-weight="900">Redis Keys (128)</text>
   </g>
 
-  <rect x="408" y="160" width="1640" height="108" fill="#272b32" stroke="#40454f"/>
-  <rect x="428" y="184" width="360" height="44" rx="10" fill="#1f232a" stroke="#4b5260"/>
-  <use href="#dbIcon" x="450" y="193" width="26" height="26"/>
-  <text x="486" y="213" fill="#f7f9fc" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900">demo_workspace</text>
-  <text x="486" y="242" fill="#95a0b2" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="750">Demo Team · 203 tables / 0 views</text>
-  <rect x="1738" y="187" width="126" height="48" rx="9" fill="#2c3037" stroke="#4f5661"/>
-  <text x="1801" y="218" fill="#909aaa" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900" text-anchor="middle">复制表</text>
-  <rect x="1880" y="187" width="146" height="48" rx="9" fill="#163d35" stroke="#1f765c"/>
-  <text x="1953" y="218" fill="#82e0bd" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900" text-anchor="middle">粘贴到此库</text>
+  <rect x="612" y="230" width="1000" height="922" fill="#f7fbff"/>
+  <rect x="612" y="230" width="1000" height="58" fill="#edf4fd" stroke="#d6e3f3"/>
+  <rect x="636" y="244" width="208" height="34" rx="7" fill="#fff" stroke="#cad8e8"/>
+  <use href="#db" x="646" y="250" width="23" height="23"/>
+  <text x="680" y="268" fill="#1d2a3b" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="900">Local Demo</text>
+  <rect x="858" y="244" width="226" height="34" rx="7" fill="#fff" stroke="#cad8e8"/>
+  <use href="#db" x="868" y="250" width="23" height="23"/>
+  <text x="902" y="268" fill="#1d2a3b" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="900">demo_store</text>
+  <rect x="1100" y="244" width="96" height="34" rx="8" fill="#208647"/>
+  <path d="M1124 252v18l15-9z" fill="#fff"/>
+  <text x="1157" y="268" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="900">运行</text>
+  <text x="1220" y="268" fill="#49627d" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="850">美化 SQL</text>
 
-  <rect x="408" y="268" width="1640" height="74" fill="#24272d" stroke="#444a55"/>
-  <rect x="428" y="291" width="470" height="46" rx="10" fill="#1d2026" stroke="#606874"/>
-  <circle cx="448" cy="314" r="10" fill="none" stroke="#9ba6b7" stroke-width="3"/>
-  <path d="M456 322l9 9" stroke="#9ba6b7" stroke-width="3" stroke-linecap="round"/>
-  <text x="482" y="321" fill="#9ba6b7" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800">搜索表...</text>
-  <rect x="922" y="291" width="48" height="46" rx="9" fill="#2b2f36" stroke="#4f5663"/>
-  <path d="M936 303h22M936 314h22M936 325h22" stroke="#c8d0dc" stroke-width="3" stroke-linecap="round"/>
-  <rect x="982" y="291" width="48" height="46" rx="9" fill="#1e395c" stroke="#327fe8"/>
-  <path d="M996 304h22v22h-22zM1007 304v22M996 315h22" fill="none" stroke="#9ed8ff" stroke-width="3" stroke-linecap="round"/>
-
-  <g font-family="Inter, Arial, sans-serif" filter="url(#shadow)">
-    <g transform="translate(432 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#327fe8" stroke-width="2"/>
-      <use href="#tableIcon" x="18" y="36" width="56" height="56"/>
-      <text x="18" y="124" fill="#f5f7fa" font-size="23" font-weight="900">act_app_appdef</text>
-      <text x="18" y="153" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(686 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_app_database</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">changelog</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(940 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_app_deployme</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">nt_resource</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1194 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_casedef</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1448 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_database</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">changeloglock</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1702 378)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_dep</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">resource</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-
-    <g transform="translate(432 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_hi_case</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">_inst</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(686 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_hi_plan</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">_item_inst</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(940 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_cmmn_ru_case</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">_inst</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1194 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_co_content</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">_item</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1448 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_dmn_database</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">changelog</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1702 590)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_dmn_decision</text>
-      <text x="18" y="139" fill="#f5f7fa" font-size="21" font-weight="900">_table</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-
-    <g transform="translate(432 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">act_evt_log</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(686 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">sys_config</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(940 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">sys_dept</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1194 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">sys_user</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1448 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">workflow_task</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
-    <g transform="translate(1702 802)">
-      <rect width="236" height="192" rx="8" fill="url(#panel)" stroke="#4a505b"/>
-      <use href="#tableIcon" x="18" y="26" width="56" height="56"/>
-      <text x="18" y="112" fill="#f5f7fa" font-size="21" font-weight="900">report_index</text>
-      <text x="18" y="168" fill="#99a3b1" font-size="15" font-weight="900">BASE TABLE</text>
-    </g>
+  <rect x="612" y="288" width="1000" height="440" fill="url(#editor)"/>
+  <g font-family="JetBrains Mono, Menlo, Consolas, monospace" font-size="25" font-weight="800">
+    <text x="652" y="338" fill="#8892a4">1</text>
+    <text x="714" y="338" fill="#ff6680">SELECT</text>
+    <text x="816" y="338" fill="#e7edf5">o.id, o.order_no, c.name, o.total_amount</text>
+    <text x="652" y="386" fill="#8892a4">2</text>
+    <text x="714" y="386" fill="#ff6680">FROM</text>
+    <text x="786" y="386" fill="#78b7ff">orders</text>
+    <text x="882" y="386" fill="#e7edf5">o</text>
+    <text x="652" y="434" fill="#8892a4">3</text>
+    <text x="714" y="434" fill="#ff6680">JOIN</text>
+    <text x="786" y="434" fill="#78b7ff">customers</text>
+    <text x="930" y="434" fill="#e7edf5">c ON c.id = o.customer_id</text>
+    <text x="652" y="482" fill="#8892a4">4</text>
+    <text x="714" y="482" fill="#ff6680">WHERE</text>
+    <text x="806" y="482" fill="#e7edf5">o.status = </text>
+    <text x="980" y="482" fill="#ffb86b">'paid'</text>
+    <text x="652" y="530" fill="#8892a4">5</text>
+    <text x="714" y="530" fill="#ff6680">ORDER BY</text>
+    <text x="850" y="530" fill="#e7edf5">o.created_at DESC</text>
+    <text x="652" y="578" fill="#8892a4">6</text>
+    <text x="714" y="578" fill="#ff6680">LIMIT</text>
+    <text x="800" y="578" fill="#8df0a8">50</text>
   </g>
 
-  <rect x="408" y="1084" width="1640" height="52" fill="#1d2026" stroke="#3d434d"/>
-  <text x="432" y="1116" fill="#98a3b3" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800">203 tables · Grid view · Ready</text>
-  <rect x="1784" y="1098" width="190" height="24" rx="12" fill="url(#blueGlow)"/>
-  <text x="1879" y="1116" fill="#c8e7ff" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="900" text-anchor="middle">Mavicat object browser</text>
+  <rect x="612" y="728" width="1000" height="424" fill="#ffffff"/>
+  <rect x="612" y="728" width="1000" height="54" fill="#f0f6fe" stroke="#d7e4f2"/>
+  <text x="640" y="762" fill="#243448" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900">查询结果</text>
+  <rect x="1342" y="742" width="108" height="28" rx="7" fill="#edf4ff" stroke="#cad8e8"/>
+  <text x="1396" y="762" fill="#2d496c" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="850" text-anchor="middle">20条/页</text>
+  <rect x="1462" y="742" width="106" height="28" rx="7" fill="#206fe8"/>
+  <text x="1515" y="762" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="900" text-anchor="middle">导出</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="15" font-weight="850">
+    <rect x="636" y="810" width="908" height="44" rx="8" fill="#f7fbff" stroke="#d8e4f2"/>
+    <text x="664" y="838" fill="#66758b">#</text>
+    <text x="744" y="838" fill="#25364a">order_no</text>
+    <text x="944" y="838" fill="#25364a">customer</text>
+    <text x="1160" y="838" fill="#25364a">status</text>
+    <text x="1320" y="838" fill="#25364a">amount</text>
+    <g fill="#35465b">
+      <text x="664" y="888">1</text><text x="744" y="888">MO-10001</text><text x="944" y="888">Alice Demo</text><text x="1160" y="888">paid</text><text x="1320" y="888">128.50</text>
+      <text x="664" y="936">2</text><text x="744" y="936">MO-10002</text><text x="944" y="936">Beta Studio</text><text x="1160" y="936">paid</text><text x="1320" y="936">368.00</text>
+      <text x="664" y="984">3</text><text x="744" y="984">MO-10003</text><text x="944" y="984">North Labs</text><text x="1160" y="984">paid</text><text x="1320" y="984">92.10</text>
+    </g>
+    <rect x="636" y="1030" width="908" height="70" rx="12" fill="#eef6ff" stroke="#cbdff6"/>
+    <text x="664" y="1060" fill="#51657c">共 46 条</text>
+    <rect x="810" y="1040" width="96" height="38" rx="8" fill="#fff" stroke="#d2deec"/>
+    <text x="858" y="1065" fill="#28384d" text-anchor="middle">1</text>
+    <text x="928" y="1065" fill="#2072ee">2</text>
+    <text x="980" y="1065" fill="#28384d">3</text>
+    <text x="1080" y="1065" fill="#51657c">前往</text>
+    <rect x="1138" y="1040" width="74" height="38" rx="8" fill="#fff" stroke="#d2deec"/>
+    <text x="1175" y="1065" fill="#28384d" text-anchor="middle">2</text>
+    <text x="1226" y="1065" fill="#51657c">页</text>
+  </g>
+
+  <rect x="1612" y="230" width="364" height="922" fill="#24272d"/>
+  <rect x="1612" y="230" width="364" height="58" fill="#2b2f36" stroke="#424952"/>
+  <rect x="1634" y="242" width="38" height="38" rx="10" fill="#5b2fa3"/>
+  <text x="1688" y="265" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">AI 数据库助手</text>
+  <text x="1688" y="286" fill="#94a2b8" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="800">Local Demo / demo_store</text>
+  <rect x="1636" y="310" width="318" height="42" rx="9" fill="#1f2329" stroke="#444b57"/>
+  <text x="1654" y="337" fill="#aeb9c8" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="850">deepseek-v4-pro · configured</text>
+  <rect x="1636" y="376" width="96" height="42" rx="10" fill="#2a2f36" stroke="#4c5564"/>
+  <text x="1684" y="402" fill="#f3f6fb" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="900" text-anchor="middle">写查询</text>
+  <rect x="1744" y="376" width="96" height="42" rx="10" fill="#2a2f36" stroke="#4c5564"/>
+  <text x="1792" y="402" fill="#f3f6fb" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="900" text-anchor="middle">解释 SQL</text>
+  <rect x="1852" y="376" width="96" height="42" rx="10" fill="#2a2f36" stroke="#4c5564"/>
+  <text x="1900" y="402" fill="#f3f6fb" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="900" text-anchor="middle">优化</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="1636" y="452" width="318" height="124" rx="12" fill="#1f2329" stroke="#444b57"/>
+    <text x="1656" y="486" fill="#dbe3ef" font-size="16" font-weight="850">帮我查最近已支付订单，并按金额排序。</text>
+    <rect x="1636" y="604" width="318" height="226" rx="12" fill="#21262d" stroke="#505966"/>
+    <text x="1656" y="642" fill="#f5f8fc" font-size="17" font-weight="900">AI 建议</text>
+    <text x="1656" y="682" fill="#bdc7d6" font-size="15" font-weight="800">已根据当前数据库上下文生成安全查询，</text>
+    <text x="1656" y="710" fill="#bdc7d6" font-size="15" font-weight="800">可追加到编辑器或一键执行。</text>
+    <rect x="1656" y="738" width="278" height="64" rx="10" fill="#151a20" stroke="#45505d"/>
+    <text x="1674" y="766" fill="#78b7ff" font-family="JetBrains Mono, Menlo, monospace" font-size="13" font-weight="800">SELECT * FROM orders</text>
+    <text x="1674" y="788" fill="#ffb86b" font-family="JetBrains Mono, Menlo, monospace" font-size="13" font-weight="800">WHERE status = 'paid';</text>
+    <rect x="1636" y="1024" width="318" height="72" rx="12" fill="#1e232a" stroke="#4b5360"/>
+    <text x="1656" y="1068" fill="#8794a8" font-size="16" font-weight="850">问 AI 写查询、解释 SQL、优化脚本...</text>
+  </g>
+
+  <rect x="72" y="1152" width="1904" height="38" fill="#34383d"/>
+  <text x="96" y="1177" fill="#d5dbe4" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="850">Demo Cloud</text>
+  <text x="432" y="1177" fill="#d5dbe4" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="850">demo_store</text>
+  <text x="1908" y="1177" fill="#d5dbe4" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="850" text-anchor="end">就绪</text>
 </svg>
