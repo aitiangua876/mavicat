@@ -279,6 +279,31 @@ pub async fn download_and_install_update(app: AppHandle) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    const GITHUB_REPO: &str = "aitiangua876/mavicat";
+
+    fn categorize_asset(name: &str) -> &'static str {
+        let normalized = name.to_ascii_lowercase();
+        if normalized.ends_with(".dmg")
+            || normalized.contains("darwin")
+            || normalized.contains("macos")
+        {
+            return "macos";
+        }
+        if normalized.ends_with(".exe")
+            || normalized.ends_with(".msi")
+            || normalized.contains("windows")
+        {
+            return "windows";
+        }
+        if normalized.ends_with(".appimage")
+            || normalized.ends_with(".deb")
+            || normalized.ends_with(".rpm")
+        {
+            return "linux";
+        }
+        "other"
+    }
+
     // Version parsing tests
     #[test]
     fn test_version_parsing_standard() {

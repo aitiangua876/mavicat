@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use async_trait::async_trait;
 use serde_json::Value;
@@ -84,16 +84,42 @@ fn unsupported(feature: &str) -> String {
 }
 
 async fn connect(params: &ConnectionParams) -> Result<Client, String> {
-    let host = params.host.as_deref().unwrap_or("localhost");
+    let host = params
+        .host
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("localhost");
     let port = params.port.unwrap_or(5236);
-    let username = params.username.as_deref().unwrap_or("SYSDBA");
+    let username = params
+        .username
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("SYSDBA");
     let password = params.password.as_deref().unwrap_or_default();
     let mut client = Client::new(host, port);
-    client
-        .connect(username, password)
-        .await
-        .map_err(|error| error.to_string())?;
+    client.connect(username, password).await.map_err(|error| {
+        format_dameng_connection_error(host, port, username, &error.to_string())
+    })?;
     Ok(client)
+}
+
+fn format_dameng_connection_error(host: &str, port: u16, username: &str, error: &str) -> String {
+    let target = format!("{host}:{port}");
+    if error.contains("os error 65") || error.contains("No route to host") {
+        return format!(
+            "达梦连接失败：Mavicat 当前进程无法访问 {target}。如果终端 nc 能连通，通常是 macOS 未授予 Mavicat 局域网访问权限，或当前连接仍启用了 SSH 隧道/错误的主机参数。请安装带局域网权限声明的新版本，首次测试时允许“本地网络”访问；同时确认 SSH 未启用、主机地址没有空格或协议前缀。原始错误：{error}"
+        );
+    }
+
+    if error.contains("expected LOGIN_RESPONSE got msg_type=187") {
+        return format!(
+            "达梦登录失败：服务器已响应 {target}，但返回了登录错误 ACK。请确认用户名 {username} 和密码是否正确；如果账号无误，可能是当前达梦版本的登录协议需要进一步兼容。原始错误：{error}"
+        );
+    }
+
+    format!("达梦连接失败：{target} / {username}，原始错误：{error}")
 }
 
 fn sql_string(value: &str) -> String {
@@ -105,6 +131,12 @@ fn quote_identifier(value: &str) -> String {
 }
 
 fn qualified_table(schema: Option<&str>, table: &str) -> String {
+    if schema.is_none() {
+        if let Some((owner, table_name)) = split_qualified_table_name(table) {
+            return format!("{}.{}", quote_identifier(&owner), quote_identifier(&table_name));
+        }
+    }
+
     match schema.filter(|value| !value.trim().is_empty()) {
         Some(schema_name) => format!(
             "{}.{}",
@@ -113,6 +145,16 @@ fn qualified_table(schema: Option<&str>, table: &str) -> String {
         ),
         None => quote_identifier(table),
     }
+}
+
+fn split_qualified_table_name(table: &str) -> Option<(String, String)> {
+    let (owner, table_name) = table.split_once('.')?;
+    let owner = owner.trim().trim_matches('"');
+    let table_name = table_name.trim().trim_matches('"');
+    if owner.is_empty() || table_name.is_empty() {
+        return None;
+    }
+    Some((owner.to_string(), table_name.to_string()))
 }
 
 fn json_to_sql(value: &Value) -> String {
@@ -231,6 +273,87 @@ fn row_i32(row: &Row, index: usize) -> i32 {
 
 fn row_bool(row: &Row, index: usize) -> bool {
     row_i32(row, index) != 0 || row_string(row, index).eq_ignore_ascii_case("YES")
+}
+
+fn is_system_database_name(name: &str) -> bool {
+    matches!(
+        name.trim().to_ascii_uppercase().as_str(),
+        "SYS" | "SYSAUDITOR" | "SYSSSO" | "SYSMAN" | "CTISYS"
+    )
+}
+
+fn push_visible_database_name(names: &mut BTreeSet<String>, name: String) {
+    let trimmed = name.trim();
+    if trimmed.is_empty() || is_system_database_name(trimmed) {
+        return;
+    }
+    names.insert(trimmed.to_string());
+}
+
+fn collect_first_column_strings(result: ResultSet) -> Vec<String> {
+    result.rows.iter().map(|row| row_string(row, 0)).collect()
+}
+
+async fn query_first_column_strings(
+    params: &ConnectionParams,
+    query: &str,
+) -> Result<Vec<String>, String> {
+    query_result_set(params, query)
+        .await
+        .map(collect_first_column_strings)
+}
+
+async fn resolve_table_owner(
+    params: &ConnectionParams,
+    schema: Option<&str>,
+    table: &str,
+) -> Result<(String, String), String> {
+    if let Some((owner, table_name)) = split_qualified_table_name(table) {
+        return Ok((owner, table_name));
+    }
+
+    let driver = DamengDriver::new();
+    let requested = driver.resolve_schema(params, schema);
+    let table_name = table.trim().trim_matches('"').to_string();
+
+    let owner_sql = format!(
+        "SELECT OWNER FROM DBA_TABLES WHERE OWNER = {} AND TABLE_NAME = {}",
+        sql_string(&requested),
+        sql_string(&table_name),
+    );
+    if let Ok(owners) = query_first_column_strings(params, &owner_sql).await {
+        if owners.iter().any(|owner| owner.eq_ignore_ascii_case(&requested)) {
+            return Ok((requested, table_name));
+        }
+    }
+
+    let all_owner_sql = format!(
+        "SELECT OWNER FROM ALL_TABLES WHERE OWNER = {} AND TABLE_NAME = {}",
+        sql_string(&requested),
+        sql_string(&table_name),
+    );
+    if let Ok(owners) = query_first_column_strings(params, &all_owner_sql).await {
+        if owners.iter().any(|owner| owner.eq_ignore_ascii_case(&requested)) {
+            return Ok((requested, table_name));
+        }
+    }
+
+    let tablespace_sql = format!(
+        "SELECT OWNER FROM DBA_TABLES WHERE TABLESPACE_NAME = {} AND TABLE_NAME = {} ORDER BY OWNER",
+        sql_string(&requested),
+        sql_string(&table_name),
+    );
+    if let Ok(owners) = query_first_column_strings(params, &tablespace_sql).await {
+        if let Some(owner) = owners
+            .into_iter()
+            .find(|owner| !owner.trim().is_empty())
+            .map(|owner| owner.trim().to_string())
+        {
+            return Ok((owner, table_name));
+        }
+    }
+
+    Ok((requested, table_name))
 }
 
 fn row_u64_opt(row: &Row, index: usize) -> Option<u64> {
@@ -483,20 +606,22 @@ pub async fn get_table_ddl(
     schema: Option<&str>,
 ) -> Result<String, String> {
     let driver = DamengDriver::new();
-    let owner = driver.resolve_schema(params, schema);
+    let (owner, actual_table_name) = resolve_table_owner(params, schema, table_name).await?;
     let tables = driver.get_tables(params, Some(&owner)).await?;
     let table_comment = tables
         .iter()
-        .find(|table| table.name.eq_ignore_ascii_case(table_name))
+        .find(|table| table.name.eq_ignore_ascii_case(&actual_table_name))
         .and_then(|table| table.comment.as_deref());
-    let columns = describe_table_columns(params, table_name, &owner).await?;
-    let indexes = driver.get_indexes(params, table_name, Some(&owner)).await?;
+    let columns = describe_table_columns(params, &actual_table_name, &owner).await?;
+    let indexes = driver
+        .get_indexes(params, &actual_table_name, Some(&owner))
+        .await?;
     let foreign_keys = driver
-        .get_foreign_keys(params, table_name, Some(&owner))
+        .get_foreign_keys(params, &actual_table_name, Some(&owner))
         .await?;
     Ok(build_table_ddl(
         &owner,
-        table_name,
+        &actual_table_name,
         table_comment,
         &columns,
         &indexes,
@@ -510,7 +635,8 @@ pub async fn dump_table_data_sql<W: std::io::Write + Send>(
     table: &str,
     schema: &str,
 ) -> Result<(), String> {
-    let query = format!("SELECT * FROM {}", qualified_table(Some(schema), table));
+    let (owner, table_name) = resolve_table_owner(params, Some(schema), table).await?;
+    let query = format!("SELECT * FROM {}", qualified_table(Some(&owner), &table_name));
     let result = query_result_set(params, &query).await?;
     let mut batch = Vec::new();
     for row in &result.rows {
@@ -524,7 +650,7 @@ pub async fn dump_table_data_sql<W: std::io::Write + Send>(
             writeln!(
                 writer,
                 "INSERT INTO {} VALUES {};",
-                qualified_table(Some(schema), table),
+                qualified_table(Some(&owner), &table_name),
                 batch.join(", ")
             )
             .map_err(|error| error.to_string())?;
@@ -536,7 +662,7 @@ pub async fn dump_table_data_sql<W: std::io::Write + Send>(
         writeln!(
             writer,
             "INSERT INTO {} VALUES {};",
-            qualified_table(Some(schema), table),
+            qualified_table(Some(&owner), &table_name),
             batch.join(", ")
         )
         .map_err(|error| error.to_string())?;
@@ -638,12 +764,47 @@ impl DatabaseDriver for DamengDriver {
     }
 
     async fn get_databases(&self, params: &ConnectionParams) -> Result<Vec<String>, String> {
-        let result = query_result_set(
-            params,
-            "SELECT USERNAME FROM ALL_USERS WHERE USERNAME NOT IN ('SYS', 'SYSAUDITOR', 'SYSSSO') ORDER BY USERNAME",
-        )
-        .await?;
-        Ok(result.rows.iter().map(|row| row_string(row, 0)).collect())
+        let mut names = BTreeSet::new();
+        push_visible_database_name(&mut names, params.database.primary().to_string());
+
+        let discovery_queries = [
+            // Object owners are the most useful "database" level in Mavicat's tree.
+            "SELECT OWNER FROM DBA_TABLES ORDER BY OWNER",
+            "SELECT OWNER FROM DBA_VIEWS ORDER BY OWNER",
+            "SELECT OWNER FROM ALL_TABLES ORDER BY OWNER",
+            "SELECT OWNER FROM ALL_VIEWS ORDER BY OWNER",
+            // Keep user/schema names visible even when they do not own tables yet.
+            "SELECT USERNAME FROM ALL_USERS ORDER BY USERNAME",
+            // Some Dameng installations are organized by tablespace; expose them
+            // in the picker so users can select the operational namespace they know.
+            "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES ORDER BY TABLESPACE_NAME",
+            "SELECT TABLESPACE_NAME FROM USER_TABLESPACES ORDER BY TABLESPACE_NAME",
+            "SELECT NAME FROM V$TABLESPACE ORDER BY NAME",
+        ];
+
+        let mut last_error = None;
+        for query in discovery_queries {
+            match query_first_column_strings(params, query).await {
+                Ok(values) => {
+                    for value in values {
+                        push_visible_database_name(&mut names, value);
+                    }
+                }
+                Err(error) => last_error = Some(error),
+            }
+        }
+
+        if names.is_empty() {
+            if let Some(username) = &params.username {
+                push_visible_database_name(&mut names, username.clone());
+            }
+        }
+
+        if names.is_empty() {
+            return Err(last_error.unwrap_or_else(|| "No Dameng schemas found".to_string()));
+        }
+
+        Ok(names.into_iter().collect())
     }
 
     async fn get_schemas(&self, params: &ConnectionParams) -> Result<Vec<String>, String> {
@@ -656,7 +817,7 @@ impl DatabaseDriver for DamengDriver {
         schema: Option<&str>,
     ) -> Result<Vec<TableInfo>, String> {
         let owner = self.resolve_schema(params, schema);
-        let sql = format!(
+        let owner_sql = format!(
             r#"
             SELECT TABLE_NAME, COMMENTS
             FROM ALL_TAB_COMMENTS
@@ -665,7 +826,32 @@ impl DatabaseDriver for DamengDriver {
             "#,
             sql_string(&owner),
         );
-        let result = query_result_set(params, &sql).await?;
+        let result = query_result_set(params, &owner_sql).await?;
+        let owner_tables = result
+            .rows
+            .iter()
+            .map(|row| TableInfo {
+                name: row_string(row, 0),
+                comment: row_string_opt(row, 1).filter(|value| !value.trim().is_empty()),
+            })
+            .collect::<Vec<_>>();
+        if !owner_tables.is_empty() {
+            return Ok(owner_tables);
+        }
+
+        let tablespace_sql = format!(
+            r#"
+            SELECT t.TABLE_NAME, c.COMMENTS
+            FROM DBA_TABLES t
+            LEFT JOIN DBA_TAB_COMMENTS c
+                ON c.OWNER = t.OWNER
+               AND c.TABLE_NAME = t.TABLE_NAME
+            WHERE t.TABLESPACE_NAME = {}
+            ORDER BY t.OWNER, t.TABLE_NAME
+            "#,
+            sql_string(&owner),
+        );
+        let result = query_result_set(params, &tablespace_sql).await?;
         Ok(result
             .rows
             .iter()
@@ -682,7 +868,7 @@ impl DatabaseDriver for DamengDriver {
         table: &str,
         schema: Option<&str>,
     ) -> Result<Vec<TableColumn>, String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             r#"
             SELECT
@@ -713,7 +899,7 @@ impl DatabaseDriver for DamengDriver {
             ORDER BY c.COLUMN_ID
             "#,
             sql_string(&owner),
-            sql_string(table),
+            sql_string(&table_name),
         );
 
         let result = query_result_set(params, &sql).await?;
@@ -739,7 +925,7 @@ impl DatabaseDriver for DamengDriver {
         table: &str,
         schema: Option<&str>,
     ) -> Result<Vec<ForeignKey>, String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             r#"
             SELECT
@@ -765,7 +951,7 @@ impl DatabaseDriver for DamengDriver {
             ORDER BY cons.CONSTRAINT_NAME, cols.POSITION
             "#,
             sql_string(&owner),
-            sql_string(table),
+            sql_string(&table_name),
         );
         let result = query_result_set(params, &sql).await?;
         Ok(result
@@ -788,7 +974,7 @@ impl DatabaseDriver for DamengDriver {
         table: &str,
         schema: Option<&str>,
     ) -> Result<Vec<Index>, String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             r#"
             SELECT
@@ -810,7 +996,7 @@ impl DatabaseDriver for DamengDriver {
             ORDER BY idx.INDEX_NAME, col.COLUMN_POSITION
             "#,
             sql_string(&owner),
-            sql_string(table),
+            sql_string(&table_name),
         );
         let result = query_result_set(params, &sql).await?;
         Ok(result
@@ -1025,7 +1211,7 @@ impl DatabaseDriver for DamengDriver {
         if data.is_empty() {
             return Err("No data provided for insert".to_string());
         }
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let mut pairs = data.into_iter().collect::<Vec<_>>();
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
         let columns = pairs
@@ -1040,7 +1226,7 @@ impl DatabaseDriver for DamengDriver {
             .join(", ");
         let sql = format!(
             "INSERT INTO {} ({}) VALUES ({})",
-            qualified_table(Some(&owner), table),
+            qualified_table(Some(&owner), &table_name),
             columns,
             values
         );
@@ -1062,10 +1248,10 @@ impl DatabaseDriver for DamengDriver {
         schema: Option<&str>,
         _max_blob_size: u64,
     ) -> Result<u64, String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             "UPDATE {} SET {} = {} WHERE {} = {}",
-            qualified_table(Some(&owner), table),
+            qualified_table(Some(&owner), &table_name),
             quote_identifier(col_name),
             json_to_sql(&new_val),
             quote_identifier(pk_col),
@@ -1086,10 +1272,10 @@ impl DatabaseDriver for DamengDriver {
         pk_val: Value,
         schema: Option<&str>,
     ) -> Result<u64, String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             "DELETE FROM {} WHERE {} = {}",
-            qualified_table(Some(&owner), table),
+            qualified_table(Some(&owner), &table_name),
             quote_identifier(pk_col),
             json_to_sql(&pk_val)
         );
@@ -1241,10 +1427,10 @@ impl DatabaseDriver for DamengDriver {
         fk_name: &str,
         schema: Option<&str>,
     ) -> Result<(), String> {
-        let owner = self.resolve_schema(params, schema);
+        let (owner, table_name) = resolve_table_owner(params, schema, table).await?;
         let sql = format!(
             "ALTER TABLE {} DROP CONSTRAINT {}",
-            qualified_table(Some(&owner), table),
+            qualified_table(Some(&owner), &table_name),
             quote_identifier(fk_name)
         );
         let mut client = connect(params).await?;
@@ -1312,6 +1498,31 @@ mod tests {
     #[test]
     fn sql_string_escapes_quotes() {
         assert_eq!(sql_string("O'Hara"), "'O''Hara'");
+    }
+
+    #[test]
+    fn system_database_names_are_hidden_from_picker() {
+        assert!(is_system_database_name("SYS"));
+        assert!(is_system_database_name("ctisys"));
+        assert!(!is_system_database_name("BUSINESS_SCHEMA"));
+    }
+
+    #[test]
+    fn visible_database_names_are_trimmed_and_unique() {
+        let mut names = BTreeSet::new();
+        push_visible_database_name(&mut names, "  DMHR  ".to_string());
+        push_visible_database_name(&mut names, "DMHR".to_string());
+        push_visible_database_name(&mut names, "SYS".to_string());
+        assert_eq!(names.into_iter().collect::<Vec<_>>(), vec!["DMHR"]);
+    }
+
+    #[test]
+    fn qualified_table_name_splits_owner_and_table() {
+        assert_eq!(
+            split_qualified_table_name("\"DMHR\".\"EMPLOYEE\""),
+            Some(("DMHR".to_string(), "EMPLOYEE".to_string()))
+        );
+        assert_eq!(split_qualified_table_name("EMPLOYEE"), None);
     }
 
     #[test]

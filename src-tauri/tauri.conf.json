@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Mavicat",
-  "version": "1.0.18",
+  "version": "1.0.22",
   "identifier": "com.mavicat.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -47,6 +47,10 @@
       "appimage": {
         "bundleMediaFramework": false
       }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "infoPlist": "Info.plist"
     }
   },
   "plugins": {

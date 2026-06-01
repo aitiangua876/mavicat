@@ -433,14 +433,14 @@ export const NewConnectionModal = ({
     setTestResult(null);
     try {
       const testParams: Partial<ConnectionParams> = {
-        driver,
         ...formData,
+        driver,
         save_in_keychain: false,
         port: formData.port != null ? Number(formData.port) : undefined,
         database: isMultiDb
           ? (selectedDatabasesState[0] ??
             availableDatabases[0] ??
-            (isRedisDriver ? "0" : "information_schema"))
+            getDefaultDatabase(driver))
           : formData.database,
       };
       const result = await invoke<string>("test_connection", {
@@ -545,8 +545,8 @@ export const NewConnectionModal = ({
       }
 
       const params: Partial<ConnectionParams> = {
-        driver,
         ...formData,
+        driver,
         port: formData.port != null ? Number(formData.port) : undefined,
         ssl_mode: formData.ssl_mode || getDefaultSslMode(driver),
         save_in_keychain: false,
