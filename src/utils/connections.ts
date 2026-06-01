@@ -9,7 +9,7 @@ import { isLocalDriver } from "./driverCapabilities";
 
 export type DatabaseDriver = string;
 
-export const BUILTIN_DRIVER_IDS = ["postgres", "mysql", "sqlite", "sqlserver", "redis"] as const;
+export const BUILTIN_DRIVER_IDS = ["postgres", "mysql", "sqlite", "sqlserver", "redis", "dameng"] as const;
 export type BuiltinDriverId = (typeof BUILTIN_DRIVER_IDS)[number];
 
 export interface ConnectionParams {
@@ -73,6 +73,9 @@ export function getDefaultPort(driver: DatabaseDriver): number {
       return 1433;
     case "redis":
       return 6379;
+    case "dameng":
+    case "dm":
+      return 5236;
     default:
       return 0;
   }
@@ -176,6 +179,9 @@ export function getDriverLabel(driver: DatabaseDriver): string {
       return "MySQL";
     case "sqlite":
       return "SQLite";
+    case "dameng":
+    case "dm":
+      return "Dameng";
     default:
       return String(driver).toUpperCase();
   }

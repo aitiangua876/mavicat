@@ -45,6 +45,7 @@ pub mod theme_models;
 pub mod updater;
 pub mod drivers {
     pub mod common;
+    pub mod dameng;
     pub mod driver_trait;
     pub mod mysql;
     pub mod postgres;
@@ -152,6 +153,7 @@ pub fn run() {
         .setup(move |app| {
             // Register built-in drivers
             tauri::async_runtime::block_on(async {
+                drivers::registry::register_driver(drivers::dameng::DamengDriver::new()).await;
                 drivers::registry::register_driver(drivers::mysql::MysqlDriver::new()).await;
                 drivers::registry::register_driver(drivers::postgres::PostgresDriver::new()).await;
                 drivers::registry::register_driver(drivers::redis::RedisDriver::new()).await;

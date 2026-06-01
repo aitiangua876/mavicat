@@ -2,11 +2,13 @@
 ///
 /// - MySQL: `table` (backtick-quoted, no schema prefix)
 /// - PostgreSQL: "schema"."table" (double-quote-quoted, schema-qualified)
+/// - Dameng: "schema"."table" (double-quote-quoted, schema-qualified)
 /// - SQLite / other: "table" (double-quote-quoted)
 pub fn format_table_ref(driver: &str, schema: &str, table: &str) -> String {
     match driver {
         "mysql" => format!("`{}`", table),
         "postgres" => format!(r#""{}"."{}""#, schema, table),
+        "dameng" | "dm" => format!(r#""{}"."{}""#, schema, table),
         _ => format!(r#""{}""#, table),
     }
 }

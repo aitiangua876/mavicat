@@ -89,6 +89,7 @@ impl<W: Write> RowSink for ExcelSink<W> {
 pub enum SqlDialect {
     Mysql,
     Postgres,
+    Dameng,
     Sqlite,
 }
 
@@ -97,6 +98,7 @@ impl SqlDialect {
         match driver {
             "mysql" | "mariadb" => Self::Mysql,
             "postgres" => Self::Postgres,
+            "dameng" | "dm" => Self::Dameng,
             _ => Self::Sqlite,
         }
     }
@@ -104,7 +106,9 @@ impl SqlDialect {
     pub fn quote_identifier(self, identifier: &str) -> String {
         match self {
             Self::Mysql => format!("`{}`", identifier.replace('`', "``")),
-            Self::Postgres | Self::Sqlite => format!("\"{}\"", identifier.replace('"', "\"\"")),
+            Self::Postgres | Self::Dameng | Self::Sqlite => {
+                format!("\"{}\"", identifier.replace('"', "\"\""))
+            }
         }
     }
 

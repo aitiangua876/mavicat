@@ -3,18 +3,26 @@ import {
   Clipboard,
   ClipboardPaste,
   Copy,
-  Database,
   FileCode,
   Grid2X2,
   List,
-  PenTool,
   Search,
+  Table2,
 } from "lucide-react";
 import type { TableInfo, ViewInfo } from "../../contexts/DatabaseContext";
 import type { CopiedTableSet } from "../../types/tableClipboard";
 import { NavicatDatabaseIcon, NavicatTableIcon } from "../icons/NavicatStyleIcons";
 
 type ObjectViewMode = "list" | "icons";
+
+interface MarqueeSelectionState {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  baseSelection: Set<string>;
+  additive: boolean;
+}
 
 interface DatabaseObjectViewProps {
   connectionId: string;
@@ -41,17 +49,13 @@ export function DatabaseObjectView({
   onCopyTables,
   onPasteTables,
   onOpenTable,
-  onDesignTable,
 }: DatabaseObjectViewProps) {
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("");
-  const [viewMode, setViewMode] = useState<ObjectViewMode>("list");
-  const [dragState, setDragState] = useState<{
-    anchorIndex: number;
-    baseSelection: Set<string>;
-    additive: boolean;
-  } | null>(null);
+  const [viewMode, setViewMode] = useState<ObjectViewMode>("icons");
+  const [marquee, setMarquee] = useState<MarqueeSelectionState | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const dragMovedRef = useRef(false);
 
   const filteredTables = useMemo(() => {
@@ -134,40 +138,119 @@ export function DatabaseObjectView({
     [filteredTables, selectRange, selectedNames],
   );
 
-  const startDragSelection = useCallback(
-    (index: number, event: React.MouseEvent) => {
-      if (event.button !== 0) return;
-      rootRef.current?.focus();
-      const table = filteredTables[index];
-      if (!table) return;
-
-      const additive = event.metaKey || event.ctrlKey;
-      const baseSelection = additive ? new Set(selectedNames) : new Set<string>();
-      dragMovedRef.current = false;
-      setDragState({ anchorIndex: index, baseSelection, additive });
-      selectRange(index, index, baseSelection);
-    },
-    [filteredTables, selectRange, selectedNames],
-  );
-
-  const extendDragSelection = useCallback(
-    (index: number) => {
-      if (!dragState) return;
-      if (index !== dragState.anchorIndex) {
-        dragMovedRef.current = true;
+  const setObjectRef = useCallback(
+    (name: string, node: HTMLButtonElement | null) => {
+      if (node) {
+        itemRefs.current.set(name, node);
+      } else {
+        itemRefs.current.delete(name);
       }
-      selectRange(
-        dragState.anchorIndex,
-        index,
-        dragState.additive ? dragState.baseSelection : new Set<string>(),
-      );
     },
-    [dragState, selectRange],
+    [],
   );
 
-  const finishDragSelection = useCallback(() => {
-    setDragState(null);
-  }, []);
+  const updateMarqueeSelection = useCallback(
+    (state: MarqueeSelectionState) => {
+      const left = Math.min(state.startX, state.currentX);
+      const right = Math.max(state.startX, state.currentX);
+      const top = Math.min(state.startY, state.currentY);
+      const bottom = Math.max(state.startY, state.currentY);
+
+      const selectedInRect = filteredTables
+        .filter((table) => {
+          const node = itemRefs.current.get(table.name);
+          if (!node) return false;
+          const rect = node.getBoundingClientRect();
+          return (
+            rect.left <= right &&
+            rect.right >= left &&
+            rect.top <= bottom &&
+            rect.bottom >= top
+          );
+        })
+        .map((table) => table.name);
+
+      const next = state.additive
+        ? new Set(state.baseSelection)
+        : new Set<string>();
+      selectedInRect.forEach((name) => next.add(name));
+      setSelectedNames(next);
+    },
+    [filteredTables],
+  );
+
+  const startMarqueeSelection = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "button, input, textarea, select, a, [data-object-item='true']",
+        )
+      ) {
+        return;
+      }
+
+      rootRef.current?.focus();
+      event.preventDefault();
+      dragMovedRef.current = false;
+
+      const next: MarqueeSelectionState = {
+        startX: event.clientX,
+        startY: event.clientY,
+        currentX: event.clientX,
+        currentY: event.clientY,
+        baseSelection:
+          event.metaKey || event.ctrlKey ? new Set(selectedNames) : new Set(),
+        additive: event.metaKey || event.ctrlKey,
+      };
+      setMarquee(next);
+      updateMarqueeSelection(next);
+    },
+    [selectedNames, updateMarqueeSelection],
+  );
+
+  useEffect(() => {
+    if (!marquee) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      dragMovedRef.current = true;
+      setMarquee((current) => {
+        if (!current) return null;
+        const next = {
+          ...current,
+          currentX: event.clientX,
+          currentY: event.clientY,
+        };
+        updateMarqueeSelection(next);
+        return next;
+      });
+    };
+
+    const handleMouseUp = () => {
+      setMarquee(null);
+      window.setTimeout(() => {
+        dragMovedRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp, { once: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [marquee, updateMarqueeSelection]);
+
+  const marqueeBox = useMemo(() => {
+    if (!marquee) return null;
+    return {
+      left: Math.min(marquee.startX, marquee.currentX),
+      top: Math.min(marquee.startY, marquee.currentY),
+      width: Math.abs(marquee.currentX - marquee.startX),
+      height: Math.abs(marquee.currentY - marquee.startY),
+    };
+  }, [marquee]);
 
   const toggleAllFiltered = () => {
     setSelectedNames((prev) => {
@@ -241,11 +324,15 @@ export function DatabaseObjectView({
       ref={rootRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onMouseUp={finishDragSelection}
-      onMouseLeave={finishDragSelection}
       className="h-full min-h-0 flex flex-col bg-base text-primary outline-none"
     >
-      <div className="shrink-0 border-b border-default bg-elevated px-5 py-4">
+      {marqueeBox && (
+        <div
+          className="pointer-events-none fixed z-[9999] rounded border border-blue-400/80 bg-blue-500/15 shadow-[0_0_0_1px_rgba(59,130,246,0.15)]"
+          style={marqueeBox}
+        />
+      )}
+      <div className="shrink-0 border-b border-default bg-elevated px-5 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-lg bg-surface-secondary border border-default flex items-center justify-center">
@@ -291,7 +378,7 @@ export function DatabaseObjectView({
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3">
           <label className="relative flex-1 max-w-md">
             <Search
               size={16}
@@ -347,134 +434,34 @@ export function DatabaseObjectView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div
+        className="min-h-0 flex-1 overflow-auto"
+        onMouseDown={startMarqueeSelection}
+      >
         {viewMode === "list" ? (
-          <table className="w-full text-left border-collapse select-none">
-            <thead className="sticky top-0 z-10 bg-base shadow-sm">
-              <tr className="border-b border-default">
-                <th className="w-11 px-4 py-2">
-                  <input
-                    type="checkbox"
-                    checked={allFilteredSelected}
-                    onChange={toggleAllFiltered}
-                    className="accent-blue-500"
-                    aria-label="选择全部表"
-                  />
-                </th>
-                <th className="px-3 py-2 text-xs font-semibold text-muted uppercase">
-                  对象名
-                </th>
-                <th className="px-3 py-2 text-xs font-semibold text-muted uppercase">
-                  类型
-                </th>
-                <th className="px-3 py-2 text-xs font-semibold text-muted uppercase">
-                  注释
-                </th>
-                <th className="w-48 px-3 py-2 text-xs font-semibold text-muted uppercase text-right">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                    正在加载对象...
-                  </td>
-                </tr>
-              ) : filteredTables.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                    未找到表对象
-                  </td>
-                </tr>
-              ) : (
-                filteredTables.map((table, index) => {
-                  const selected = selectedNames.has(table.name);
-                  return (
-                    <tr
-                      key={table.name}
-                      onMouseDown={(event) => startDragSelection(index, event)}
-                      onMouseEnter={() => extendDragSelection(index)}
-                      onClick={(event) => handleObjectClick(table.name, index, event)}
-                      onDoubleClick={() => onOpenTable(table.name, databaseName)}
-                      className={`border-b border-default cursor-pointer transition-colors ${
-                        selected
-                          ? "bg-blue-500/20"
-                          : "hover:bg-surface-secondary/60"
-                      }`}
-                    >
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            setSelectedNames((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked) {
-                                next.add(table.name);
-                              } else {
-                                next.delete(table.name);
-                              }
-                              return next;
-                            });
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          className="accent-blue-500"
-                          aria-label={`选择 ${table.name}`}
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <NavicatTableIcon size={17} className="shrink-0" />
-                          <span className="font-mono text-sm font-medium text-primary truncate">
-                            {table.name}
-                          </span>
-                          {renderConflictBadge(table.name)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-sm text-secondary">
-                        BASE TABLE
-                      </td>
-                      <td className="px-3 py-2 text-sm text-muted">
-                        {table.comment || "-"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onOpenTable(table.name, databaseName);
-                            }}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary"
-                          >
-                            <Database size={13} />
-                            数据
-                          </button>
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onDesignTable(table.name, databaseName);
-                            }}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-secondary hover:bg-surface-secondary hover:text-primary"
-                          >
-                            <PenTool size={13} />
-                            设计
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        ) : (
-          <div className="p-5 select-none">
+          <div className="select-none px-6 py-4">
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="font-semibold text-primary">表</span>
+                <span className="text-muted">共 {filteredTables.length} 个</span>
+                {selectedCount > 0 && (
+                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-200">
+                    已选 {selectedCount}
+                  </span>
+                )}
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs text-secondary">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="accent-blue-500"
+                  aria-label="选择全部表"
+                />
+                全选当前结果
+              </label>
+            </div>
+
             {isLoading ? (
               <div className="px-4 py-10 text-center text-muted">
                 正在加载对象...
@@ -484,34 +471,135 @@ export function DatabaseObjectView({
                 未找到表对象
               </div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-x-10 gap-y-1.5">
                 {filteredTables.map((table, index) => {
                   const selected = selectedNames.has(table.name);
+                  const comment = table.comment?.trim();
                   return (
                     <button
                       key={table.name}
+                      ref={(node) => setObjectRef(table.name, node)}
+                      data-object-item="true"
                       type="button"
-                      onMouseDown={(event) => startDragSelection(index, event)}
-                      onMouseEnter={() => extendDragSelection(index)}
                       onClick={(event) => handleObjectClick(table.name, index, event)}
                       onDoubleClick={() => onOpenTable(table.name, databaseName)}
-                      className={`group min-h-[116px] rounded-md border p-3 text-left transition-colors ${
+                      className={`group/object relative flex h-8 min-w-0 items-center gap-2 rounded px-2 text-left transition-colors ${
                         selected
-                          ? "border-blue-400 bg-blue-500/20"
-                          : "border-default bg-surface-secondary/40 hover:border-blue-500/50 hover:bg-surface-secondary"
+                          ? "bg-blue-500/22 text-primary"
+                          : "hover:bg-surface-secondary text-primary"
                       }`}
-                      title={table.comment ? `${table.name}: ${table.comment}` : table.name}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <NavicatTableIcon size={26} className="shrink-0" />
-                        {renderConflictBadge(table.name)}
-                      </div>
-                      <div className="mt-3 font-mono text-sm font-semibold text-primary break-all line-clamp-2">
+                      <Table2
+                        size={18}
+                        className={`shrink-0 ${
+                          selected ? "text-blue-200" : "text-secondary"
+                        }`}
+                      />
+                      <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
                         {table.name}
-                      </div>
-                      <div className="mt-1 text-xs text-muted truncate">
-                        {table.comment || "BASE TABLE"}
-                      </div>
+                      </span>
+                      <span className="shrink-0 opacity-0 transition-opacity group-hover/object:opacity-100">
+                        {renderConflictBadge(table.name)}
+                      </span>
+                      <span className="pointer-events-none absolute left-9 top-8 z-30 hidden w-[340px] rounded-md border border-strong bg-elevated p-3 text-xs shadow-xl shadow-black/30 group-hover/object:block">
+                        <span className="block truncate font-mono text-sm font-semibold text-primary">
+                          {table.name}
+                        </span>
+                        <span className="mt-2 grid grid-cols-[56px_1fr] gap-x-2 gap-y-1 text-secondary">
+                          <span className="text-muted">类型</span>
+                          <span>BASE TABLE</span>
+                          <span className="text-muted">数据库</span>
+                          <span className="truncate">{databaseName}</span>
+                          <span className="text-muted">备注</span>
+                          <span className="line-clamp-4 whitespace-normal text-primary">
+                            {comment || "无备注"}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="select-none px-6 py-4">
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="font-semibold text-primary">表</span>
+                <span className="text-muted">共 {filteredTables.length} 个</span>
+                {selectedCount > 0 && (
+                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-200">
+                    已选 {selectedCount}
+                  </span>
+                )}
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs text-secondary">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="accent-blue-500"
+                  aria-label="选择全部表"
+                />
+                全选当前结果
+              </label>
+            </div>
+            {isLoading ? (
+              <div className="px-4 py-10 text-center text-muted">
+                正在加载对象...
+              </div>
+            ) : filteredTables.length === 0 ? (
+              <div className="px-4 py-10 text-center text-muted">
+                未找到表对象
+              </div>
+            ) : (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-x-10 gap-y-1.5">
+                {filteredTables.map((table, index) => {
+                  const selected = selectedNames.has(table.name);
+                  const comment = table.comment?.trim();
+                  return (
+                    <button
+                      key={table.name}
+                      ref={(node) => setObjectRef(table.name, node)}
+                      data-object-item="true"
+                      type="button"
+                      onClick={(event) => handleObjectClick(table.name, index, event)}
+                      onDoubleClick={() => onOpenTable(table.name, databaseName)}
+                      className={`group/object relative flex h-8 min-w-0 items-center gap-2 rounded px-2 text-left transition-colors ${
+                        selected
+                          ? "bg-blue-500/22 text-primary"
+                          : "text-primary hover:bg-surface-secondary"
+                      }`}
+                      title={comment ? `${table.name}: ${comment}` : table.name}
+                    >
+                      <NavicatTableIcon
+                        size={19}
+                        className={`shrink-0 ${
+                          selected ? "drop-shadow-[0_0_4px_rgba(96,165,250,0.35)]" : ""
+                        }`}
+                      />
+                      <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
+                        {table.name}
+                      </span>
+                      <span className="shrink-0 opacity-0 transition-opacity group-hover/object:opacity-100">
+                        {renderConflictBadge(table.name)}
+                      </span>
+                      <span className="pointer-events-none absolute left-8 top-8 z-30 hidden w-[340px] rounded-md border border-strong bg-elevated p-3 text-xs shadow-xl shadow-black/30 group-hover/object:block">
+                        <span className="block truncate font-mono text-sm font-semibold text-primary">
+                          {table.name}
+                        </span>
+                        <span className="mt-2 grid grid-cols-[56px_1fr] gap-x-2 gap-y-1 text-secondary">
+                          <span className="text-muted">类型</span>
+                          <span>BASE TABLE</span>
+                          <span className="text-muted">数据库</span>
+                          <span className="truncate">{databaseName}</span>
+                          <span className="text-muted">备注</span>
+                          <span className="line-clamp-4 whitespace-normal text-primary">
+                            {comment || "无备注"}
+                          </span>
+                        </span>
+                      </span>
                     </button>
                   );
                 })}

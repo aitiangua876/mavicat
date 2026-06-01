@@ -1179,6 +1179,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "dameng-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "655baefc31b868af91f45b912b0f062009023d0e69bfe6f8fd16d70e4830a2f6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "dameng-protocol"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19266a8412bb4abd0ee02a9ff7924a81f69804ff0d255145f54f67a8f2c69733"
+dependencies = [
+ "bytes",
+ "dameng-types",
+]
+
+[[package]]
+name = "dameng-types"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f5154e09543e48ecd79ce743517a93af8ed70c44009fbbdd42e1350de792764"
+dependencies = [
+ "bytes",
+ "chrono",
+ "encoding_rs",
+ "rust_decimal",
+]
+
+[[package]]
 name = "darling"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3218,7 +3251,7 @@ checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
 
 [[package]]
 name = "mavicat"
-version = "1.0.16"
+version = "1.0.18"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3257,6 +3290,7 @@ dependencies = [
  "tempfile",
  "tiberius",
  "tokio",
+ "tokio-dameng",
  "tokio-postgres",
  "tokio-postgres-rustls",
  "tokio-util",
@@ -6835,6 +6869,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-dameng"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07c0f23aeb3033d134900fb0f4a9a42c9a3e3d4a795d89edf779eebc206757d4"
+dependencies = [
+ "bytes",
+ "dameng-macros",
+ "dameng-protocol",
+ "dameng-types",
+ "encoding_rs",
+ "log",
+ "native-tls",
+ "tokio",
+ "tokio-native-tls",
+]
+
+[[package]]
 name = "tokio-macros"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6843,6 +6894,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "tokio-native-tls"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
+dependencies = [
+ "native-tls",
+ "tokio",
 ]
 
 [[package]]

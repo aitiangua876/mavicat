@@ -246,6 +246,7 @@ export const NewConnectionModal = ({
     if (driverId === "postgres") return "postgres";
     if (driverId === "mysql" || driverId === "mariadb") return "root";
     if (driverId === "sqlserver" || driverId === "mssql") return "sa";
+    if (driverId === "dameng" || driverId === "dm") return "SYSDBA";
     return "";
   };
 
@@ -253,6 +254,7 @@ export const NewConnectionModal = ({
     if (driverId === "postgres") return "postgres";
     if (driverId === "sqlserver" || driverId === "mssql") return "master";
     if (driverId === "redis") return "0";
+    if (driverId === "dameng" || driverId === "dm") return "SYSDBA";
     return "";
   };
 

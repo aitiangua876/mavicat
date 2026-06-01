@@ -881,6 +881,9 @@ pub async fn get_table_ddl<R: Runtime>(
             crate::drivers::postgres::get_table_ddl(&params, &table_name, &schema_name).await
         }
         "sqlite" => crate::drivers::sqlite::get_table_ddl(&params, &table_name).await,
+        "dameng" | "dm" => {
+            crate::drivers::dameng::get_table_ddl(&params, &table_name, schema.as_deref()).await
+        }
         driver => Err(format!("Table DDL is not supported for driver: {}", driver)),
     }
 }

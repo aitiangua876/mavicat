@@ -2,7 +2,7 @@ use crate::commands::{
     expand_ssh_connection_params, find_connection_by_id, register_abort_handle,
     resolve_connection_params_with_id, unregister_abort_handle, AbortHandleMap,
 };
-use crate::drivers::{mysql, postgres, sqlite};
+use crate::drivers::{dameng, mysql, postgres, sqlite};
 use crate::dump_utils::{drop_table_if_exists, format_table_ref, insert_into_statement};
 use crate::models::ConnectionParams;
 use crate::pool_manager::{get_mysql_pool, get_postgres_pool, get_sqlite_pool};
@@ -58,6 +58,19 @@ fn normalized_dump_schema(
     requested.unwrap_or_else(|| match driver {
         "postgres" => "public".to_string(),
         "mysql" => params.database.primary().to_string(),
+        "dameng" | "dm" => {
+            let database = params.database.primary().trim();
+            if database.is_empty() {
+                params
+                    .username
+                    .as_deref()
+                    .unwrap_or("SYSDBA")
+                    .trim()
+                    .to_string()
+            } else {
+                database.to_string()
+            }
+        }
         _ => String::new(),
     })
 }
@@ -103,6 +116,7 @@ fn dump_driver_label(driver: &str) -> &str {
         "mysql" => "MySQL",
         "postgres" => "PostgreSQL",
         "sqlite" => "SQLite",
+        "dameng" | "dm" => "Dameng",
         other => other,
     }
 }
@@ -200,6 +214,7 @@ pub async fn dump_database<R: Runtime>(
             "mysql" => mysql::get_tables(&params, Some(&schema)).await?,
             "postgres" => postgres::get_tables(&params, &schema).await?,
             "sqlite" => sqlite::get_tables(&params).await?,
+            "dameng" | "dm" => dameng::get_tables(&params, Some(&schema)).await?,
             _ => return Err("Unsupported driver".into()),
         };
 
@@ -240,6 +255,7 @@ pub async fn dump_database<R: Runtime>(
                     "mysql" => mysql::get_table_ddl(&params, table, Some(&schema)).await?,
                     "postgres" => postgres::get_table_ddl(&params, table, &schema).await?,
                     "sqlite" => sqlite::get_table_ddl(&params, table).await?,
+                    "dameng" | "dm" => dameng::get_table_ddl(&params, table, Some(&schema)).await?,
                     _ => return Err("Unsupported driver".into()),
                 };
 
@@ -422,6 +438,9 @@ async fn export_table_data(
                 )
                 .map_err(|e| e.to_string())?;
             }
+        }
+        "dameng" | "dm" => {
+            dameng::dump_table_data_sql(writer, params, table, schema).await?;
         }
         _ => return Err("Unsupported driver".into()),
     }
