@@ -252,6 +252,7 @@ button {
 .advantage-band,
 .feature-band,
 .security-band,
+.toolkits-band,
 .downloads-band,
 .comments-band,
 .admin-band {
@@ -408,6 +409,7 @@ main {
 .advantage-band,
 .feature-band,
 .security-band,
+.toolkits-band,
 .downloads-band,
 .comments-band,
 .admin-band {
@@ -438,6 +440,7 @@ main {
 .advantage-band,
 .feature-band,
 .security-band,
+.toolkits-band,
 .downloads-band,
 .comments-band,
 .admin-band {
@@ -687,6 +690,7 @@ main {
 }
 
 .versions-list,
+.tools-list,
 .admin-list,
 .comments-list {
   display: grid;
@@ -694,6 +698,7 @@ main {
 }
 
 .version-card,
+.tool-card,
 .admin-card,
 .comment-card,
 .comment-form {
@@ -704,6 +709,7 @@ main {
 }
 
 .version-card,
+.tool-card,
 .admin-card,
 .comment-card {
   padding: 24px;
@@ -714,6 +720,140 @@ main {
   background:
     linear-gradient(135deg, rgb(32 201 151 / 13%), rgb(52 131 255 / 9%)),
     linear-gradient(90deg, var(--teal), var(--blue));
+}
+
+.tools-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tool-card {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  overflow: hidden;
+  min-height: 360px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 3%)),
+    radial-gradient(circle at 86% 12%, rgb(255 157 61 / 18%), transparent 30%),
+    radial-gradient(circle at 14% 84%, rgb(52 131 255 / 16%), transparent 34%);
+}
+
+.tool-card::before {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 6%) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 5%) 1px, transparent 1px);
+  background-size: 42px 42px;
+  content: "";
+  opacity: .2;
+  pointer-events: none;
+}
+
+.tool-card.featured {
+  border-color: rgb(255 157 61 / 36%);
+}
+
+.tool-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.tool-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tool-category {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgb(255 157 61 / 14%);
+  color: #ffd5a8;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.tool-card h3 {
+  margin: 16px 0 10px;
+}
+
+.tool-card p,
+.tool-description,
+.tool-admin-summary {
+  color: rgb(247 248 245 / 72%);
+  line-height: 1.7;
+}
+
+.tool-description {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.tool-package-list {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.tool-package-group {
+  display: grid;
+  gap: 8px;
+}
+
+.tool-package-platform {
+  color: #9bffe9;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.tool-package-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tool-download {
+  display: inline-flex;
+  min-height: 42px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tool-download span {
+  color: rgb(16 20 24 / 56%);
+  font-size: 11px;
+}
+
+.tool-homepage {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 38px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #9bffe9;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-subheading {
+  margin-top: 72px;
+}
+
+.tool-admin-card {
+  background:
+    linear-gradient(135deg, rgb(255 157 61 / 8%), rgb(52 131 255 / 6%)),
+    rgb(255 255 255 / 6%);
 }
 
 .version-header,
@@ -901,7 +1041,19 @@ main {
   align-items: end;
 }
 
+.tool-upload-form {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(110px, .7fr) minmax(180px, 1fr) minmax(260px, 1.4fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
 .upload-form label {
+  font-size: 12px;
+}
+
+.tool-upload-form label {
+  color: rgb(247 248 245 / 86%);
   font-size: 12px;
 }
 
@@ -1092,7 +1244,8 @@ textarea {
   .workflow-grid,
   .feature-grid,
   .advantage-layout,
-  .highlight-grid {
+  .highlight-grid,
+  .tools-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1126,16 +1279,21 @@ textarea {
   .upload-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .tool-upload-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
   .hero,
   .quick-download,
   .workflow-band,
-  .advantage-band,
-  .feature-band,
-  .security-band,
-  .downloads-band,
+    .advantage-band,
+    .feature-band,
+    .security-band,
+    .toolkits-band,
+    .downloads-band,
   .comments-band,
   .admin-band {
     width: min(100% - 28px, 1220px);
@@ -1144,9 +1302,11 @@ textarea {
   .workflow-grid,
   .feature-grid,
   .advantage-layout,
-  .highlight-grid,
-  .two-column,
-  .upload-form {
+    .highlight-grid,
+    .tools-list,
+    .two-column,
+    .upload-form,
+    .tool-upload-form {
     grid-template-columns: 1fr;
   }
 

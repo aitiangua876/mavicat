@@ -42,6 +42,7 @@ function defaultDatabase() {
     ],
     comments: [],
     sessions: [],
+    tools: [],
     versions: [
       {
         id: "ver_100",
@@ -72,6 +73,15 @@ export function readDb() {
   if (!Array.isArray(db.comments)) {
     db.comments = [];
   }
+  if (!Array.isArray(db.tools)) {
+    db.tools = [];
+  }
+  db.tools = db.tools.map((tool) => ({
+    ...tool,
+    packages: Array.isArray(tool.packages) ? tool.packages : [],
+    createdAt: tool.createdAt ?? new Date().toISOString(),
+    updatedAt: tool.updatedAt ?? tool.createdAt ?? new Date().toISOString()
+  }));
   if (Array.isArray(db.versions)) {
     db.versions = db.versions.map((version) => ({
       ...version,

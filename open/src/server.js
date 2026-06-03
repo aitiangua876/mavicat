@@ -187,6 +187,27 @@ function sortedPublishedVersions() {
     });
 }
 
+function sortedVisibleTools(request) {
+  const user = getSessionUser(request);
+  return readDb().tools
+    .filter((tool) => tool.published || user?.role === "admin")
+    .sort((left, right) => {
+      const leftFeatured = left.featured ? 1 : 0;
+      const rightFeatured = right.featured ? 1 : 0;
+      if (leftFeatured !== rightFeatured) {
+        return rightFeatured - leftFeatured;
+      }
+      const leftSort = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : 0;
+      const rightSort = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : 0;
+      if (leftSort !== rightSort) {
+        return rightSort - leftSort;
+      }
+      const leftTime = new Date(left.updatedAt ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.updatedAt ?? right.createdAt ?? 0).getTime();
+      return rightTime - leftTime;
+    });
+}
+
 function findLatestPackage(request, requestedPlatform) {
   const platform = requestedPlatform === "auto" ? detectPlatform(request.headers["user-agent"]) : requestedPlatform;
   const hints = architectureHints(request.headers["user-agent"]);
@@ -314,6 +335,30 @@ function validateVersionInput(input) {
   }
   if (!input.title) {
     return "Title is required.";
+  }
+  return null;
+}
+
+function normalizeToolInput(body) {
+  return {
+    name: normalizeText(body.name),
+    slug: normalizeText(body.slug).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, ""),
+    category: normalizeText(body.category, "效率工具"),
+    summary: normalizeText(body.summary),
+    description: normalizeText(body.description),
+    homepage: normalizeText(body.homepage),
+    featured: Boolean(body.featured),
+    published: Boolean(body.published),
+    sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0
+  };
+}
+
+function validateToolInput(input) {
+  if (!input.name) {
+    return "Tool name is required.";
+  }
+  if (!input.summary) {
+    return "Tool summary is required.";
   }
   return null;
 }
@@ -473,6 +518,10 @@ app.get("/api/versions", (request, response) => {
   response.json({ versions: sortedVisibleVersions(request) });
 });
 
+app.get("/api/tools", (request, response) => {
+  response.json({ tools: sortedVisibleTools(request) });
+});
+
 app.get("/api/comments", (_request, response) => {
   const comments = readDb().comments
     .slice()
@@ -517,6 +566,120 @@ app.delete("/api/admin/comments/:id", requireAdmin, (request, response) => {
     response.status(404).json({ message: "Comment not found." });
     return;
   }
+  writeDb(db);
+  response.json({ ok: true });
+});
+
+app.post("/api/admin/tools", requireAdmin, (request, response) => {
+  const input = normalizeToolInput(request.body);
+  const error = validateToolInput(input);
+  if (error) {
+    response.status(400).json({ message: error });
+    return;
+  }
+
+  const db = readDb();
+  const now = new Date().toISOString();
+  const tool = {
+    id: makeId("tool"),
+    ...input,
+    packages: [],
+    createdAt: now,
+    updatedAt: now
+  };
+  db.tools.push(tool);
+  writeDb(db);
+  response.status(201).json({ tool });
+});
+
+app.put("/api/admin/tools/:id", requireAdmin, (request, response) => {
+  const input = normalizeToolInput(request.body);
+  const error = validateToolInput(input);
+  if (error) {
+    response.status(400).json({ message: error });
+    return;
+  }
+
+  const db = readDb();
+  const tool = db.tools.find((item) => item.id === request.params.id);
+  if (!tool) {
+    response.status(404).json({ message: "Tool not found." });
+    return;
+  }
+
+  Object.assign(tool, input, { updatedAt: new Date().toISOString() });
+  writeDb(db);
+  response.json({ tool });
+});
+
+app.delete("/api/admin/tools/:id", requireAdmin, (request, response) => {
+  const db = readDb();
+  const before = db.tools.length;
+  db.tools = db.tools.filter((tool) => tool.id !== request.params.id);
+  if (db.tools.length === before) {
+    response.status(404).json({ message: "Tool not found." });
+    return;
+  }
+  writeDb(db);
+  response.json({ ok: true });
+});
+
+app.post(
+  "/api/admin/tools/:id/packages",
+  requireAdmin,
+  upload.fields([{ name: "installer", maxCount: 1 }]),
+  (request, response) => {
+    const platform = normalizeText(request.body.platform);
+    const arch = normalizeText(request.body.arch);
+    const label = normalizeText(request.body.label, `${platform} ${arch}`);
+    const installerFile = request.files?.installer?.[0];
+
+    if (!installerFile || !platform || !arch) {
+      response.status(400).json({ message: "Installer file, platform, and architecture are required." });
+      return;
+    }
+
+    const db = readDb();
+    const tool = db.tools.find((item) => item.id === request.params.id);
+    if (!tool) {
+      response.status(404).json({ message: "Tool not found." });
+      return;
+    }
+
+    const pkg = {
+      id: makeId("pkg"),
+      platform,
+      arch,
+      label,
+      originalName: installerFile.originalname,
+      fileName: installerFile.filename,
+      size: installerFile.size,
+      url: `/uploads/${installerFile.filename}`,
+      uploadedAt: new Date().toISOString()
+    };
+    tool.packages.push(pkg);
+    tool.updatedAt = new Date().toISOString();
+    writeDb(db);
+    response.status(201).json({ package: pkg, tool });
+  }
+);
+
+app.delete("/api/admin/tools/:toolId/packages/:packageId", requireAdmin, (request, response) => {
+  const db = readDb();
+  const tool = db.tools.find((item) => item.id === request.params.toolId);
+  if (!tool) {
+    response.status(404).json({ message: "Tool not found." });
+    return;
+  }
+
+  const before = tool.packages.length;
+  tool.packages = tool.packages.filter((pkg) => pkg.id !== request.params.packageId);
+  if (tool.packages.length === before) {
+    response.status(404).json({ message: "Package not found." });
+    return;
+  }
+
+  tool.updatedAt = new Date().toISOString();
   writeDb(db);
   response.json({ ok: true });
 });

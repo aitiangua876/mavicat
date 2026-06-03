@@ -17,6 +17,7 @@
         <a href="#workflow">工作流</a>
         <a href="#features">能力</a>
         <a href="#security">安全</a>
+        <a href="#toolkits">工具包</a>
         <a href="#versions">下载</a>
         <a href="#comments">反馈</a>
         <a href="#admin" id="admin-nav" hidden>后台</a>
@@ -236,6 +237,17 @@
         </div>
       </section>
 
+      <section class="toolkits-band" id="toolkits">
+        <div class="section-heading inline-heading">
+          <div>
+            <p class="eyebrow">Toolkit center</p>
+            <h2>团队工具包</h2>
+          </div>
+          <p class="download-note">技术团队沉淀的实用桌面工具会集中放在这里，按 Windows、macOS 和架构提供下载。</p>
+        </div>
+        <div id="tools-list" class="tools-list"></div>
+      </section>
+
       <section class="downloads-band" id="versions">
         <div class="section-heading inline-heading">
           <div>
@@ -277,6 +289,14 @@
           <button class="primary" id="new-version-button" type="button">新增版本</button>
         </div>
         <div id="admin-list" class="admin-list"></div>
+        <div class="section-heading inline-heading admin-subheading">
+          <div>
+            <p class="eyebrow">Toolkit admin</p>
+            <h2>工具包管理</h2>
+          </div>
+          <button class="primary" id="new-tool-button" type="button">新增工具</button>
+        </div>
+        <div id="admin-tools-list" class="admin-list"></div>
       </section>
     </main>
 
@@ -364,6 +384,62 @@
       </form>
     </dialog>
 
-    <script src="/app.js?v=20260526-download-fix" type="module"></script>
+    <dialog id="tool-dialog" class="dialog wide-dialog">
+      <form method="dialog" class="dialog-shell">
+        <button class="icon-button close-dialog" type="button" data-close="tool-dialog" aria-label="Close">×</button>
+        <h2 id="tool-dialog-title">新增工具</h2>
+        <input id="tool-id" type="hidden" />
+        <div class="two-column">
+          <label>
+            工具名称
+            <input id="tool-name" placeholder="数据脱敏助手" />
+          </label>
+          <label>
+            标识
+            <input id="tool-slug" placeholder="data-masker" />
+          </label>
+        </div>
+        <div class="two-column">
+          <label>
+            分类
+            <input id="tool-category" placeholder="效率工具" />
+          </label>
+          <label>
+            排序权重
+            <input id="tool-sort-order" type="number" step="1" value="0" />
+          </label>
+        </div>
+        <label>
+          一句话介绍
+          <input id="tool-summary" placeholder="批量处理日常数据任务的小工具。" />
+        </label>
+        <label>
+          详细说明
+          <textarea
+            id="tool-description"
+            rows="6"
+            placeholder="写清楚适用场景、核心能力和使用注意事项。"
+          ></textarea>
+        </label>
+        <label>
+          外部链接
+          <input id="tool-homepage" placeholder="https://..." />
+        </label>
+        <div class="two-column">
+          <label class="check-row">
+            <input id="tool-featured" type="checkbox" />
+            推荐展示
+          </label>
+          <label class="check-row">
+            <input id="tool-published" type="checkbox" />
+            已发布
+          </label>
+        </div>
+        <p id="tool-message" class="form-message"></p>
+        <button class="primary full-width" id="tool-submit" type="button">保存工具</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js?v=20260603-toolkits" type="module"></script>
   </body>
 </html>

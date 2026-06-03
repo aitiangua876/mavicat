@@ -1,6 +1,7 @@
 const state = {
   user: null,
   versions: [],
+  tools: [],
   comments: [],
   authMode: "login"
 };
@@ -16,7 +17,9 @@ const nodes = {
   alternateDownloadButton: document.querySelector("#alternate-download-button"),
   platformDownloadLinks: document.querySelectorAll("[data-platform-download]"),
   versionsList: document.querySelector("#versions-list"),
+  toolsList: document.querySelector("#tools-list"),
   adminList: document.querySelector("#admin-list"),
+  adminToolsList: document.querySelector("#admin-tools-list"),
   commentsList: document.querySelector("#comments-list"),
   commentForm: document.querySelector("#comment-form"),
   commentBody: document.querySelector("#comment-body"),
@@ -45,7 +48,22 @@ const nodes = {
   versionNotes: document.querySelector("#version-notes"),
   versionPublished: document.querySelector("#version-published"),
   versionMessage: document.querySelector("#version-message"),
-  versionSubmit: document.querySelector("#version-submit")
+  versionSubmit: document.querySelector("#version-submit"),
+  newToolButton: document.querySelector("#new-tool-button"),
+  toolDialog: document.querySelector("#tool-dialog"),
+  toolDialogTitle: document.querySelector("#tool-dialog-title"),
+  toolId: document.querySelector("#tool-id"),
+  toolName: document.querySelector("#tool-name"),
+  toolSlug: document.querySelector("#tool-slug"),
+  toolCategory: document.querySelector("#tool-category"),
+  toolSortOrder: document.querySelector("#tool-sort-order"),
+  toolSummary: document.querySelector("#tool-summary"),
+  toolDescription: document.querySelector("#tool-description"),
+  toolHomepage: document.querySelector("#tool-homepage"),
+  toolFeatured: document.querySelector("#tool-featured"),
+  toolPublished: document.querySelector("#tool-published"),
+  toolMessage: document.querySelector("#tool-message"),
+  toolSubmit: document.querySelector("#tool-submit")
 };
 
 function formatBytes(bytes) {
@@ -369,6 +387,72 @@ function renderVersions() {
     .join("");
 }
 
+function renderToolPackages(tool) {
+  if (!tool.packages?.length) {
+    return `<p class="empty-state">暂未上传安装包。</p>`;
+  }
+
+  const grouped = tool.packages.reduce((groups, pkg) => {
+    const key = packageMatchesPlatform(pkg, "macos")
+      ? "macOS"
+      : packageMatchesPlatform(pkg, "windows")
+        ? "Windows"
+        : getPlatformLabel(pkg.platform);
+    groups[key] = groups[key] ?? [];
+    groups[key].push(pkg);
+    return groups;
+  }, {});
+
+  return Object.entries(grouped)
+    .map(
+      ([platform, packages]) => `
+        <div class="tool-package-group">
+          <div class="tool-package-platform">${escapeHtml(platform)}</div>
+          <div class="tool-package-links">
+            ${packages
+              .map(
+                (pkg) => `
+                  <a class="secondary tool-download" href="${escapeHtml(pkg.url)}" download>
+                    ${escapeHtml(pkg.label || `${pkg.platform} ${pkg.arch}`)}
+                    <span>${escapeHtml(pkg.arch)} · ${formatBytes(pkg.size)}</span>
+                  </a>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderTools() {
+  if (state.tools.length === 0) {
+    nodes.toolsList.innerHTML = `<p class="empty-state">工具包正在整理中，稍后会开放下载。</p>`;
+    return;
+  }
+
+  nodes.toolsList.innerHTML = state.tools
+    .map(
+      (tool, index) => `
+        <article class="tool-card ${tool.featured || index === 0 ? "featured" : ""}">
+          <div class="tool-card-top">
+            <div>
+              <span class="tool-category">${escapeHtml(tool.category || "工具包")}</span>
+              <h3>${escapeHtml(tool.name)}</h3>
+              <p>${escapeHtml(tool.summary)}</p>
+            </div>
+            ${tool.featured ? '<span class="badge stable">推荐</span>' : ""}
+          </div>
+          ${tool.description ? `<p class="tool-description">${escapeHtml(tool.description)}</p>` : ""}
+          <div class="tool-package-list">${renderToolPackages(tool)}</div>
+          ${tool.homepage ? `<a class="tool-homepage" href="${escapeHtml(tool.homepage)}" target="_blank" rel="noreferrer">查看说明</a>` : ""}
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderAdmin() {
   if (state.user?.role !== "admin") {
     return;
@@ -454,6 +538,81 @@ function renderAdmin() {
     .join("");
 }
 
+function renderAdminTools() {
+  if (state.user?.role !== "admin") {
+    return;
+  }
+
+  nodes.adminToolsList.innerHTML = state.tools
+    .map((tool) => {
+      const packages = tool.packages
+        .map(
+          (pkg) => `
+            <div class="package-row">
+              <div>
+                <div class="package-name">${escapeHtml(pkg.label)}</div>
+                <p class="package-meta">
+                  ${escapeHtml(pkg.platform)} · ${escapeHtml(pkg.arch)} · ${escapeHtml(pkg.originalName)} · ${formatBytes(pkg.size)}
+                </p>
+              </div>
+              <button class="danger delete-tool-package" data-tool-id="${escapeHtml(tool.id)}" data-package-id="${escapeHtml(pkg.id)}" type="button">删除</button>
+            </div>
+          `
+        )
+        .join("");
+
+      return `
+        <article class="admin-card tool-admin-card">
+          <div class="admin-header">
+            <div>
+              <h3>${escapeHtml(tool.name)}</h3>
+              <p class="package-meta">
+                ${escapeHtml(tool.category || "工具包")} · ${tool.featured ? "Featured" : "Normal"} · ${tool.published ? "Published" : "Draft"}
+                · 更新于 ${formatDateTime(tool.updatedAt ?? tool.createdAt)}
+              </p>
+            </div>
+            <div class="admin-actions">
+              <button class="ghost edit-tool" data-id="${escapeHtml(tool.id)}" type="button">编辑工具</button>
+              <button class="danger delete-tool" data-id="${escapeHtml(tool.id)}" type="button">删除</button>
+            </div>
+          </div>
+          <p class="tool-admin-summary">${escapeHtml(tool.summary)}</p>
+          <div class="package-list">${packages || '<p class="empty-state">尚未上传工具包。</p>'}</div>
+          <div class="upload-panel">
+            <h4>上传此工具安装包</h4>
+            <form class="tool-upload-form" data-tool-id="${escapeHtml(tool.id)}">
+              <label>
+                平台
+                <select name="platform">
+                  <option value="windows">Windows</option>
+                  <option value="macos">macOS</option>
+                </select>
+              </label>
+              <label>
+                架构
+                <select name="arch">
+                  <option value="x64">x64</option>
+                  <option value="arm64">arm64</option>
+                  <option value="universal">Universal</option>
+                </select>
+              </label>
+              <label>
+                显示名称
+                <input name="label" placeholder="Windows x64" />
+              </label>
+              <label>
+                安装包文件
+                <input name="installer" type="file" />
+              </label>
+              <button class="primary upload-inline" type="submit">上传</button>
+            </form>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderComments() {
   if (state.comments.length === 0) {
     nodes.commentsList.innerHTML = `<p class="empty-state">还没有评论，欢迎留下第一个建议。</p>`;
@@ -486,14 +645,17 @@ function render() {
   renderShell();
   renderSmartDownload();
   renderVersions();
+  renderTools();
   renderAdmin();
+  renderAdminTools();
   renderComments();
 }
 
 async function refresh() {
-  const [me, versions, comments] = await Promise.all([api("/api/me"), api("/api/versions"), api("/api/comments")]);
+  const [me, versions, tools, comments] = await Promise.all([api("/api/me"), api("/api/versions"), api("/api/tools"), api("/api/comments")]);
   state.user = me.user;
   state.versions = versions.versions;
+  state.tools = tools.tools;
   state.comments = comments.comments;
   render();
 }
@@ -519,6 +681,22 @@ function openVersionDialog(version = null) {
   nodes.versionPublished.checked = version?.published ?? true;
   setMessage(nodes.versionMessage, "");
   nodes.versionDialog.showModal();
+}
+
+function openToolDialog(tool = null) {
+  nodes.toolDialogTitle.textContent = tool ? "编辑工具" : "新增工具";
+  nodes.toolId.value = tool?.id ?? "";
+  nodes.toolName.value = tool?.name ?? "";
+  nodes.toolSlug.value = tool?.slug ?? "";
+  nodes.toolCategory.value = tool?.category ?? "效率工具";
+  nodes.toolSortOrder.value = String(tool?.sortOrder ?? 0);
+  nodes.toolSummary.value = tool?.summary ?? "";
+  nodes.toolDescription.value = tool?.description ?? "";
+  nodes.toolHomepage.value = tool?.homepage ?? "";
+  nodes.toolFeatured.checked = Boolean(tool?.featured);
+  nodes.toolPublished.checked = tool?.published ?? true;
+  setMessage(nodes.toolMessage, "");
+  nodes.toolDialog.showModal();
 }
 
 async function submitAuth() {
@@ -585,6 +763,32 @@ async function submitVersion() {
   }
 }
 
+async function submitTool() {
+  const id = nodes.toolId.value;
+  const payload = {
+    name: nodes.toolName.value,
+    slug: nodes.toolSlug.value,
+    category: nodes.toolCategory.value,
+    summary: nodes.toolSummary.value,
+    description: nodes.toolDescription.value,
+    homepage: nodes.toolHomepage.value,
+    featured: nodes.toolFeatured.checked,
+    published: nodes.toolPublished.checked,
+    sortOrder: Number(nodes.toolSortOrder.value || 0)
+  };
+
+  try {
+    await api(id ? `/api/admin/tools/${id}` : "/api/admin/tools", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload)
+    });
+    nodes.toolDialog.close();
+    await refresh();
+  } catch (error) {
+    setMessage(nodes.toolMessage, error.message);
+  }
+}
+
 async function submitUpload(form) {
   const fileInput = form.elements.namedItem("installer");
   const platformInput = form.elements.namedItem("platform");
@@ -616,6 +820,38 @@ async function submitUpload(form) {
 
   try {
     await api(`/api/admin/versions/${form.dataset.versionId}/packages`, {
+      method: "POST",
+      body: formData
+    });
+    form.reset();
+    await refresh();
+  } catch (error) {
+    window.alert(error.message);
+  }
+}
+
+async function submitToolUpload(form) {
+  const fileInput = form.elements.namedItem("installer");
+  const platformInput = form.elements.namedItem("platform");
+  const archInput = form.elements.namedItem("arch");
+  const labelInput = form.elements.namedItem("label");
+  const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
+  if (!file) {
+    window.alert("请选择安装包文件。");
+    return;
+  }
+
+  const formData = new FormData();
+  const platform = platformInput instanceof HTMLSelectElement ? platformInput.value : "windows";
+  const arch = archInput instanceof HTMLSelectElement ? archInput.value : "x64";
+  const label = labelInput instanceof HTMLInputElement ? labelInput.value : "";
+  formData.append("platform", platform);
+  formData.append("arch", arch);
+  formData.append("label", label || `${platform} ${arch}`);
+  formData.append("installer", file);
+
+  try {
+    await api(`/api/admin/tools/${form.dataset.toolId}/packages`, {
       method: "POST",
       body: formData
     });
@@ -670,6 +906,8 @@ nodes.passwordSubmit.addEventListener("click", submitPassword);
 
 nodes.newVersionButton.addEventListener("click", () => openVersionDialog());
 nodes.versionSubmit.addEventListener("click", submitVersion);
+nodes.newToolButton.addEventListener("click", () => openToolDialog());
+nodes.toolSubmit.addEventListener("click", submitTool);
 nodes.commentForm.addEventListener("submit", submitComment);
 
 nodes.commentsList.addEventListener("click", async (event) => {
@@ -730,6 +968,44 @@ nodes.adminList.addEventListener("submit", async (event) => {
   const form = event.target;
   if (form instanceof HTMLFormElement && form.classList.contains("upload-form")) {
     await submitUpload(form);
+  }
+});
+
+nodes.adminToolsList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const toolId = target.dataset.id;
+  if (target.classList.contains("edit-tool") && toolId) {
+    const tool = state.tools.find((item) => item.id === toolId);
+    openToolDialog(tool);
+  }
+
+  if (target.classList.contains("delete-tool") && toolId) {
+    if (!window.confirm("确定删除这个工具及其安装包记录吗？")) {
+      return;
+    }
+    await api(`/api/admin/tools/${toolId}`, { method: "DELETE" });
+    await refresh();
+  }
+
+  if (target.classList.contains("delete-tool-package")) {
+    const packageId = target.dataset.packageId;
+    const parentToolId = target.dataset.toolId;
+    if (parentToolId && packageId) {
+      await api(`/api/admin/tools/${parentToolId}/packages/${packageId}`, { method: "DELETE" });
+      await refresh();
+    }
+  }
+});
+
+nodes.adminToolsList.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  if (form instanceof HTMLFormElement && form.classList.contains("tool-upload-form")) {
+    await submitToolUpload(form);
   }
 });
 
