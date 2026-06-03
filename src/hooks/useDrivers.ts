@@ -155,7 +155,7 @@ const FALLBACK_DRIVERS: PluginManifest[] = [
     color: "#f59e0b",
     icon: "sqlserver",
     capabilities: {
-      schemas: true,
+      schemas: false,
       views: true,
       routines: false,
       file_based: false,

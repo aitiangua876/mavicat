@@ -10,8 +10,9 @@ use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 use crate::drivers::driver_trait::{DatabaseDriver, DriverCapabilities, PluginManifest};
 use crate::models::{
-    ColumnDefinition, ConnectionParams, DataTypeInfo, ForeignKey, Index, Pagination, QueryResult,
-    RoutineInfo, RoutineParameter, TableColumn, TableInfo, TableSchema, ViewInfo,
+    ColumnDefinition, ConnectionParams, DataTypeInfo, DatabaseSelection, ForeignKey, Index,
+    Pagination, QueryResult, RoutineInfo, RoutineParameter, TableColumn, TableInfo, TableSchema,
+    ViewInfo,
 };
 
 type SqlServerClient = Client<Compat<TcpStream>>;
@@ -30,7 +31,7 @@ impl SqlServerDriver {
                 description: "Microsoft SQL Server databases".to_string(),
                 default_port: Some(1433),
                 capabilities: DriverCapabilities {
-                    schemas: true,
+                    schemas: false,
                     views: true,
                     routines: true,
                     file_based: false,
@@ -59,8 +60,22 @@ impl SqlServerDriver {
         }
     }
 
-    fn resolve_schema<'a>(&self, schema: Option<&'a str>) -> &'a str {
-        schema.unwrap_or("dbo")
+    fn resolve_database_and_schema(
+        &self,
+        params: &ConnectionParams,
+        database: Option<&str>,
+    ) -> (String, String) {
+        let database_name = database
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                let primary = params.database.primary().trim();
+                (!primary.is_empty()).then_some(primary)
+            })
+            .unwrap_or("master")
+            .to_string();
+
+        (database_name, "dbo".to_string())
     }
 }
 
@@ -93,6 +108,12 @@ async fn connect(params: &ConnectionParams) -> Result<SqlServerClient, String> {
     Client::connect(config, tcp.compat_write())
         .await
         .map_err(|error| error.to_string())
+}
+
+fn params_for_database(params: &ConnectionParams, database: &str) -> ConnectionParams {
+    let mut scoped = params.clone();
+    scoped.database = DatabaseSelection::Single(database.to_string());
+    scoped
 }
 
 fn sql_string(value: &str) -> String {
@@ -196,6 +217,15 @@ async fn query_rows(params: &ConnectionParams, query: &str) -> Result<Vec<Row>, 
     Ok(rows)
 }
 
+async fn query_rows_in_database(
+    params: &ConnectionParams,
+    database: &str,
+    query: &str,
+) -> Result<Vec<Row>, String> {
+    let scoped = params_for_database(params, database);
+    query_rows(&scoped, query).await
+}
+
 #[async_trait]
 impl DatabaseDriver for SqlServerDriver {
     fn manifest(&self) -> &PluginManifest {
@@ -273,14 +303,20 @@ impl DatabaseDriver for SqlServerDriver {
     }
 
     async fn get_databases(&self, params: &ConnectionParams) -> Result<Vec<String>, String> {
-        Ok(query_rows(
-            params,
-            "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name",
-        )
-        .await?
-        .iter()
-        .map(|row| row_string(row, 0))
-        .collect())
+        let sql = "
+            SELECT name
+            FROM sys.databases
+            WHERE state = 0
+              AND HAS_DBACCESS(name) = 1
+              AND name <> 'tempdb'
+            ORDER BY CASE WHEN database_id <= 4 THEN 1 ELSE 0 END, name
+        ";
+        let master_params = params_for_database(params, "master");
+        let rows = match query_rows(&master_params, sql).await {
+            Ok(rows) => rows,
+            Err(_) => query_rows(params, sql).await?,
+        };
+        Ok(rows.iter().map(|row| row_string(row, 0)).collect())
     }
 
     async fn get_schemas(&self, params: &ConnectionParams) -> Result<Vec<String>, String> {
@@ -297,13 +333,14 @@ impl DatabaseDriver for SqlServerDriver {
     async fn get_tables(
         &self,
         params: &ConnectionParams,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<Vec<TableInfo>, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = {} AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME",
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
         );
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .iter()
             .map(|row| TableInfo {
@@ -317,8 +354,9 @@ impl DatabaseDriver for SqlServerDriver {
         &self,
         params: &ConnectionParams,
         table: &str,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<Vec<TableColumn>, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             r#"
             SELECT
@@ -344,11 +382,11 @@ impl DatabaseDriver for SqlServerDriver {
             WHERE c.TABLE_SCHEMA = {} AND c.TABLE_NAME = {}
             ORDER BY c.ORDINAL_POSITION
             "#,
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
             sql_string(table),
         );
 
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .iter()
             .map(|row| TableColumn {
@@ -368,8 +406,9 @@ impl DatabaseDriver for SqlServerDriver {
         &self,
         params: &ConnectionParams,
         table: &str,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<Vec<ForeignKey>, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             r#"
             SELECT fk.name, pc.name, rt.name, rc.name
@@ -383,10 +422,10 @@ impl DatabaseDriver for SqlServerDriver {
             WHERE ps.name = {} AND pt.name = {}
             ORDER BY fk.name, fkc.constraint_column_id
             "#,
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
             sql_string(table),
         );
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .iter()
             .map(|row| ForeignKey {
@@ -404,8 +443,9 @@ impl DatabaseDriver for SqlServerDriver {
         &self,
         params: &ConnectionParams,
         table: &str,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<Vec<Index>, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             r#"
             SELECT i.name, c.name, i.is_unique, i.is_primary_key, ic.key_ordinal
@@ -417,10 +457,10 @@ impl DatabaseDriver for SqlServerDriver {
             WHERE s.name = {} AND t.name = {} AND i.name IS NOT NULL
             ORDER BY i.name, ic.key_ordinal
             "#,
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
             sql_string(table),
         );
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .iter()
             .map(|row| Index {
@@ -436,13 +476,14 @@ impl DatabaseDriver for SqlServerDriver {
     async fn get_views(
         &self,
         params: &ConnectionParams,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<Vec<ViewInfo>, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = {} ORDER BY TABLE_NAME",
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
         );
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .iter()
             .map(|row| ViewInfo {
@@ -456,8 +497,9 @@ impl DatabaseDriver for SqlServerDriver {
         &self,
         params: &ConnectionParams,
         view_name: &str,
-        schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<String, String> {
+        let (database_name, schema_name) = self.resolve_database_and_schema(params, database);
         let sql = format!(
             r#"
             SELECT m.definition
@@ -466,10 +508,10 @@ impl DatabaseDriver for SqlServerDriver {
             JOIN sys.sql_modules m ON v.object_id = m.object_id
             WHERE s.name = {} AND v.name = {}
             "#,
-            sql_string(self.resolve_schema(schema)),
+            sql_string(&schema_name),
             sql_string(view_name),
         );
-        Ok(query_rows(params, &sql)
+        Ok(query_rows_in_database(params, &database_name, &sql)
             .await?
             .first()
             .map(|row| row_string(row, 0))
@@ -547,9 +589,10 @@ impl DatabaseDriver for SqlServerDriver {
         query: &str,
         limit: Option<u32>,
         page: u32,
-        _schema: Option<&str>,
+        database: Option<&str>,
     ) -> Result<QueryResult, String> {
-        let rows = query_rows(params, query).await?;
+        let (database_name, _) = self.resolve_database_and_schema(params, database);
+        let rows = query_rows_in_database(params, &database_name, query).await?;
         let columns = rows
             .first()
             .map(|row| {
@@ -689,5 +732,49 @@ mod tests {
     #[test]
     fn sql_string_escapes_quotes() {
         assert_eq!(sql_string("O'Hara"), "'O''Hara'");
+    }
+
+    #[test]
+    fn resolves_database_context_as_database_not_schema() {
+        let driver = SqlServerDriver::new();
+        let params = ConnectionParams {
+            driver: "sqlserver".to_string(),
+            database: DatabaseSelection::Single("master".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            driver.resolve_database_and_schema(&params, Some("sales")),
+            ("sales".to_string(), "dbo".to_string())
+        );
+    }
+
+    #[test]
+    fn defaults_to_master_and_dbo_without_database_context() {
+        let driver = SqlServerDriver::new();
+        let params = ConnectionParams {
+            driver: "sqlserver".to_string(),
+            database: DatabaseSelection::Single(String::new()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            driver.resolve_database_and_schema(&params, None),
+            ("master".to_string(), "dbo".to_string())
+        );
+    }
+
+    #[test]
+    fn params_for_database_replaces_primary_database() {
+        let params = ConnectionParams {
+            driver: "sqlserver".to_string(),
+            database: DatabaseSelection::Single("master".to_string()),
+            ..Default::default()
+        };
+
+        let scoped = params_for_database(&params, "sales");
+
+        assert_eq!(scoped.database.primary(), "sales");
+        assert_eq!(params.database.primary(), "master");
     }
 }

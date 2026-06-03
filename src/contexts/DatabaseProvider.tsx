@@ -524,10 +524,22 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
       // Register for health-check pinging.
       await invoke('register_active_connection', { connectionId });
 
-      const isMultiDb = isMultiDatabaseCapable(capabilities) && Array.isArray(dbParam) && dbParam.length > 1;
+      const multiDbCapable = isMultiDatabaseCapable(capabilities);
+      const isSqlServerDriver = driver === 'sqlserver' || driver === 'mssql';
+      let dbList = multiDbCapable ? getDatabaseList(dbParam) : [];
+      if (multiDbCapable && (dbList.length === 0 || (isSqlServerDriver && dbList.length <= 1))) {
+        try {
+          const availableDbs = await invoke<string[]>('get_available_databases', { connectionId });
+          if (availableDbs.length > 0) {
+            dbList = availableDbs;
+          }
+        } catch (e) {
+          console.error('Failed to load available databases:', e);
+        }
+      }
+      const isMultiDb = multiDbCapable && dbList.length > 1;
 
       if (isMultiDb) {
-        const dbList = getDatabaseList(dbParam);
         const firstDb = dbList[0] ?? '';
 
         // Pre-load first database inline
@@ -556,6 +568,7 @@ export const DatabaseProvider = ({ children }: { children: ReactNode }) => {
         }
 
         updateConnectionData(connectionId, {
+          databaseName: firstDb,
           selectedDatabases: dbList,
           databaseDataMap: initialDbMap,
           isLoadingTables: false,
