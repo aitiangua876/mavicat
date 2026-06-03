@@ -945,6 +945,57 @@ main {
   background: linear-gradient(135deg, rgb(32 201 151 / 16%), rgb(52 131 255 / 10%));
 }
 
+.history-section {
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.history-section > summary {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 18px;
+  color: #f7f8f5;
+  font-weight: 950;
+  list-style: none;
+  cursor: pointer;
+}
+
+.history-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-section > summary::before {
+  color: #0f8f6e;
+  content: "+";
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.history-section[open] > summary::before {
+  content: "-";
+}
+
+.history-section > summary span {
+  flex: 1;
+}
+
+.history-section > summary small {
+  color: rgb(247 248 245 / 56%);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.history-list {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+  padding: 16px;
+}
+
 .version-notes-panel {
   margin-top: 14px;
   border: 1px solid rgb(255 255 255 / 13%);

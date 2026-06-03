@@ -334,57 +334,79 @@ function renderShell() {
   nodes.adminBand.hidden = !isAdmin;
 }
 
+function renderVersionCard(version, index = 0) {
+  const packages = version.packages.length
+    ? `
+      <div class="release-section-title">安装包下载</div>
+      <div class="package-list">
+        ${version.packages
+        .map(
+          (pkg) => `
+            <div class="package-row">
+              <div>
+                <div class="package-name">${escapeHtml(pkg.label || `${pkg.platform} ${pkg.arch}`)}</div>
+                <p class="package-meta">${escapeHtml(pkg.platform)} · ${escapeHtml(pkg.arch)} · ${formatBytes(pkg.size)} · ${escapeHtml(pkg.originalName)}</p>
+              </div>
+              <a class="primary" href="${escapeHtml(pkg.url)}" download>下载</a>
+            </div>
+          `
+        )
+        .join("")}
+      </div>
+    `
+    : `<p class="empty-state">安装包即将提供。</p>`;
+
+  return `
+    <article class="version-card ${index === 0 ? "latest" : ""}">
+      <div class="version-header">
+        <div>
+          <div class="version-title">
+            <h3>${escapeHtml(version.title)}</h3>
+            ${index === 0 ? '<span class="badge stable">Latest</span>' : ""}
+            <span class="badge ${escapeHtml(version.channel)}">${escapeHtml(version.channel)}</span>
+            ${version.published ? "" : '<span class="badge">Draft</span>'}
+          </div>
+          <p class="package-meta">
+            ${escapeHtml(version.version)} · 发布时间 ${formatDateTime(version.releaseDate)}
+            ${version.updatedAt ? ` · 更新于 ${formatDateTime(version.updatedAt)}` : ""}
+          </p>
+        </div>
+      </div>
+      ${renderVersionDetails(version, { open: index === 0, latest: index === 0 })}
+      ${packages}
+    </article>
+  `;
+}
+
+function renderHistorySection(items, renderer, label) {
+  if (items.length === 0) {
+    return "";
+  }
+
+  return `
+    <details class="history-section">
+      <summary>
+        <span>${escapeHtml(label)}</span>
+        <small>${items.length} 个历史版本</small>
+      </summary>
+      <div class="history-list">
+        ${items.map((item, index) => renderer(item, index + 1)).join("")}
+      </div>
+    </details>
+  `;
+}
+
 function renderVersions() {
   if (state.versions.length === 0) {
     nodes.versionsList.innerHTML = `<p class="empty-state">暂无可下载版本。</p>`;
     return;
   }
 
-  nodes.versionsList.innerHTML = state.versions
-    .map((version, index) => {
-      const packages = version.packages.length
-        ? `
-          <div class="release-section-title">安装包下载</div>
-          <div class="package-list">
-            ${version.packages
-            .map(
-              (pkg) => `
-                <div class="package-row">
-                  <div>
-                    <div class="package-name">${escapeHtml(pkg.label || `${pkg.platform} ${pkg.arch}`)}</div>
-                    <p class="package-meta">${escapeHtml(pkg.platform)} · ${escapeHtml(pkg.arch)} · ${formatBytes(pkg.size)} · ${escapeHtml(pkg.originalName)}</p>
-                  </div>
-                  <a class="primary" href="${escapeHtml(pkg.url)}" download>下载</a>
-                </div>
-              `
-            )
-            .join("")}
-          </div>
-        `
-        : `<p class="empty-state">安装包即将提供。</p>`;
-
-      return `
-        <article class="version-card ${index === 0 ? "latest" : ""}">
-          <div class="version-header">
-            <div>
-              <div class="version-title">
-                <h3>${escapeHtml(version.title)}</h3>
-                ${index === 0 ? '<span class="badge stable">Latest</span>' : ""}
-                <span class="badge ${escapeHtml(version.channel)}">${escapeHtml(version.channel)}</span>
-                ${version.published ? "" : '<span class="badge">Draft</span>'}
-              </div>
-              <p class="package-meta">
-                ${escapeHtml(version.version)} · 发布时间 ${formatDateTime(version.releaseDate)}
-                ${version.updatedAt ? ` · 更新于 ${formatDateTime(version.updatedAt)}` : ""}
-              </p>
-            </div>
-          </div>
-          ${renderVersionDetails(version, { open: index === 0, latest: index === 0 })}
-          ${packages}
-        </article>
-      `;
-    })
-    .join("");
+  const [latest, ...history] = state.versions;
+  nodes.versionsList.innerHTML = `
+    ${renderVersionCard(latest, 0)}
+    ${renderHistorySection(history, renderVersionCard, "历史版本")}
+  `;
 }
 
 function renderToolPackages(tool) {
@@ -458,84 +480,88 @@ function renderAdmin() {
     return;
   }
 
-  nodes.adminList.innerHTML = state.versions
-    .map((version) => {
-      const packages = version.packages
-        .map(
-          (pkg) => `
-            <div class="package-row">
-              <div>
-                <div class="package-name">${escapeHtml(pkg.label)}</div>
-                <p class="package-meta">
-                  ${escapeHtml(pkg.originalName)} · ${formatBytes(pkg.size)}
-                  · 自动更新 ${pkg.updaterSignature ? "已配置签名" : "未配置签名"}
-                </p>
-              </div>
-              <button class="danger delete-package" data-version-id="${escapeHtml(version.id)}" data-package-id="${escapeHtml(pkg.id)}" type="button">删除</button>
-            </div>
-          `
-        )
-        .join("");
-
-      return `
-        <article class="admin-card">
-          <div class="admin-header">
+  const renderAdminVersionCard = (version) => {
+    const packages = version.packages
+      .map(
+        (pkg) => `
+          <div class="package-row">
             <div>
-              <h3>${escapeHtml(version.title)}</h3>
+              <div class="package-name">${escapeHtml(pkg.label)}</div>
               <p class="package-meta">
-                ${escapeHtml(version.version)} · ${escapeHtml(version.channel)} · ${version.published ? "Published" : "Draft"}
-                · 更新于 ${formatDateTime(version.updatedAt ?? version.releaseDate)}
+                ${escapeHtml(pkg.originalName)} · ${formatBytes(pkg.size)}
+                · 自动更新 ${pkg.updaterSignature ? "已配置签名" : "未配置签名"}
               </p>
             </div>
-            <div class="admin-actions">
-              <button class="ghost edit-version" data-id="${escapeHtml(version.id)}" type="button">编辑版本/说明</button>
-              <button class="danger delete-version" data-id="${escapeHtml(version.id)}" type="button">删除</button>
-            </div>
+            <button class="danger delete-package" data-version-id="${escapeHtml(version.id)}" data-package-id="${escapeHtml(pkg.id)}" type="button">删除</button>
           </div>
-          ${renderVersionDetails(version, { open: true })}
-          <div class="package-list">${packages || '<p class="empty-state">尚未上传安装包。</p>'}</div>
-          <div class="upload-panel">
-            <h4>上传此版本安装包</h4>
-            <form class="upload-form" data-version-id="${escapeHtml(version.id)}">
-              <label>
-                平台
-                <select name="platform">
-                  <option value="windows">Windows</option>
-                  <option value="macos">macOS</option>
-                  <option value="linux">Linux</option>
-                </select>
-              </label>
-              <label>
-                架构
-                <select name="arch">
-                  <option value="x64">x64</option>
-                  <option value="arm64">arm64</option>
-                  <option value="universal">Universal</option>
-                </select>
-              </label>
-              <label>
-                显示名称
-                <input name="label" placeholder="Windows x64 Installer" />
-              </label>
-              <label>
-                安装包文件
-                <input name="installer" type="file" />
-              </label>
-              <label>
-                自动更新签名
-                <input name="signatureFile" type="file" accept=".sig,.txt" />
-              </label>
-              <label class="wide-field">
-                或粘贴签名内容
-                <textarea name="signature" rows="3" placeholder="从 .sig 文件复制完整内容；仅用于自动更新校验，普通下载可留空。"></textarea>
-              </label>
-              <button class="primary upload-inline" type="submit">上传</button>
-            </form>
+        `
+      )
+      .join("");
+
+    return `
+      <article class="admin-card">
+        <div class="admin-header">
+          <div>
+            <h3>${escapeHtml(version.title)}</h3>
+            <p class="package-meta">
+              ${escapeHtml(version.version)} · ${escapeHtml(version.channel)} · ${version.published ? "Published" : "Draft"}
+              · 更新于 ${formatDateTime(version.updatedAt ?? version.releaseDate)}
+            </p>
           </div>
-        </article>
-      `;
-    })
-    .join("");
+          <div class="admin-actions">
+            <button class="ghost edit-version" data-id="${escapeHtml(version.id)}" type="button">编辑版本/说明</button>
+            <button class="danger delete-version" data-id="${escapeHtml(version.id)}" type="button">删除</button>
+          </div>
+        </div>
+        ${renderVersionDetails(version, { open: true })}
+        <div class="package-list">${packages || '<p class="empty-state">尚未上传安装包。</p>'}</div>
+        <div class="upload-panel">
+          <h4>上传此版本安装包</h4>
+          <form class="upload-form" data-version-id="${escapeHtml(version.id)}">
+            <label>
+              平台
+              <select name="platform">
+                <option value="windows">Windows</option>
+                <option value="macos">macOS</option>
+                <option value="linux">Linux</option>
+              </select>
+            </label>
+            <label>
+              架构
+              <select name="arch">
+                <option value="x64">x64</option>
+                <option value="arm64">arm64</option>
+                <option value="universal">Universal</option>
+              </select>
+            </label>
+            <label>
+              显示名称
+              <input name="label" placeholder="Windows x64 Installer" />
+            </label>
+            <label>
+              安装包文件
+              <input name="installer" type="file" />
+            </label>
+            <label>
+              自动更新签名
+              <input name="signatureFile" type="file" accept=".sig,.txt" />
+            </label>
+            <label class="wide-field">
+              或粘贴签名内容
+              <textarea name="signature" rows="3" placeholder="从 .sig 文件复制完整内容；仅用于自动更新校验，普通下载可留空。"></textarea>
+            </label>
+            <button class="primary upload-inline" type="submit">上传</button>
+          </form>
+        </div>
+      </article>
+    `;
+  };
+
+  const [latest, ...history] = state.versions;
+  nodes.adminList.innerHTML = `
+    ${latest ? renderAdminVersionCard(latest) : '<p class="empty-state">暂无版本。</p>'}
+    ${renderHistorySection(history, renderAdminVersionCard, "历史版本管理")}
+  `;
 }
 
 function renderAdminTools() {
