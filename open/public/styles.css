@@ -1019,6 +1019,40 @@ main {
   gap: 8px;
 }
 
+.admin-quick-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 34px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 8px;
+  padding: 22px;
+  background:
+    linear-gradient(135deg, rgb(32 201 151 / 12%), rgb(52 131 255 / 10%)),
+    rgb(255 255 255 / 6%);
+  box-shadow: 0 20px 70px rgb(0 0 0 / 22%);
+}
+
+.admin-quick-panel h2 {
+  margin-bottom: 0;
+  font-size: clamp(22px, 2.6vw, 34px);
+}
+
+.admin-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-empty-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-style: dashed;
+}
+
 .upload-panel {
   display: grid;
   gap: 12px;
@@ -1312,6 +1346,8 @@ textarea {
 
   .version-header,
   .admin-header,
+  .admin-quick-panel,
+  .admin-empty-card,
   .package-row,
   .comment-actions,
   .comment-header,

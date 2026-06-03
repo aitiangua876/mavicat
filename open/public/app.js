@@ -543,6 +543,21 @@ function renderAdminTools() {
     return;
   }
 
+  if (state.tools.length === 0) {
+    nodes.adminToolsList.innerHTML = `
+      <article class="admin-card admin-empty-card">
+        <div>
+          <h3>还没有工具包</h3>
+          <p class="package-meta">
+            先新增一个工具，保存后这里会出现该工具的 Windows / macOS 安装包上传入口。
+          </p>
+        </div>
+        <button class="primary new-tool-shortcut" type="button">新增工具并上传</button>
+      </article>
+    `;
+    return;
+  }
+
   nodes.adminToolsList.innerHTML = state.tools
     .map((tool) => {
       const packages = tool.packages
@@ -978,6 +993,11 @@ nodes.adminToolsList.addEventListener("click", async (event) => {
   }
 
   const toolId = target.dataset.id;
+  if (target.classList.contains("new-tool-shortcut")) {
+    openToolDialog();
+    return;
+  }
+
   if (target.classList.contains("edit-tool") && toolId) {
     const tool = state.tools.find((item) => item.id === toolId);
     openToolDialog(tool);
