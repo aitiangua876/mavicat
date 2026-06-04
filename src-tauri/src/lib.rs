@@ -210,6 +210,7 @@ pub fn run() {
             commands::save_keybindings,
             commands::test_connection,
             commands::list_databases,
+            commands::drop_database,
             commands::save_connection,
             commands::delete_connection,
             commands::update_connection,

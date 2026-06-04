@@ -13,9 +13,9 @@ use crate::credential_cache;
 use crate::keychain_utils;
 use crate::models::{
     BatchStatementResult, ColumnDefinition, ConnectionGroup, ConnectionParams, ConnectionsFile,
-    ExplainPlan, ExportPayload, ForeignKey, Index, QueryResult, RoutineInfo, RoutineParameter,
-    SavedConnection, SshConnection, SshConnectionInput, SshTestParams, TableColumn, TableInfo,
-    TestConnectionRequest, TriggerInfo,
+    DatabaseSelection, ExplainPlan, ExportPayload, ForeignKey, Index, QueryResult, RoutineInfo,
+    RoutineParameter, SavedConnection, SshConnection, SshConnectionInput, SshTestParams,
+    TableColumn, TableInfo, TestConnectionRequest, TriggerInfo,
 };
 use crate::persistence;
 use crate::ssh_tunnel::{get_tunnels, SshTunnel};
@@ -786,6 +786,87 @@ pub async fn get_available_databases<R: Runtime>(
     drv.get_databases(&params).await
 }
 
+fn quote_drop_database_identifier(driver: &str, database: &str) -> Result<String, String> {
+    match driver {
+        "mysql" | "mariadb" => Ok(format!("`{}`", database.replace('`', "``"))),
+        "postgres" => Ok(format!("\"{}\"", database.replace('"', "\"\""))),
+        "sqlserver" | "mssql" => Ok(format!("[{}]", database.replace(']', "]]"))),
+        _ => Err(format!(
+            "Dropping databases is not supported for driver: {}",
+            driver
+        )),
+    }
+}
+
+fn ensure_database_can_be_dropped(driver: &str, database: &str) -> Result<(), String> {
+    let normalized = database.trim().to_lowercase();
+    let protected = match driver {
+        "mysql" | "mariadb" => {
+            matches!(
+                normalized.as_str(),
+                "information_schema" | "mysql" | "performance_schema" | "sys"
+            )
+        }
+        "postgres" => matches!(normalized.as_str(), "postgres" | "template0" | "template1"),
+        "sqlserver" | "mssql" => {
+            matches!(normalized.as_str(), "master" | "model" | "msdb" | "tempdb")
+        }
+        _ => false,
+    };
+
+    if protected {
+        return Err(format!("System database cannot be deleted: {}", database));
+    }
+
+    Ok(())
+}
+
+fn admin_database_for_drop(driver: &str, target_database: &str) -> Option<String> {
+    match driver {
+        "mysql" | "mariadb" => Some("information_schema".to_string()),
+        "postgres" => {
+            if target_database.eq_ignore_ascii_case("postgres") {
+                Some("template1".to_string())
+            } else {
+                Some("postgres".to_string())
+            }
+        }
+        "sqlserver" | "mssql" => Some("master".to_string()),
+        _ => None,
+    }
+}
+
+fn build_drop_database_sql(driver: &str, database: &str) -> Result<String, String> {
+    let name = database.trim();
+    if name.is_empty() {
+        return Err("Database name is required".to_string());
+    }
+    ensure_database_can_be_dropped(driver, name)?;
+    let quoted = quote_drop_database_identifier(driver, name)?;
+    Ok(format!("DROP DATABASE {}", quoted))
+}
+
+#[tauri::command]
+pub async fn drop_database<R: Runtime>(
+    app: AppHandle<R>,
+    connection_id: String,
+    database_name: String,
+) -> Result<(), String> {
+    let saved_conn = find_connection_by_id(&app, &connection_id)?;
+    let driver = saved_conn.params.driver.clone();
+    let sql = build_drop_database_sql(&driver, &database_name)?;
+
+    let expanded_params = expand_ssh_connection_params(&app, &saved_conn.params).await?;
+    let mut params = resolve_connection_params_with_id(&expanded_params, &connection_id)?;
+    if let Some(admin_database) = admin_database_for_drop(&driver, database_name.trim()) {
+        params.database = DatabaseSelection::Single(admin_database);
+    }
+
+    let drv = driver_for(&driver).await?;
+    drv.execute_query(&params, &sql, None, 1, None).await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn get_routines<R: Runtime>(
     app: AppHandle<R>,
@@ -1005,10 +1086,27 @@ pub async fn update_connection<R: Runtime>(
         .position(|c| c.id == id)
         .ok_or("Connection not found")?;
 
+    let original_conn = conn_file.connections[conn_idx].clone();
+    let password_provided = params.password.is_some();
+    let ssh_password_provided = params.ssh_password.is_some();
+    let ssh_key_passphrase_provided = params.ssh_key_passphrase.is_some();
     let mut params_to_save = params.clone();
 
+    if !password_provided {
+        params_to_save.password = original_conn.params.password.clone();
+        if original_conn.params.save_in_keychain.unwrap_or(false) {
+            params_to_save.save_in_keychain = Some(true);
+        }
+    }
+    if !ssh_password_provided {
+        params_to_save.ssh_password = original_conn.params.ssh_password.clone();
+    }
+    if !ssh_key_passphrase_provided {
+        params_to_save.ssh_key_passphrase = original_conn.params.ssh_key_passphrase.clone();
+    }
+
     let cache = app.state::<std::sync::Arc<crate::credential_cache::CredentialCache>>();
-    if params.save_in_keychain.unwrap_or(false) {
+    if params_to_save.save_in_keychain.unwrap_or(false) {
         if let Some(pwd) = &params.password {
             keychain_utils::set_db_password(&id, pwd)?;
             credential_cache::set_db_password_cached(&cache, &id, pwd);
@@ -1677,6 +1775,16 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_password_preserves_explicit_empty_request() {
+        let mut params = base_params();
+        params.password = Some(String::new());
+        let saved = saved_conn("id1", Some("stored"), true);
+        let result =
+            resolve_test_connection_password(&params, Some(&saved), |_| Ok("kc".to_string()));
+        assert_eq!(result, Some(String::new()));
+    }
+
+    #[test]
     fn test_resolve_password_from_keychain() {
         let params = base_params();
         let saved = saved_conn("id1", None, true);
@@ -1701,6 +1809,34 @@ mod tests {
         let result =
             resolve_test_connection_password(&params, Some(&saved), |_| Ok("  ".to_string()));
         assert_eq!(result, Some("stored".to_string()));
+    }
+
+    #[test]
+    fn test_build_drop_database_sql_quotes_identifiers() {
+        assert_eq!(
+            build_drop_database_sql("mysql", "sales`2026").unwrap(),
+            "DROP DATABASE `sales``2026`"
+        );
+        assert_eq!(
+            build_drop_database_sql("postgres", "sales\"2026").unwrap(),
+            "DROP DATABASE \"sales\"\"2026\""
+        );
+        assert_eq!(
+            build_drop_database_sql("sqlserver", "sales]2026").unwrap(),
+            "DROP DATABASE [sales]]2026]"
+        );
+    }
+
+    #[test]
+    fn test_build_drop_database_sql_rejects_system_databases() {
+        assert!(build_drop_database_sql("mysql", "information_schema").is_err());
+        assert!(build_drop_database_sql("postgres", "template1").is_err());
+        assert!(build_drop_database_sql("sqlserver", "master").is_err());
+    }
+
+    #[test]
+    fn test_build_drop_database_sql_rejects_unsupported_driver() {
+        assert!(build_drop_database_sql("sqlite", "main").is_err());
     }
 
     mod build_connection_url_tests {

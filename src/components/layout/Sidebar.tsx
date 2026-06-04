@@ -117,10 +117,7 @@ export const Sidebar = () => {
         )
       : connections;
 
-    return [...list].sort((a, b) => {
-      if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
+    return list;
   }, [connectionDataMap, connections, search]);
 
   const toggleExpanded = (connectionId: string) => {

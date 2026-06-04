@@ -561,7 +561,11 @@ export const NewConnectionModal = ({
             : formData.database,
       };
       if (initialConnection) {
-        if (!params.password?.trim()) delete params.password;
+        if (!passwordDirty) {
+          delete params.password;
+        } else if (!params.password?.trim()) {
+          params.password = "";
+        }
         if (!params.ssh_password?.trim()) delete params.ssh_password;
         await invoke("update_connection", {
           id: initialConnection.id,

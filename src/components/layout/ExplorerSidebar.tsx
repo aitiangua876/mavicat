@@ -76,6 +76,7 @@ import { groupByDate, formatHistoryTime } from "../../utils/dateGroups";
 import { SqlHighlight } from "../ui/SqlHighlight";
 import { isMultiDatabaseCapable } from "../../utils/database";
 import { supportsManageTables } from "../../utils/driverCapabilities";
+import { supportsDropDatabase } from "../../utils/createDatabase";
 import { newConsoleForDatabase, newConsoleForTable } from "../../utils/newConsole";
 import {
   DEFAULT_CREATE_TABLE_TARGET,
@@ -439,6 +440,37 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
     }
     if (activeConnectionId) {
       void closeTabsForDatabase(activeConnectionId, database);
+    }
+  };
+
+  const handleDropDatabase = async (database: string) => {
+    if (!activeConnectionId || !supportsDropDatabase(activeDriver)) return;
+
+    const firstConfirmed = await ask(
+      `确定要删除数据库“${database}”吗？\n\n该操作会永久删除库中的所有表、视图、过程和数据。`,
+      { title: "删除数据库", kind: "warning" },
+    );
+    if (!firstConfirmed) return;
+
+    const secondConfirmed = await ask(
+      `再次确认删除数据库“${database}”。\n\n删除后无法通过 Mavicat 恢复，请确认你已经完成备份。`,
+      { title: "危险操作确认", kind: "warning" },
+    );
+    if (!secondConfirmed) return;
+
+    try {
+      await invoke("drop_database", {
+        connectionId: activeConnectionId,
+        databaseName: database,
+      });
+      closeDatabaseNode(database);
+      setSelectedDatabases(selectedDatabases.filter((name) => name !== database));
+      showAlert(`已删除数据库“${database}”`, { title: "删除数据库", kind: "info" });
+    } catch (error) {
+      showAlert(`删除数据库失败：${toErrorMessage(error)}`, {
+        title: "删除数据库",
+        kind: "error",
+      });
     }
   };
 
@@ -2165,6 +2197,17 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                                   icon: RefreshCw,
                                   action: () => refreshDatabaseData(contextMenu.id),
                                 },
+                                ...(supportsDropDatabase(activeDriver)
+                                  ? [
+                                      { separator: true },
+                                      {
+                                        label: "删除数据库...",
+                                        icon: Trash2,
+                                        danger: true,
+                                        action: () => void handleDropDatabase(contextMenu.id),
+                                      },
+                                    ]
+                                  : []),
                               ]
                           : contextMenu.type === "history"
                             ? (() => {

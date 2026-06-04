@@ -42,6 +42,10 @@ export function supportsCreateDatabase(driver: string | null | undefined): drive
   return driver === "mysql" || driver === "mariadb" || driver === "postgres" || driver === "sqlserver" || driver === "mssql";
 }
 
+export function supportsDropDatabase(driver: string | null | undefined): driver is CreateDatabaseDialect {
+  return supportsCreateDatabase(driver);
+}
+
 export function getDefaultDatabaseEncoding(driver: string | null | undefined): string {
   if (driver === "postgres") return POSTGRES_DATABASE_ENCODINGS[0].value;
   if (driver === "sqlserver" || driver === "mssql") return SQLSERVER_DATABASE_COLLATIONS[0].value;
