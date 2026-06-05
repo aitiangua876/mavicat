@@ -27,6 +27,8 @@ import {
   Network,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowLeftToLine,
   ArrowRightToLine,
   XCircle,
@@ -3884,6 +3886,18 @@ export const Editor = () => {
                               activeTab.result.pagination.page === 1 ||
                               activeTab.isLoading
                             }
+                            onClick={() => gotoPage(1)}
+                            className="w-10 inline-flex items-center justify-center border-r border-default text-secondary hover:bg-surface-secondary hover:text-primary disabled:opacity-35 disabled:cursor-not-allowed"
+                            title="第一页"
+                          >
+                            <ChevronsLeft size={16} />
+                          </button>
+
+                          <button
+                            disabled={
+                              activeTab.result.pagination.page === 1 ||
+                              activeTab.isLoading
+                            }
                             onClick={() =>
                               gotoPage(activeTab.result!.pagination!.page - 1)
                             }
@@ -3921,6 +3935,23 @@ export const Editor = () => {
                             title="下一页"
                           >
                             <ChevronRight size={16} />
+                          </button>
+
+                          <button
+                            disabled={
+                              totalPages === null ||
+                              activeTab.result.pagination.page === totalPages ||
+                              activeTab.isLoading
+                            }
+                            onClick={() => {
+                              if (totalPages !== null) {
+                                gotoPage(totalPages);
+                              }
+                            }}
+                            className="w-10 inline-flex items-center justify-center border-l border-default text-secondary hover:bg-surface-secondary hover:text-primary disabled:opacity-35 disabled:cursor-not-allowed"
+                            title="最后一页"
+                          >
+                            <ChevronsRight size={16} />
                           </button>
                         </div>
 
