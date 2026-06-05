@@ -1580,26 +1580,31 @@ export const ExplorerSidebar = ({ sidebarWidth, startResize, onCollapse, sidebar
                       </div>
                     }
                   >
-                    {views.length === 0 ? (
-                      <div className="text-center p-2 text-xs text-muted italic">
-                        {t("sidebar.noViews")}
-                      </div>
-                    ) : (
-                      <div>
-                        {views.map((view) => (
-                          <SidebarViewItem
-                            key={view.name}
-                            view={view}
-                            activeView={activeView}
-                            onViewClick={handleViewClick}
-                            onViewDoubleClick={handleOpenView}
-                            onContextMenu={handleContextMenu}
-                            connectionId={activeConnectionId!}
-                            driver={activeDriver!}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const filtered = objectFilter
+                        ? views.filter((view) => view.name.toLowerCase().includes(objectFilter))
+                        : views;
+                      return filtered.length === 0 ? (
+                        <div className="text-center p-2 text-xs text-muted italic">
+                          {objectFilter ? t("sidebar.noViewsMatch") : t("sidebar.noViews")}
+                        </div>
+                      ) : (
+                        <div>
+                          {filtered.map((view) => (
+                            <SidebarViewItem
+                              key={view.name}
+                              view={view}
+                              activeView={activeView}
+                              onViewClick={handleViewClick}
+                              onViewDoubleClick={handleOpenView}
+                              onContextMenu={handleContextMenu}
+                              connectionId={activeConnectionId!}
+                              driver={activeDriver!}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </Accordion>
                   )}
 

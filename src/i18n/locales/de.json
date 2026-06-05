@@ -52,6 +52,7 @@
     "createView": "Neue Ansicht erstellen",
     "views": "Ansichten",
     "noViews": "Keine Ansichten gefunden",
+    "noViewsMatch": "Keine passenden Ansichten",
     "editView": "Ansicht bearbeiten",
     "viewDefinition": "Ansichtsdefinition",
     "dropView": "Ansicht löschen",

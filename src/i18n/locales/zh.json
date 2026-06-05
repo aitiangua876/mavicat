@@ -51,6 +51,7 @@
     "createView": "创建新视图",
     "views": "视图",
     "noViews": "未找到视图",
+    "noViewsMatch": "无匹配的视图",
     "editView": "编辑视图",
     "viewDefinition": "视图定义",
     "dropView": "删除视图",

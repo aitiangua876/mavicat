@@ -52,6 +52,7 @@
     "createView": "ビューを新規作成",
     "views": "ビュー",
     "noViews": "ビューが見つかりません",
+    "noViewsMatch": "一致するビューはありません",
     "editView": "ビューを編集",
     "viewDefinition": "ビュー定義",
     "dropView": "ビューを削除",

@@ -52,6 +52,7 @@
     "createView": "Create New View",
     "views": "Views",
     "noViews": "No views found",
+    "noViewsMatch": "No views match",
     "editView": "Edit View",
     "viewDefinition": "View Definition",
     "dropView": "Drop View",

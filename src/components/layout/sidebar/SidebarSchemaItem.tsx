@@ -111,6 +111,9 @@ export const SidebarSchemaItem = ({
     ? tables.filter((t) => t.name.toLowerCase().includes(objectFilter))
     : tables;
   const views = schemaData?.views ?? [];
+  const filteredViews = objectFilter
+    ? views.filter((v) => v.name.toLowerCase().includes(objectFilter))
+    : views;
   const routines = schemaData?.routines ?? [];
   const triggers = schemaData?.triggers ?? [];
   const filteredTriggers = objectFilter
@@ -250,13 +253,13 @@ export const SidebarSchemaItem = ({
                   </div>
                 }
               >
-                {views.length === 0 ? (
+                {filteredViews.length === 0 ? (
                   <div className="text-center p-2 text-xs text-muted italic">
-                    {t("sidebar.noViews")}
+                    {objectFilter ? t("sidebar.noViewsMatch") : t("sidebar.noViews")}
                   </div>
                 ) : (
                   <div>
-                    {views.map((view) => (
+                    {filteredViews.map((view) => (
                       <SidebarViewItem
                         key={view.name}
                         view={view}
