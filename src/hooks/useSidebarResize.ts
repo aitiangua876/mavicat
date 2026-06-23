@@ -3,20 +3,19 @@ import { useState, useRef, useEffect, useCallback } from "react";
 const MIN_WIDTH = 150;
 const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 256;
-const COLLAPSE_THRESHOLD = 100;
 const STORAGE_KEY = "mavicat_sidebar_width";
 
-export const useSidebarResize = (onCollapse?: () => void) => {
+function clampSidebarWidth(width: number) {
+  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
+}
+
+export const useSidebarResize = () => {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    const parsed = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    return Number.isFinite(parsed) ? clampSidebarWidth(parsed) : DEFAULT_WIDTH;
   });
   const isDragging = useRef(false);
-  const onCollapseRef = useRef(onCollapse);
-
-  useEffect(() => {
-    onCollapseRef.current = onCollapse;
-  }, [onCollapse]);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,19 +26,7 @@ export const useSidebarResize = (onCollapse?: () => void) => {
       if (!isDragging.current) return;
       const newWidth = e.clientX - 64; // Subtract primary sidebar width (w-16 = 64px)
 
-      // Auto-collapse when dragged below threshold
-      if (newWidth < COLLAPSE_THRESHOLD && onCollapseRef.current) {
-        isDragging.current = false;
-        document.body.style.cursor = "default";
-        document.removeEventListener("mousemove", handleResize);
-        document.removeEventListener("mouseup", stopResize);
-        onCollapseRef.current();
-        return;
-      }
-
-      if (newWidth > MIN_WIDTH && newWidth < MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      setSidebarWidth(clampSidebarWidth(newWidth));
     };
 
     const stopResize = () => {
@@ -56,7 +43,7 @@ export const useSidebarResize = (onCollapse?: () => void) => {
 
   // Persist width on change as well to be safe
   useEffect(() => {
-      localStorage.setItem(STORAGE_KEY, sidebarWidth.toString());
+    localStorage.setItem(STORAGE_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
   return { sidebarWidth, startResize };

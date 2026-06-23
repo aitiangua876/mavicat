@@ -46,19 +46,37 @@ describe("useSidebarResize", () => {
     const preventDefault = vi.fn();
     startResize({ preventDefault } as unknown as React.MouseEvent);
 
-    // Try too small (100 - 64 = 36 < 150) -> should not update (remains 256)
+    // Try too small (100 - 64 = 36 < 150) -> should clamp to 150.
     act(() => {
       const moveEvent = new MouseEvent("mousemove", { clientX: 100 });
       document.dispatchEvent(moveEvent);
     });
-    expect(result.current.sidebarWidth).toBe(256); // No update
+    expect(result.current.sidebarWidth).toBe(150);
 
-    // Try too large (1000 - 64 = 936 > 600) -> should not update
+    // Try too large (1000 - 64 = 936 > 600) -> should clamp to 600.
     act(() => {
       const moveEvent = new MouseEvent("mousemove", { clientX: 1000 });
       document.dispatchEvent(moveEvent);
     });
-    expect(result.current.sidebarWidth).toBe(256); // No update
+    expect(result.current.sidebarWidth).toBe(600);
+  });
+
+  it("should keep resizing after the pointer crosses the left edge", () => {
+    const { result } = renderHook(() => useSidebarResize());
+    const { startResize } = result.current;
+
+    startResize({ preventDefault: vi.fn() } as unknown as React.MouseEvent);
+
+    act(() => {
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: 20 }));
+    });
+    expect(result.current.sidebarWidth).toBe(150);
+    expect(document.body.style.cursor).toBe("col-resize");
+
+    act(() => {
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: 364 }));
+    });
+    expect(result.current.sidebarWidth).toBe(300);
   });
 
   it("should stop resizing on mouseup and save to localStorage", () => {

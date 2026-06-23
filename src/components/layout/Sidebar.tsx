@@ -68,7 +68,7 @@ export const Sidebar = () => {
   const [renameValue, setRenameValue] = useState("");
   const [isRenamingConnection, setIsRenamingConnection] = useState(false);
   const [createDatabaseTarget, setCreateDatabaseTarget] = useState<ConnectionStatus | null>(null);
-  const { sidebarWidth, startResize } = useSidebarResize(() => undefined);
+  const { sidebarWidth, startResize } = useSidebarResize();
 
   useEffect(() => {
     if (!activeConnectionId) return;
